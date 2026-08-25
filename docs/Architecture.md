@@ -152,7 +152,7 @@ flowchart TB
 
 ## 5. 核心数据流
 
-### 5.1 互联网情报主流程（M1）
+### 5.1 互联网情报主流程（核心链路）
 
 ```mermaid
 sequenceDiagram
