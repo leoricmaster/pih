@@ -1,1 +1,4 @@
 .superpowers/
+spikes/.venv/
+.env
+__pycache__/
