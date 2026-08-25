@@ -1,0 +1,22 @@
+meta:
+  domain_id: fixture_good
+  display_name: 夹具好包
+  version: 0.1.0
+sources:
+  - id: s1
+    name: 源1
+    type: rss
+    url: http://example.com/feed
+    reliability: B
+keywords:
+  - 关键词1
+competitors:
+  - id: c1
+    display_name: 竞品1
+    aliases:
+      - 竞品一
+tag_tree:
+  产品类:
+    - 挖掘机械
+report_template: 占位模板
+extraction_prompt: 占位提示词

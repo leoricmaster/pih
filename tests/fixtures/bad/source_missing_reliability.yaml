@@ -1,0 +1,20 @@
+# sources[0] 缺必选字段 reliability（嵌套 required，位置应指向 sources[0].reliability）
+meta:
+  domain_id: fixture_bad
+  display_name: 夹具坏包
+  version: 0.1.0
+sources:
+  - id: s1
+    name: 源1
+    type: rss
+    url: http://example.com/feed
+keywords:
+  - 关键词1
+competitors:
+  - id: c1
+    display_name: 竞品1
+tag_tree:
+  产品类:
+    - 挖掘机械
+report_template: 占位模板
+extraction_prompt: 占位提示词
