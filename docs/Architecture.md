@@ -1,8 +1,9 @@
 # 产品情报中心（Product Intelligence Hub）架构设计
 
-- 版本：V0.7（分层重构稿；ADR 拆分至 docs/adr/）
+- 版本：V0.8（Backlog 重构同步；ADR 拆分至 docs/adr/）
 - 日期：2026-08-25
-- 配套：《Product Requirements.md》V0.8、《情报中心-Backlog.md》V0.7
+- 配套：《Product Requirements.md》V0.9、《Backlog.md》V0.8
+- 变更：V0.7→V0.8 配合 Backlog V0.8——里程碑标注改为设计预期口径（Backlog 不再承载分期）
 - 用途：指导 Backlog 梳理与模块设计；关键决策记录见 §10 索引
 
 ## 1. 概览
@@ -126,7 +127,7 @@ flowchart TB
 
 ### 模块职责与关键接口
 
-里程碑 M1/M2 以 Backlog 为准，此处标注为设计预期。
+里程碑标注为设计预期；Backlog 不再承载分期，Sprint 规划时按此校准。
 
 | 模块 | 职责 | 关键接口/产出 | 里程碑 |
 |---|---|---|---|
@@ -184,7 +185,7 @@ sequenceDiagram
 
 主链一条：调度器按信源频率触发采集，原始内容先落盘 inbox、原文快照存档 MinIO，经去重与粗筛后进入 LangGraph 处理链（结构化抽取 → 预评级 → 事件聚类）写入情报库，终态核实（确认/证伪）由人工操作完成并写 verification_log。
 
-(M2) 重大事件即时推送 + 汇入周报
+（后续迭代）重大事件即时推送 + 汇入周报
 
 ### 5.2 检索流程
 
