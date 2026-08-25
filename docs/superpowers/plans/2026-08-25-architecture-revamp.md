@@ -29,7 +29,7 @@
 | 旧004 事件/情报分离 | 新ADR-003 | 旧007 极简Web + 旧013 同源 | 新ADR-006 |
 | 旧006 LangGraph | 新ADR-004 | 旧012 at-least-once | 新ADR-007 |
 | 旧003 Admiralty | 正文 §6.2 | 旧005 快照 | 正文 §5.3 |
-| 旧008 分级调用 | 正文 §9.3 | 旧010 人工同管道 | 正文 §4 模块表 |
+| 旧008 分级调用 | 正文 §9.2 | 旧010 人工同管道 | 正文 §4 模块表 |
 
 **章节号映射（跨文档引用更新参照）：** 状态机 旧§4.2→新§6.1；排序函数 旧§4.3→新§6.2；可靠性 旧§5A→新§8；部署 旧§6→新§3/§9。
 
@@ -419,7 +419,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: Task 1/2 的 7 个 ADR（§10 索引链接到 `adr/ADR-00X-*.md` 相对路径）；旧 Architecture.md 各节内容（迁移来源，行号见步骤）
-- Produces: `docs/Architecture.md` V0.7，Backlog 与需求文档在 Task 4 中引用其 §6.1/§6.2/§8/§9.3 章节号
+- Produces: `docs/Architecture.md` V0.7，Backlog 与需求文档在 Task 4 中引用其 §6.1/§6.2/§8/§9.2 章节号
 
 **迁移总表（旧文行号 → 新文位置）：**
 
@@ -437,7 +437,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 | ADR-001 领域包细节（L184–190） | 新 §6.3（决策指向 ADR-001） |
 | §5 数据架构（L142–148） | 新 §7 + erDiagram |
 | §5A 可靠性（L152–165） | 新 §8 |
-| ADR-008 分级调用与成本（L230–234） | 新 §9.3 |
+| ADR-008 分级调用与成本（L230–234） | 新 §9.2 |
 | §7 ADR 全部 | 已由 Task 1/2 取代；新 §10 仅留索引表 |
 | §8 Backlog 推导（L267–286） | **删除**（归属 Backlog 文档） |
 | §9 架构风险表（L290–300） | **删除**（归属需求文档 §7；zhparser 风险已进 ADR-005，备份语义进新 §9.2） |
@@ -770,7 +770,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - Modify: `docs/Product Requirements.md`（8 处）
 
 **Interfaces:**
-- Consumes: Task 3 产出的新章节号（§6.1 状态机 / §6.2 排序 / §8 可靠性 / §9.3 成本）与新 ADR 编号（006 消费端 / 007 可靠性）
+- Consumes: Task 3 产出的新章节号（§6.1 状态机 / §6.2 排序 / §8 可靠性 / §9.2 成本）与新 ADR 编号（006 消费端 / 007 可靠性）
 - Produces: 全库三份文档 + `docs/adr/` 中不存在任何旧编号、旧章节号引用
 
 - [ ] **Step 1: 修改 Backlog（7 处 Edit）**
@@ -792,13 +792,13 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 | # | old_string | new_string |
 |---|---|---|
 | 1 | `- 版本：V0.7（需求重构稿）` | `- 版本：V0.8（架构引用同步）` |
-| 2 | `- 定位：面向产品规划与产品设计的行业/竞品情报收集、核实、结构化沉淀与检索系统` | 同左 + 换行 + `- 变更：V0.7→V0.8 同步架构文档重构（ADR 编号与章节号迁移：ADR-013→ADR-006，成本模型→架构 §9.3）` |
+| 2 | `- 定位：面向产品规划与产品设计的行业/竞品情报收集、核实、结构化沉淀与检索系统` | 同左 + 换行 + `- 变更：V0.7→V0.8 同步架构文档重构（ADR 编号与章节号迁移：ADR-013→ADR-006，成本模型→架构 §9.2）` |
 | 3 | `实现细节（框架、数据结构、状态机、排序函数）见设计文档` | `实现细节（框架、数据结构、状态机、排序函数）见架构文档` |
 | 4 | `（完整语义见架构 §4.2）` | `（完整语义见架构 §6.1）` |
 | 5 | `（排序函数见架构 §4.3）` | `（排序函数见架构 §6.2）` |
 | 6 | `（部署与鉴权见架构 ADR-013）` | `（部署与鉴权见架构 ADR-006）` |
 | 7 | `（详见架构 §5A）` | `（详见架构 §8）` |
-| 8 | `（目标与公式见架构 ADR-008）` | `（目标与公式见架构 §9.3）` |
+| 8 | `（目标与公式见架构 ADR-008）` | `（目标与公式见架构 §9.2）` |
 
 - [ ] **Step 3: 全库引用清零校验**
 
@@ -835,7 +835,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 1. `ls docs/adr/` = 7 个文件；抽查 2 个确认含 问题/可选方案/决策/理由/后果 五节且无旧编号；
 2. `grep -c '```mermaid' docs/Architecture.md` ≥ 5；`grep -n "┌\|─►\|│" docs/Architecture.md` 无输出（无 ASCII 图）；十节结构完整；
 3. Task 4 Step 3 两条 grep 复跑一遍仍为空；
-4. 语义无丢失抽查——旧文（`git show HEAD~3:docs/Architecture.md` 或提交历史中 V0.6 版本）13 个 ADR 逐个确认：新 ADR 001–007 或正文 §5.3/§6.2/§9.3/§4 模块表中有其对应内容（重点核对降级项：Admiralty、快照、分级调用、人工同管道）；
+4. 语义无丢失抽查——旧文（`git show HEAD~3:docs/Architecture.md` 或提交历史中 V0.6 版本）13 个 ADR 逐个确认：新 ADR 001–007 或正文 §5.3/§6.2/§9.2/§4 模块表中有其对应内容（重点核对降级项：Admiralty、快照、分级调用、人工同管道）；
 5. `git log --oneline` 显示 4 个新提交（ADR×2、Architecture、引用同步）+ 本任务提交（如有）；
 6. 旧 §8/§9 内容确认未迁入新文（`grep -n "Sprint 0\|E1 数据底座" docs/Architecture.md` 应无输出——Spike/法务内容归属 Backlog 与需求文档）。
 
@@ -858,4 +858,4 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 - **规格覆盖**：规格 §2.1（7 个 ADR）→ Task 1/2；§2.2（降级去向）→ Task 3 迁移表；§2.3（模板）→ Task 1/2 内容 + Step 4/5 校验；§3（十节大纲 + 删两节）→ Task 3；§4（引用同步 + 版本号）→ Task 3 头部 + Task 4；§5（明确不做）→ 全局约束；§6（验收标准）→ Task 5。无缺口。
 - **占位符**：【迁移】标记是精确的复制指令（含旧行号与修改项），非 TBD；Task 3 Step 2 强制清除标记。
-- **一致性**：ADR 文件名在 Task 1/2 产出与 Task 3 §10 索引链接中逐字一致；章节号 §6.1/§6.2/§8/§9.3 在 Task 3 产出与 Task 4 引用中一致；ADR-006/007 新语义在 Backlog/PRD 修改表中与 ADR 文件标题一致。
+- **一致性**：ADR 文件名在 Task 1/2 产出与 Task 3 §10 索引链接中逐字一致；章节号 §6.1/§6.2/§8/§9.2 在 Task 3 产出与 Task 4 引用中一致；ADR-006/007 新语义在 Backlog/PRD 修改表中与 ADR 文件标题一致。
