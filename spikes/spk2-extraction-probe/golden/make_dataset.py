@@ -20,13 +20,13 @@ EVENTS: list[str] = [
 
 # 来源层级映射（Spike 简版：按信源名人工映射，锁定清单为准）
 # 依据 SPK-1 报告 §4 锁定清单（spk1-report.md）：CCMA=L2 行业权威、三一官网=L1 官方一手、
-# 铁甲网 cehome=L2 行业权威、第一工程机械网 d1cm=L3 泛媒体、KHL=L2 行业权威（观察级）。
+# 铁甲网 cehome=L2 行业权威、第一工程机械网 d1cm=L2 行业权威、KHL=L2 行业权威（观察级）。
 # 样本中未出现的锁定清单源（徐工 L1、CNIPA L1、千里马 L4 法务前不启用、lmjx 待复核）不在此列。
 LEVEL_BY_SOURCE: dict[str, str] = {
     "ccma": "L2",
     "sany": "L1",
     "cehome": "L2",
-    "d1cm": "L3",
+    "d1cm": "L2",
     "khl": "L2",
 }
 
