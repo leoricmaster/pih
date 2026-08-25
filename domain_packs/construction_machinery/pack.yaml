@@ -11,55 +11,84 @@ meta:
 # ---- 信源清单（SPK-1 §4 锁定 9 源）----
 # reliability（Admiralty 来源可靠性 A–F）：
 #   B = 实抓验证可信；C = 纸面充分未实抓；D = 条件源（反爬/法务前置）；E = 待复核
+# level（架构 §6.2）：L1 官方/主机厂、L2 权威/垂直媒体、L3 聚合、L4 弱信号
+# fetch_frequency：调度器 Sprint 消费；本 Sprint 仅落盘
 sources:
   # 主选 5 源（实抓或纸面充分）
   - id: ccma
     name: 中国工程机械工业协会
     type: html
     url: http://www.cncma.org/
+    list_url: http://www.cncma.org/col/hangyxw
     reliability: B
+    level: L2
+    fetch_frequency: daily
   - id: sany
     name: 三一集团
     type: html
     url: https://www.sanygroup.com/
+    list_url: https://www.sanygroup.com/news
     reliability: B
+    level: L1
+    fetch_frequency: daily
   - id: xcmg
     name: 徐工集团
     type: api
     url: https://www.xcmg.com/
+    list_url: https://www.xcmg.com/aboutus/news.htm
     reliability: C
+    level: L1
+    fetch_frequency: daily
   - id: cehome
     name: 铁甲网
     type: html
     url: https://www.cehome.com/
+    list_url: https://www.cehome.com/news/hangye/
     reliability: B
+    level: L2
+    fetch_frequency: daily
   - id: d1cm
     name: 第一工程机械网
     type: html
     url: https://news.d1cm.com/
+    list_url: https://news.d1cm.com/
     reliability: B
+    level: L2
+    fetch_frequency: daily
   # 观察级非主选
   - id: khl
     name: KHL Group
     type: html
     url: https://www.khl.com/
+    list_url: https://www.khl.com/sitemap-index.xml
     reliability: C
+    level: L2
+    fetch_frequency: weekly
   # 条件源（法务/反爬前置，启用前须满足条件）
   - id: qianlima
     name: 千里马招标网
     type: html
     url: https://www.qianlima.com/
+    list_url: https://www.qianlima.com/zb/
     reliability: D
+    level: L3
+    fetch_frequency: daily
   - id: cnipa_patent
     name: 国家知识产权局专利公布
     type: api
     url: https://www.cnipa.gov.cn/
+    list_url: https://www.cnipa.gov.cn/
     reliability: D
+    level: L1
+    fetch_frequency: weekly
   - id: lmjx
     name: 中国路面机械网
     type: change_monitor
     url: https://www.lmjx.net/
+    list_url: https://www.lmjx.net/
     reliability: E
+    level: L2
+    fetch_frequency: daily
 
 # ---- 监控关键词 ----
 keywords:

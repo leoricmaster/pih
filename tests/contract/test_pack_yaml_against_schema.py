@@ -56,6 +56,27 @@ def test_construction_machinery_sources_match_spk1_locked():
     assert ids == expected, f"信源集合不一致，缺/多：{expected ^ ids}"
 
 
+def test_every_source_has_level_and_list_url():
+    """Backlog S3.2.1 AC3：信源缺必填字段（层级）拒绝。契约层保证每源有 level + list_url。
+
+    Sprint 2 扩 schema 后，level/list_url 为必选；此测试防止回退。
+    """
+    pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
+    for s in pack["sources"]:
+        assert "level" in s, f"信源 {s['id']} 缺 level"
+        assert s["level"] in ("L1", "L2", "L3", "L4"), f"信源 {s['id']} level 非法：{s['level']}"
+        assert "list_url" in s, f"信源 {s['id']} 缺 list_url"
+
+
+def test_three_target_sources_have_fetch_frequency():
+    """首批接入的三源（CCMA/三一/cehome）须有 fetch_frequency（虽调度器未做，字段先落盘）。"""
+    pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
+    by_id = {s["id"]: s for s in pack["sources"]}
+    for sid in ("ccma", "sany", "cehome"):
+        assert "fetch_frequency" in by_id[sid], f"{sid} 缺 fetch_frequency"
+        assert by_id[sid]["level"] in ("L1", "L2")
+
+
 def test_event_type_enum_has_11_categories():
     """SPK-2 扩展后事件类型枚举 11 类（tag_tree.事件类型 落 8 类可见 + 其他 = 11）。
 

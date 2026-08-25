@@ -16,6 +16,10 @@ RELIABILITY_VALUES = ["A", "B", "C", "D", "E", "F"]
 CREDIBILITY_VALUES = ["1", "2", "3", "4", "5", "6"]
 # 信源类型（架构 §4 信源适配器：RSS/网页/API/变更监控）
 SOURCE_TYPES = ["rss", "html", "api", "change_monitor"]
+# 信源层级（架构 §6.2 / SPK-1 §4）：L1 官方/主机厂、L2 权威/垂直媒体、L3 聚合、L4 弱信号
+SOURCE_LEVELS = ["L1", "L2", "L3", "L4"]
+# 抓取频率（调度器 Sprint 消费，本 Sprint 仅落盘）
+FETCH_FREQUENCIES = ["hourly", "daily", "weekly"]
 
 DOMAIN_PACK_SCHEMA: dict = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -52,13 +56,19 @@ DOMAIN_PACK_SCHEMA: dict = {
             "items": {
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["id", "name", "type", "url", "reliability"],
+                "required": ["id", "name", "type", "url", "reliability", "level", "list_url"],
                 "properties": {
                     "id": {"type": "string", "minLength": 1},
                     "name": {"type": "string", "minLength": 1},
                     "type": {"type": "string", "enum": SOURCE_TYPES},
-                    "url": {"type": "string", "format": "uri"},
+                    "url": {"type": "string", "format": "uri", "description": "站点根 URL"},
+                    "list_url": {
+                        "type": "string", "format": "uri",
+                        "description": "列表页入口（采集适配器从此发现详情链接）",
+                    },
                     "reliability": {"type": "string", "enum": RELIABILITY_VALUES},
+                    "level": {"type": "string", "enum": SOURCE_LEVELS},
+                    "fetch_frequency": {"type": "string", "enum": FETCH_FREQUENCIES},
                 },
             },
         },

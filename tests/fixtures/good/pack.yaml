@@ -7,7 +7,9 @@ sources:
     name: 源1
     type: rss
     url: http://example.com/feed
+    list_url: http://example.com/list
     reliability: B
+    level: L2
 keywords:
   - 关键词1
 competitors:
