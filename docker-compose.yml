@@ -1,0 +1,55 @@
+# 工程脚手架本地环境（架构 §3 容器视图）
+# 三服务：postgres+pgvector / minio / app
+# 说明：中文分词扩展（zhparser/pg_jieba）留到 M1 全文检索 Sprint 单独验证镜像选型，
+#       本 Sprint 仅验 pgvector 扩展可用。
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pih}
+      POSTGRES_USER: ${POSTGRES_USER:-pih}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pih}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pih}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-pih}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-pih12345}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - ./minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      MINIO_ENDPOINT: minio:9000
+    volumes:
+      # dev 热重载
+      - ./src:/app/src:ro
+      - ./domain_packs:/app/domain_packs:ro
+      - ./tests:/app/tests:ro
+    command: sleep infinity

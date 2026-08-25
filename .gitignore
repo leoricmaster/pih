@@ -1,4 +1,29 @@
 .superpowers/
-spikes/.venv/
-.env
+
+# Python
 __pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# venv（spike 独立 venv 与工程 venv 均不进版本库）
+spikes/.venv/
+.venv/
+
+# 测试缓存
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 环境与密钥
+.env
+
+# Docker 卷（本地数据）
+pgdata/
+minio_data/
+
+# 编辑器
+.vscode/
+.idea/
