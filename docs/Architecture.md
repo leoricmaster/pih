@@ -78,6 +78,9 @@ flowchart TB
 | minio | 原文快照与附件 | §5.3 |
 | changedetection.io | 网页变更监控，检测到变更回调流水线 | 官方镜像自部署，不二次开发 |
 
+> **Sprint 1 实测**（2026-08-25，工程脚手架）：`pgvector/pgvector:pg16` 镜像 `CREATE EXTENSION vector` 验证通过；中文分词扩展（zhparser/pg_jieba）不含于该镜像，推迟到 M1 全文检索 Sprint 单独验证镜像选型（本 Sprint 仅验 pgvector 本体可用，与 §7"M1 规模"无矛盾）。MinIO bucket 可建、app 容器可 `import pih` 并端到端加载领域包。
+
+
 ## 4. 逻辑架构
 
 ```mermaid
