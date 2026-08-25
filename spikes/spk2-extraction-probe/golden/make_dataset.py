@@ -13,9 +13,11 @@ DEFAULT_SRC = Path(__file__).resolve().parents[2] / "spk1-source-probe" / "sampl
 DEFAULT_OUT = Path(__file__).resolve().parent / "samples.json"
 
 # 事件类型枚举（需求 §4.4；Task 6/7 试抽与评分复用同一常量）
+# SPK-2 复核阶段扩展：原"其他"占比 19/25 过泛，拆出 行业统计/行业合作/财报 三类
 EVENTS: list[str] = [
     "新品发布", "功能迭代", "专利公开", "中标落地",
-    "组织人事", "价格变动", "标准动态", "其他",
+    "组织人事", "价格变动", "标准动态",
+    "行业统计", "行业合作", "财报", "其他",
 ]
 
 # 来源层级映射（Spike 简版：按信源名人工映射，锁定清单为准）
