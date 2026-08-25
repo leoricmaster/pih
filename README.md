@@ -25,7 +25,7 @@
 | 子包 | 层 | 状态 |
 |---|---|---|
 | `domainpacks/` | 横切·配置治理 | ✅ Sprint 1 已交付（加载器+校验器+schema） |
-| `collect/` | 采集层 | 占位，后续 Sprint |
+| `collect/` | 采集层 | ✅ Sprint 2 已交付（适配器+RawItem+快照+robots；CCMA/三一/cehome 三源） |
 | `process/` | 处理层（LangGraph） | 占位，后续 Sprint |
 | `store/` | 存储层 | 占位，后续 Sprint |
 | `consume/` | 消费层 | 占位，后续 Sprint |
