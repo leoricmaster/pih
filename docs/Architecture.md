@@ -1,9 +1,9 @@
 # 产品情报中心（Product Intelligence Hub）架构设计
 
-- 版本：V0.8（Backlog 重构同步；ADR 拆分至 docs/adr/）
+- 版本：V0.9（Sprint 0 回写同步；ADR 拆分至 docs/adr/）
 - 日期：2026-08-25
-- 配套：《Product Requirements.md》V0.9、《Backlog.md》V0.8
-- 变更：V0.7→V0.8 配合 Backlog V0.8——里程碑标注改为设计预期口径（Backlog 不再承载分期）；§9.2 补 SPK-2 实测 token 值
+- 配套：《Product Requirements.md》V1.0、《Backlog.md》V0.9
+- 变更：V0.8→V0.9 Sprint 0 回写——§9.2 补 SPK-2/SPK-3 实测 token 与延迟值（大模型 2997+1729 tokens/20s，小模型与大模型同量级）；ADR-004 后果节补 SPK-3 实测结论（成功率 92%，ADR-004 维持）
 - 用途：指导 Backlog 梳理与模块设计；关键决策记录见 §10 索引
 
 ## 1. 概览
@@ -184,6 +184,8 @@ sequenceDiagram
 ```
 
 主链一条：调度器按信源频率触发采集，原始内容先落盘 inbox、原文快照存档 MinIO，经去重与粗筛后进入 LangGraph 处理链（结构化抽取 → 预评级 → 事件聚类）写入情报库，终态核实（确认/证伪）由人工操作完成并写 verification_log。
+
+> SPK-3 验证范围说明（2026-08-25）：Sprint 0 端到端验证覆盖主链的**粗筛 → 结构化抽取 → schema 校验**三段子集；去重、预评级、事件聚类、终态人工核实四段留待 M1 实施期。三段子集端到端成功率 92%（23/25），ADR-004 维持。
 
 （后续迭代）重大事件即时推送 + 汇入周报
 

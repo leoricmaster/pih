@@ -6,9 +6,9 @@
 
 | 目录 | Spike | 状态 |
 |---|---|---|
-| `spk1-source-probe/` | SPK-1 信源可抓取性验证 | 待开始 |
-| `spk2-extraction-probe/` | SPK-2 LLM 抽取准确率摸底 | 待开始 |
-| `spk3-langgraph-e2e/` | SPK-3 LangGraph 端到端验证 | 待开始 |
+| `spk1-source-probe/` | SPK-1 信源可抓取性验证 | 已完成 |
+| `spk2-extraction-probe/` | SPK-2 LLM 抽取准确率摸底 | 已完成 |
+| `spk3-langgraph-e2e/` | SPK-3 LangGraph 端到端验证 | 已完成 |
 | `_lib/` | 共享工具（robots 合规、LLM 客户端） | — |
 
 ## 纪律

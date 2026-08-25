@@ -1,8 +1,8 @@
 # 情报中心 — 产品 Backlog（需求树）
 
-- 版本：V0.8（配合《Product Requirements.md》V0.9、《Architecture.md》V0.8）
+- 版本：V0.9（配合《Product Requirements.md》V1.0、《Architecture.md》V0.9）
 - 日期：2026-08-25
-- 变更：V0.7→V0.8 重构为纯需求树——删除优先级/里程碑标注与重复视图（排序交 Sprint 规划），Story 增状态位，新增 EPIC-0（Spike）、F1.4、S1.3.2/S1.3.3、F4.4，S1.1.3 迁入 F4.4
+- 变更：V0.8→V0.9 Sprint 0 状态位更新——SPK-1/2/3 均已交付；SPK-4 仍待开发；法务确认行动项待用户现实中推进
 - **本文档定位**：需求的事实源与导读——开发前是具体的需求说明，开发后凭状态位反映实现现状
 
 **编写约定**：
