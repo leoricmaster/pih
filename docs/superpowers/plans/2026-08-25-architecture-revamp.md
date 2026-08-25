@@ -283,7 +283,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ### 方案 C：单一 PG——pgvector + PG 中文全文检索（zhparser/pg_jieba）
 
-- 优点：混合检索在单库内闭环，union/filter/rerant 在一个 SQL 内完成；不新增运维组件
+- 优点：混合检索在单库内闭环，union/filter/rerank 在一个 SQL 内完成；不新增运维组件
 - 缺点：超大规模需迁移（以检索接口抽象对冲）；中文分词扩展有安装维护成本
 
 ## 决策
@@ -302,7 +302,6 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - 检索接口必须抽象，pgvector/全文 SQL 细节不得散落业务代码。
 ```
 
-注意：上文 `rerant` 为笔误示范禁止项——实际写入时必须是 `rerank`（重排）。写入前自查。
 
 - [ ] **Step 3: 写入 ADR-006**
 
