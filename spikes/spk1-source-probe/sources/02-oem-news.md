@@ -3,7 +3,7 @@
 - URL：https://www.sanygroup.com/news ；https://www.xcmg.com/aboutus/news.htm
 - 摸底卡编号：02（一卡覆盖 2 家，均为实测）
 - 调研日期：2026-08-25
-- 调研方式：纸面（浏览器/文档查阅，不抓取）
+- 调研方式：纸面（curl 单发请求，不批量抓取）
 
 ## 摸底记录
 
@@ -21,7 +21,7 @@
 ## 证据摘录（实测）
 
 三一：
-- `robots.txt` 关键行：`Disallow: /xwzx/`、`Disallow: /mtsj/`、`Disallow: /sjzc/`（旧站目录）；无 `/news` 相关 Disallow
+- `robots.txt` 关键行：`Disallow: /xwzx/`、`Disallow: /mtsj/`、`Disallow: /sjzc/`（旧站目录）；`/news` 相关仅有 `/news/null?imageMogr2/` 窄规则（图片处理路径，不影响新闻列表/详情）
 - `/news` → 200，`<title>三一集团最新新闻_三一集团官网</title>`，351KB，含 `"/news/16476.html"`…`"/news/16563.html"` 与 `href="/news?page=0&amp;size=6"`…`page=5`
 - 列表项日期：`class="news-date">2026.08.04` 等；页面含 `__NUXT__`（Nuxt SSR 标记）
 - `/news/16563.html` → 200，`<title>中南大学党委书记安实率队走访三一集团_三一集团官网</title>`（346KB SSR 全文）

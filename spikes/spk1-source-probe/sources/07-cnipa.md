@@ -3,7 +3,7 @@
 - URL：https://www.cnipa.gov.cn/（政务门户）；专利检索 pss-system.cponline.cnipa.gov.cn；公布公告 epub.cnipa.gov.cn
 - 摸底卡编号：07
 - 调研日期：2026-08-25
-- 调研方式：纸面（浏览器/文档查阅，不抓取）
+- 调研方式：纸面（curl 单发请求，不批量抓取）
 
 ## 摸底记录
 
