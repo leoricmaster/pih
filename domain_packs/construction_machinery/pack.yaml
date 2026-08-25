@@ -1,0 +1,172 @@
+# 领域包：工程机械（第一领域）
+# 事实源依据：SPK-1 锁定信源清单（9 ≤ 10，见 spikes/spk1-source-probe/spk1-report.md §4）
+#             SPK-2 事件类型枚举 11 类 + 字段结构（见 spikes/spk2-extraction-probe/spk2-report.md）
+# 状态：Sprint 1 落盘，信源为纸面锁定值；采集适配器接入后按实测调 reliability。
+
+meta:
+  domain_id: construction_machinery
+  display_name: 工程机械
+  version: 0.1.0
+
+# ---- 信源清单（SPK-1 §4 锁定 9 源）----
+# reliability（Admiralty 来源可靠性 A–F）：
+#   B = 实抓验证可信；C = 纸面充分未实抓；D = 条件源（反爬/法务前置）；E = 待复核
+sources:
+  # 主选 5 源（实抓或纸面充分）
+  - id: ccma
+    name: 中国工程机械工业协会
+    type: html
+    url: http://www.cncma.org/
+    reliability: B
+  - id: sany
+    name: 三一集团
+    type: html
+    url: https://www.sanygroup.com/
+    reliability: B
+  - id: xcmg
+    name: 徐工集团
+    type: api
+    url: https://www.xcmg.com/
+    reliability: C
+  - id: cehome
+    name: 铁甲网
+    type: html
+    url: https://www.cehome.com/
+    reliability: B
+  - id: d1cm
+    name: 第一工程机械网
+    type: html
+    url: https://news.d1cm.com/
+    reliability: B
+  # 观察级非主选
+  - id: khl
+    name: KHL Group
+    type: html
+    url: https://www.khl.com/
+    reliability: C
+  # 条件源（法务/反爬前置，启用前须满足条件）
+  - id: qianlima
+    name: 千里马招标网
+    type: html
+    url: https://www.qianlima.com/
+    reliability: D
+  - id: cnipa_patent
+    name: 国家知识产权局专利公布
+    type: api
+    url: https://www.cnipa.gov.cn/
+    reliability: D
+  - id: lmjx
+    name: 中国路面机械网
+    type: change_monitor
+    url: https://www.lmjx.net/
+    reliability: E
+
+# ---- 监控关键词 ----
+keywords:
+  - 挖机
+  - 挖掘机
+  - 装载机
+  - 推土机
+  - 起重机
+  - 工程机械
+  - 无人化
+  - 远程遥控
+  - 电动化
+  - 进出口
+
+# ---- 竞品主体清单（主机厂）----
+competitors:
+  - id: sany
+    display_name: 三一
+    aliases:
+      - 三一重工
+      - SANY
+      - 三一集团
+  - id: xcmg
+    display_name: 徐工
+    aliases:
+      - 徐工集团
+      - XCMG
+  - id: liugong
+    display_name: 柳工
+    aliases:
+      - 柳工机械
+      - Liugong
+  - id: zoomlion
+    display_name: 中联重科
+    aliases:
+      - 中联
+      - Zoomlion
+  - id: longling
+    display_name: 龙工
+    aliases:
+      - 龙工机械
+      - LonKing
+
+# ---- 标签树 ----
+tag_tree:
+  产品类:
+    - 挖掘机械
+    - 装载机械
+    - 起重机械
+    - 路面机械
+    - 混凝土机械
+  技术特征:
+    - 电动化
+    - 无人化
+    - 远程遥控
+    - 新能源
+  市场类:
+    - 进出口
+    - 销量
+    - 市场份额
+  事件类型:
+    - 新品发布
+    - 功能迭代
+    - 中标落地
+    - 行业统计
+    - 行业合作
+    - 财报
+    - 标准动态
+    - 其他
+
+# ---- 报告模板（Sprint 1 占位，M2 报告服务 Sprint 细化）----
+report_template: |
+  # {domain} 情报周报
+  周期：{period}
+  汇总 {count} 条情报，按事件类型与主体分布如下……
+  （模板由领域包提供，渲染逻辑在 M2 报告服务实现）
+
+# ---- 抽取提示词（Sprint 1 占位，生产期按 SPK-2 结论改 few-shot + 语义评分）----
+# SPK-2 结论：结构化字段（枚举/标签）为主、自由文本为辅；评分改语义相似度。
+extraction_prompt: |
+  从工程机械情报原文抽取以下字段（SPK-2 §字段结构）：
+  - 主体：竞品主体（命中 competitors.aliases 优先）
+  - 事件类型：枚举 11 类（新品发布/功能迭代/中标落地/行业统计/行业合作/财报/标准动态/其他）
+  - 事实描述：客观事实陈述
+  - 标签：命中 tag_tree
+  - 推断与判断：分析推断（须与事实分离）
+  - 量化参数：数值参数（销量/金额/增长率等）
+  （Sprint 1 占位提示词，生产期按 SPK-2 few-shot 锚定金答案风格）
+
+# ---- 排序权重（§6.2，可选；缺省由核心代码给默认，此处显式落盘与文档一致）----
+ranking:
+  reliability_weights:
+    A: 1.0
+    B: 0.8
+    C: 0.6
+    D: 0.4
+    E: 0.2
+    F: 0.0
+  credibility_weights:
+    "1": 1.0
+    "2": 0.8
+    "3": 0.6
+    "4": 0.4
+    "5": 0.2
+    "6": 0.0
+  event_state_weights:
+    confirmed: 1.0
+    single: 0.8
+    pending: 0.5
+    refuted: 0.0
