@@ -1,8 +1,8 @@
 # 情报中心 — 产品 Backlog（需求树）
 
-- 版本：V1.0（配合《Product Requirements.md》V1.0、《Architecture.md》V0.9）
-- 日期：2026-08-25
-- 变更：V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
+- 版本：V1.1（配合《Product Requirements.md》V1.0、《Architecture.md》V0.9）
+- 日期：2026-08-26
+- 变更：V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
 - **本文档定位**：需求的事实源与导读——开发前是具体的需求说明，开发后凭状态位反映实现现状
 
 **编写约定**：
@@ -238,6 +238,8 @@ AC1: Given 一条情报待核实状态持续 7 天
 > 作为运营者，我在 repo 的 YAML 中注册信源（URL、类型、层级、频率、列表页入口），信源变更走 Git 提交；加载时自动校验必填字段，并对信源执行试抓取验证可达性，以便信源配置可信、抓得通才启用。
 
 > Sprint 2 交付：领域包 schema 扩 level/list_url/fetch_frequency 必选字段；CCMA/三一/cehome 三源适配器试抓取通过（真实抓取 6/6 集成测试绿）。原 AC2「连续失败告警」拆至 S3.2.3（调度器 Sprint 前置）。
+>
+> 补交付（2026-08-26）：`pih probe-source <id>|--all` 试抓取报告与 `pih collect <id>` 正式采集 CLI 上线；schema sources 增 `enabled` 必填 boolean，collect 门控仅运行 enabled 源（未启用即拒绝并附启用流程指引）——AC1「报告成败，成功才允许启用」的用户闭环补齐，本卡可由运营者以命令行直接验收。
 
 ```gherkin
 AC1: Given 运营者在 YAML 中新增信源并提交

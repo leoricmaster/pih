@@ -56,7 +56,9 @@ DOMAIN_PACK_SCHEMA: dict = {
             "items": {
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["id", "name", "type", "url", "reliability", "level", "list_url"],
+                "required": [
+                    "id", "name", "type", "url", "reliability", "level", "list_url", "enabled",
+                ],
                 "properties": {
                     "id": {"type": "string", "minLength": 1},
                     "name": {"type": "string", "minLength": 1},
@@ -69,6 +71,11 @@ DOMAIN_PACK_SCHEMA: dict = {
                     "reliability": {"type": "string", "enum": RELIABILITY_VALUES},
                     "level": {"type": "string", "enum": SOURCE_LEVELS},
                     "fetch_frequency": {"type": "string", "enum": FETCH_FREQUENCIES},
+                    "enabled": {
+                        "type": "boolean",
+                        "description": "试抓取（pih probe-source）通过后由运营者人工置 true；"
+                        "采集门控（collect）仅运行 enabled 源（S3.2.1 AC1「成功才允许启用」）",
+                    },
                 },
             },
         },

@@ -19,6 +19,9 @@ dependencies = [
     "langgraph>=0.2",
 ]
 
+[project.scripts]
+pih = "pih.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",

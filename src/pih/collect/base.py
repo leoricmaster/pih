@@ -24,6 +24,7 @@ class SourceConfig:
     reliability: str
     level: str
     fetch_frequency: str | None = None
+    enabled: bool = False
 
     @classmethod
     def from_dict(cls, d: dict) -> SourceConfig:
@@ -36,6 +37,7 @@ class SourceConfig:
             reliability=d["reliability"],
             level=d["level"],
             fetch_frequency=d.get("fetch_frequency"),
+            enabled=d["enabled"],
         )
 
 

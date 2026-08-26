@@ -21,7 +21,7 @@ def _minimal_valid_pack() -> dict:
             {
                 "id": "s1", "name": "源1", "type": "rss",
                 "url": "http://example.com/feed", "list_url": "http://example.com/list",
-                "reliability": "B", "level": "L2",
+                "reliability": "B", "level": "L2", "enabled": True,
             },
         ],
         "keywords": ["关键词1"],
@@ -92,10 +92,17 @@ def test_missing_meta_subfield_rejected():
     _assert_rejected(pack)
 
 
-@pytest.mark.parametrize("field", ["reliability", "level", "list_url"])
+@pytest.mark.parametrize("field", ["reliability", "level", "list_url", "enabled"])
 def test_source_missing_required_field_rejected(field: str):
     pack = _minimal_valid_pack()
     del pack["sources"][0][field]
+    _assert_rejected(pack)
+
+
+def test_source_bad_enabled_type_rejected():
+    """enabled 非 boolean（如字符串 "true"）被拒。"""
+    pack = _minimal_valid_pack()
+    pack["sources"][0]["enabled"] = "true"
     _assert_rejected(pack)
 
 

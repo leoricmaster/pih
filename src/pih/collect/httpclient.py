@@ -26,6 +26,9 @@ class HttpClient:
         gap_seconds: 同源请求最小间隔（默认 2s；KHL 类 Crawl-Delay 站点传 10）
         timeout: 单请求超时秒
         max_retries: 最大重试次数（指数退避：1s, 2s, 4s）
+        trust_env: 是否继承环境代理变量（默认 False——目标站点国内直连，
+            且默认 True 会让行为依赖 shell 环境，破坏测试密闭性；
+            需要走代理的场景由 CLI --proxy-env 显式开启）
     """
 
     def __init__(
@@ -33,6 +36,7 @@ class HttpClient:
         gap_seconds: float = DEFAULT_GAP,
         timeout: float = DEFAULT_TIMEOUT,
         max_retries: int = MAX_RETRIES,
+        trust_env: bool = False,
     ) -> None:
         self.gap_seconds = gap_seconds
         self.timeout = timeout
@@ -41,6 +45,7 @@ class HttpClient:
             headers={"User-Agent": UA},
             timeout=timeout,
             follow_redirects=True,
+            trust_env=trust_env,
         )
         self._last_request_at: dict[str, float] = {}  # host → 上次请求时间
 

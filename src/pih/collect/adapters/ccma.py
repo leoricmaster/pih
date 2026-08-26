@@ -39,7 +39,7 @@ class CcmaAdapter(HtmlAdapter):
         return title.text(strip=True) if title else ""
 
     def is_valid_page(self, html: str) -> bool:
-        """软 200 判定：真实详情页含 /article/\d+ 自链接 + 非空 title。"""
+        r"""软 200 判定：真实详情页含 /article/\d+ 自链接 + 非空 title。"""
         if not super().is_valid_page(html):
             return False
         return bool(DETAIL_RE.search(html))
