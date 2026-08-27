@@ -1,8 +1,8 @@
 # 情报中心 — 产品 Backlog（需求树）
 
-- 版本：V1.2（配合《Product Requirements.md》V1.0、《Architecture.md》V0.9）
-- 日期：2026-08-26
-- 变更：V1.1→V1.2 Sprint 3 交付——新增 S4.5「情报库落库与基础检索」（已交付）：PG + alembic 迁移 + IntelRepository + `pih query` CLI；source/intel_item 两表落地，content_sha1 幂等约束（ADR-007）；原 S4.1.1 AC1「无快照不入库」备注跨 Sprint 满足（Sprint 2 快照 + Sprint 3 入库门控）。V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
+- 版本：V1.3（配合《Product Requirements.md》V1.0、《Architecture.md》V0.9）
+- 日期：2026-08-27
+- 变更：V1.2→V1.3 Sprint 4 交付——process 层上线：S4.1.2「相关性粗筛」已交付（小模型二分类，粗筛日志=行级 filtered_out 标记，SQL 可审计）；S4.2.1「自动结构化抽取」已交付（LangGraph 三节点图 粗筛→抽取→校验，intel_item 增 11 结构化列 + 迁移 0002，`pih process` CLI；标签可为空数组口径见卡内备注）；S4.2.2 备注拆分——AC1 预评级简版 Sprint 4 满足（Admiralty=reliability×可信度），AC2/AC3 待事件聚类 Sprint；S1.1.1 备注——CLI 子集已交付（`pih query --subject/--event-type/--tag` 结构化筛选），Web/API 出口待消费层 Sprint。V1.1→V1.2 Sprint 3 交付——新增 S4.5「情报库落库与基础检索」（已交付）：PG + alembic 迁移 + IntelRepository + `pih query` CLI；source/intel_item 两表落地，content_sha1 幂等约束（ADR-007）；原 S4.1.1 AC1「无快照不入库」备注跨 Sprint 满足（Sprint 2 快照 + Sprint 3 入库门控）。V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
 - **本文档定位**：需求的事实源与导读——开发前是具体的需求说明，开发后凭状态位反映实现现状
 
 **编写约定**：
@@ -64,6 +64,8 @@
 #### S1.1.1（待开发）多条件组合筛选
 
 > 作为消费者，我想按 主体/事件类型/时间范围/标签/置信度/事件核实状态 组合筛选情报列表，以便快速定位某类信息。
+
+> Sprint 4 备注：CLI 子集已交付——`pih query --subject/--event-type/--tag`（JSONB containment）+ `--source-id/--before` 结构化筛选与列表展示（process_status/event_type/admiralty）；置信度（Admiralty）筛选与事件核实状态筛选待事件/消费层字段齐备后补；Web/API 出口待消费层 Sprint。
 
 ```gherkin
 AC1: Given 情报库已有 ≥60 条情报
@@ -315,9 +317,11 @@ AC3: Given 抓取失败（网络/反爬）
      And 原始内容先落盘 inbox，处理失败不丢失、可重放
 ```
 
-#### S4.1.2（待开发）相关性粗筛
+#### S4.1.2（已交付）相关性粗筛
 
 > 作为消费者，系统只把与领域相关的内容送入后续处理，以便情报库不被噪音稀释。
+
+> Sprint 4 交付：小模型（tier=small）二分类粗筛，LangGraph 图首节点；「粗筛日志」以行级标记实现——判无关的条目 `process_status='filtered_out'` 保留在 intel_item（不物理删除），SQL 可审计（架构 §8 不丢弃口径）；粗筛 API 失败按灰条目保留走抽取（SPK-3 结论）。AC1「关键词 +」部分未做——LLM 二分类前置无关键词层，漏报审计靠行级标记 + LLM env 关闭时可全量重跑。
 
 ```gherkin
 AC1: Given 一条新抓取内容
@@ -327,9 +331,13 @@ AC1: Given 一条新抓取内容
 
 ### F4.2 自动核实与结构化
 
-#### S4.2.1（待开发）自动结构化抽取
+#### S4.2.1（已交付）自动结构化抽取
 
 > 作为消费者，每条入库情报都按 schema 填好主体、事件类型、量化参数、标签，以便我能结构化筛选而非读原文。
+
+> Sprint 4 交付：LangGraph 三节点图（粗筛→抽取→校验）+ `pih process` 批处理 CLI；领域包 v0.2.0 单一事实源（event_types 枚举 + 标签树 + 提示词占位符加载期校验）；intel_item 增 11 结构化列（迁移 0002，tags JSONB + GIN）；校验重问 ≤3 轮，API 重试独立计数（SPK-3 遗留契约）。
+>
+> 口径备注：AC1「标签均非空」按字段存在 + 合法性满足——标签可为空数组（`[]`），行业统计/组织人事类情报常无技术标签，强制非空会制造假标签；主体/事件类型/事实描述仍严格非空。AC2 满足：重问耗尽 → `process_status='needs_manual'`，条目保留可查（集成测试 AC2 验证）。
 
 ```gherkin
 AC1: Given 一条通过粗筛的内容
@@ -344,6 +352,8 @@ AC2: Given LLM 返回的结构化输出未通过 schema 校验
 #### S4.2.2（待开发）自动预评级与交叉印证
 
 > 作为消费者，每条情报自动带来源层级与 Admiralty 预评级，同一事件的多源报道自动归并，以便我一眼看出可信度。
+
+> Sprint 4 备注：AC1 已以简版满足——来源层级继承 source 表 reliability（collect 期 sync），Admiralty = reliability × 信息可信度（抽取 prompt 输出 1–6 枚举），extracted 条目 `admiralty_code` 非空（如 B2）；「核实引擎处理完成」中的核实流程未做。AC2/AC3（事件聚类/双独立信源跃迁/事件表）待事件聚类 Sprint（先例：S4.1.1 AC1 跨 Sprint 备注）。
 
 ```gherkin
 AC1: Given 一条新情报

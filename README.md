@@ -4,7 +4,7 @@
 
 - 需求：`docs/Product Requirements.md`（V1.0）
 - 架构：`docs/Architecture.md`（V0.9）
-- Backlog：`docs/Backlog.md`（V0.9）
+- Backlog：`docs/Backlog.md`（V1.3）
 - ADR：`docs/adr/`
 
 ## 仓库布局
@@ -26,7 +26,7 @@
 |---|---|---|
 | `domainpacks/` | 横切·配置治理 | ✅ Sprint 1 已交付（加载器+校验器+schema） |
 | `collect/` | 采集层 | ✅ Sprint 2 已交付（适配器+RawItem+快照+robots；CCMA/三一/cehome 三源）＋ probe/collect CLI 与 enabled 门控（S3.2.1 补交付） |
-| `process/` | 处理层（LangGraph） | 占位，后续 Sprint |
+| `process/` | 处理层（LangGraph） | ✅ Sprint 4 已交付（LLM 客户端+粗筛→抽取→校验三节点图+ProcessRunner+process CLI；领域包 v0.2.0 枚举单一事实源） |
 | `store/` | 存储层 | ✅ Sprint 3 已交付（PG 落库 + alembic 迁移 + IntelRepository + query CLI；source/intel_item 两表） |
 | `consume/` | 消费层 | 占位，后续 Sprint |
 | `core/` | 五元模型命名空间 | 占位，后续 Sprint |
@@ -63,12 +63,21 @@ uv run pih probe-source --all            # 领域包全部信源逐一试抓取
 uv run pih probe-source khl --no-snapshot  # 不落快照的快速可达性验证
 uv run pih collect ccma                  # 正式采集 + 默认落库（Sprint 3）
 uv run pih collect ccma --no-ingest      # 不落库，仅 stdout 摘要（Sprint 2 行为）
+uv run pih process --source-id=ccma --limit=5   # 批处理：粗筛→抽取→校验，写回结构化字段（Sprint 4）
 uv run pih query --source-id=ccma --limit=10   # 查询库中按信源最近入库
-uv run pih query --id=42                      # 单条详情
+uv run pih query --event-type=新品发布          # 按事件类型筛选（结构化，Sprint 4）
+uv run pih query --subject=三一 --tag=电动化    # 按主体/标签筛选（JSONB containment）
+uv run pih query --id=42                      # 单条详情（含 Admiralty 与结构化字段）
 ```
 
 `collect` 输出末尾统计：`产出 N 条 RawItem → 入库 X 新增 / Y 幂等跳过 / Z 失败`
 （content_sha1 唯一约束保障重复抓取不产生重复行，ADR-007）。
+
+`process` 需在 `.env` 配置 `PIH_LLM_*` 四变量（OpenAI 兼容端点 + 大小模型名，
+见 `.env.example`）；输出逐条明细 + 汇总行（`处理 N 条 → 抽取成功 X / 粗筛丢弃
+Y / 待人工 Z / 失败 W`）+ token 用量。抽取成功条目带 Admiralty 码（来源可靠性
+×信息可信度，如 B2），判无关条目行级标记 `filtered_out` 保留可审计，校验失败
+降级 `needs_manual` 不丢弃（架构 §8）。
 
 退出码：0 成功 / 1 抓取失败或门控拒绝 / 2 用法或环境错误。
 
