@@ -78,15 +78,35 @@ def test_three_target_sources_have_fetch_frequency():
 
 
 def test_event_type_enum_has_11_categories():
-    """SPK-2 扩展后事件类型枚举 11 类（tag_tree.事件类型 落 8 类可见 + 其他 = 11）。
+    """事件类型枚举 11 类（SPK-2 golden EVENTS 迁移至 event_types 节，Sprint 4）。
 
-    需求 §4.4 枚举 11 类：新品发布/功能迭代/中标落地/行业统计/行业合作/
-    财报/标准动态/其他（本 Sprint pack 显式落 8 类 + 其他；SPK-2 已验 11 类全集）。
+    枚举单一事实源从 spike golden/make_dataset.py 移入领域包配置；
+    「其他」为兜底类（粗筛漏网/领域边缘内容归此，不丢弃）。
     """
     pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
-    event_types = pack["tag_tree"]["事件类型"]
-    required = {
-        "新品发布", "功能迭代", "中标落地", "行业统计",
-        "行业合作", "财报", "标准动态", "其他",
+    event_types = pack["event_types"]
+    expected = {
+        "新品发布", "功能迭代", "专利公开", "中标落地", "组织人事",
+        "价格变动", "标准动态", "行业统计", "行业合作", "财报", "其他",
     }
-    assert required.issubset(set(event_types))
+    assert set(event_types) == expected, f"枚举不一致，缺/多：{expected ^ set(event_types)}"
+
+
+def test_tag_tree_no_longer_carries_event_types():
+    """Sprint 4 修正：tag_tree 不再含「事件类型」子树（曾与 event_types 重复且口径过时 8 类）。"""
+    pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
+    assert "事件类型" not in pack["tag_tree"]
+
+
+def test_extraction_prompt_has_all_placeholders():
+    """D5：extraction_prompt 含三个占位符 token（加载即校验，此处契约级回归）。"""
+    pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
+    prompt = pack["extraction_prompt"]
+    for token in ("<事件类型>", "<标签树>", "<主体清单>"):
+        assert token in prompt, f"提示词缺占位符 {token}"
+
+
+def test_prompt_mentions_credibility_rating():
+    """S4.2.2 AC1：提示词含信息可信度评级（Admiralty 1–6）输出键。"""
+    pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
+    assert "信息可信度" in pack["extraction_prompt"]

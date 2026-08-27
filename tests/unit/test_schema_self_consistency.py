@@ -27,8 +27,9 @@ def _minimal_valid_pack() -> dict:
         "keywords": ["关键词1"],
         "competitors": [{"id": "c1", "display_name": "竞品1"}],
         "tag_tree": {"产品类": ["挖掘机械"]},
+        "event_types": ["新品发布", "其他"],
         "report_template": "占位模板",
-        "extraction_prompt": "占位提示词",
+        "extraction_prompt": "占位提示词 <事件类型> <标签树> <主体清单>",
     }
 
 
@@ -77,7 +78,7 @@ class TestSchemaIntegrity:
     "field",
     [
         "meta", "sources", "keywords", "competitors",
-        "tag_tree", "report_template", "extraction_prompt",
+        "tag_tree", "event_types", "report_template", "extraction_prompt",
     ],
 )
 def test_missing_required_field_rejected(field: str):
@@ -144,4 +145,14 @@ class TestMinItemsEnforced:
     def test_empty_tag_tree_rejected(self):
         pack = _minimal_valid_pack()
         pack["tag_tree"] = {}
+        _assert_rejected(pack)
+
+    def test_empty_event_types_rejected(self):
+        pack = _minimal_valid_pack()
+        pack["event_types"] = []
+        _assert_rejected(pack)
+
+    def test_duplicate_event_types_rejected(self):
+        pack = _minimal_valid_pack()
+        pack["event_types"] = ["新品发布", "新品发布"]
         _assert_rejected(pack)

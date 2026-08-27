@@ -49,3 +49,53 @@ class TestUsageErrors:
         # 用 --no-ingest 跳过 PG 连接（单元测试不依赖 DB）
         assert main(["collect", "ccma", "--no-ingest"]) == 1
         assert "暂无特化适配器" in capsys.readouterr().err
+
+
+class TestProcessUsageErrors:
+    def _clear_llm_env(self, monkeypatch):
+        for var in ("PIH_LLM_BASE_URL", "PIH_LLM_API_KEY",
+                    "PIH_LLM_LARGE_MODEL", "PIH_LLM_SMALL_MODEL"):
+            monkeypatch.setenv(var, "")
+        monkeypatch.setattr("pih.cli.get_pool", lambda: None)  # 跳过 PG 连接
+
+    def test_missing_llm_env_exits_usage(self, capsys, monkeypatch):
+        """AC8：LLM env 缺失 → 退出码 2 + 配置指引，不产生半写状态。"""
+        self._clear_llm_env(monkeypatch)
+        assert main(["process"]) == 2
+        err = capsys.readouterr().err
+        assert "PIH_LLM" in err
+        assert ".env" in err
+
+    def test_unknown_source_id_exits_usage(self, capsys, monkeypatch):
+        """信源 id 未知 → 退出码 2（LLM env 齐备才到达该校验）。"""
+        for var in ("PIH_LLM_BASE_URL", "PIH_LLM_API_KEY",
+                    "PIH_LLM_LARGE_MODEL", "PIH_LLM_SMALL_MODEL"):
+            monkeypatch.setenv(var, "x")
+        monkeypatch.setattr("pih.cli.get_pool", lambda: None)
+        assert main(["process", "--source-id=no-such"]) == 2
+        assert "未知信源 id" in capsys.readouterr().err
+
+
+class TestQueryUsageErrors:
+    def test_requires_id_or_filter(self, capsys):
+        assert main(["query"]) == 2
+        assert "筛选条件" in capsys.readouterr().err
+
+    def test_structured_filters_accepted_without_source_id(self, capsys, monkeypatch):
+        """Sprint 4：--event-type 等结构化条件可独立使用（不再强制 --source-id）。
+
+        只验参数解析层——list_by_filter 之前的校验不再拒绝；
+        mock pool + repository 返回空列表，验退出码 0。
+        """
+        from unittest.mock import MagicMock
+
+        repo = MagicMock()
+        repo.list_by_filter.return_value = []
+        monkeypatch.setattr("pih.cli.get_pool", lambda: None)
+        monkeypatch.setattr("pih.cli.IntelRepository", lambda pool: repo)
+        monkeypatch.setattr("pih.cli.close_pool", lambda: None)
+        assert main(["query", "--event-type=新品发布"]) == 0
+        repo.list_by_filter.assert_called_once_with(
+            subject=None, event_type="新品发布", tag=None,
+            source_id=None, limit=10,
+        )

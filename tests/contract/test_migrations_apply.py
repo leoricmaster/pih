@@ -1,4 +1,4 @@
-"""契约测试：alembic 迁移链可正反向干净跑通（Sprint 3 T1/T2）。
+"""契约测试：alembic 迁移链可正反向干净跑通（Sprint 3 T1/T2 + Sprint 4 T3）。
 
 需 docker compose up（postgres）。@pytest.mark.integration。
 - upgrade head → current 指向最新版本
@@ -6,6 +6,8 @@
 - 重复 upgrade head 幂等（不报错）
 - AC6：intel_item.content_sha1 有 UNIQUE；source_id 有 FK；event_id 字段存在但无 FK
 - AC7：downgrade base 后两张表均消失
+- Sprint 4 AC7：0002 加列齐全，process_status 默认 pending，GIN 索引在；
+  downgrade 0001 后新列全部消失
 """
 from __future__ import annotations
 
@@ -104,4 +106,64 @@ def test_ac7_downgrade_base_drops_tables():
         "WHERE table_schema = 'public' AND table_name IN ('source', 'intel_item')"
     )
     assert rows == [], f"downgrade 后仍存在表：{rows}"
+
+
+PROCESS_COLUMNS = [
+    "subject", "event_type", "facts", "inferences", "tags", "quant_params",
+    "admiralty_code", "process_status", "process_error", "process_meta",
+    "processed_at",
+]
+
+
+def test_sprint4_ac7_process_columns_exist():
+    """0002：结构化与治理列齐全，process_status 非空默认 pending。"""
+    rows = _q(
+        "SELECT column_name, column_default, is_nullable FROM information_schema.columns "
+        "WHERE table_name = 'intel_item'"
+    )
+    cols = {r[0]: (r[1], r[2]) for r in rows}
+    for c in PROCESS_COLUMNS:
+        assert c in cols, f"缺列 {c}"
+    assert "'pending'" in (cols["process_status"][0] or "")
+    assert cols["process_status"][1] == "NO"
+
+
+def test_sprint4_process_indexes_exist():
+    """0002：process_status / event_type B-tree + tags GIN 三索引。"""
+    rows = _q(
+        "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'intel_item'"
+    )
+    defs = {r[0]: r[1] for r in rows}
+    assert "idx_intel_item_process_status" in defs
+    assert "idx_intel_item_event_type" in defs
+    assert "idx_intel_item_tags" in defs
+    assert "using gin" in defs["idx_intel_item_tags"].lower()
+
+
+def test_sprint4_existing_rows_get_pending_default():
+    """存量行（0001 时代入库）upgrade 0002 后自动 pending，可被 pih process 处理。"""
+    with psycopg.connect(PG_DSN) as conn, conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO source (id, name, domain_id, url, list_url, level, reliability, enabled) "
+            "VALUES ('ccma', '测', 'd', 'http://x/', 'http://x/l', 'L2', 'B', true)"
+        )
+        cur.execute(
+            "INSERT INTO intel_item (source_id, url, title, list_url, fetched_at, "
+            "http_status, snapshot_id, content_sha1, raw_html) "
+            "VALUES ('ccma', 'http://x/1', '旧标题', 'http://x/l', NOW(), 200, "
+            "'sha-old-1', 'sha-old-1', '<html></html>')"
+        )
+    rows = _q("SELECT process_status FROM intel_item WHERE content_sha1 = 'sha-old-1'")
+    assert rows == [("pending",)]
+
+
+def test_sprint4_downgrade_0001_drops_process_columns():
+    """downgrade 到 0001：新列全部消失（迁移可逆，逐级不依赖表删除）。"""
+    _run(["downgrade", "0001"])
+    rows = _q(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'intel_item'"
+    )
+    cols = {r[0] for r in rows}
+    assert not (cols & set(PROCESS_COLUMNS)), f"downgrade 后仍存在列：{cols & set(PROCESS_COLUMNS)}"
 

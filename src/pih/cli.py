@@ -1,12 +1,14 @@
-"""PIH 运营者 CLI（Backlog S3.2.1 用户闭环 + Sprint 3 store 层落库与查询）。
+"""PIH 运营者 CLI（S3.2.1 用户闭环 + Sprint 3 store 落库查询 + Sprint 4 process 批处理）。
 
 命令：
   pih probe-source <id> | --all   试抓取验证（robots→列表→详情→快照），产出成败报告
   pih collect <id>                正式采集（enabled 门控）+ 默认落库（--no-ingest 回退）
-  pih query --source-id=<id>      查询库中情报（Sprint 3 T5）
+  pih process [--source-id=<id>]  批处理 pending 条目：粗筛→抽取→校验，写回结构化字段
+  pih query [筛选条件]            查询库中情报（--id 详情 / --source-id/--subject/
+                                  --event-type/--tag 结构化筛选，Sprint 4）
 
 退出码：0 成功 / 1 抓取失败或门控拒绝 / 2 用法或环境错误。
-环境：从 cwd 的 .env 读取 MinIO 与 PG 凭据（python-dotenv）。
+环境：从 cwd 的 .env 读取 MinIO、PG 与 LLM 凭据（python-dotenv）。
 """
 from __future__ import annotations
 
@@ -27,6 +29,8 @@ from pih.collect.run import SourceDisabledError, collect_source
 from pih.collect.snapshot import BUCKET, SnapshotStore
 from pih.domainpacks.errors import LoadError
 from pih.domainpacks.loader import DEFAULT_PACK_DIR, load
+from pih.process.llm import LLMConfigError
+from pih.process.run import ProcessRunner
 from pih.store.db import close_pool, get_pool
 from pih.store.repository import IntelRepository, SaveOutcome
 from pih.store.source_sync import sync_sources
@@ -76,17 +80,28 @@ def _build_parser() -> argparse.ArgumentParser:
 
     qp = sub.add_parser(
         "query",
-        help="查询情报库（Sprint 3 T5：按信源列出最近入库 / 单条详情）",
+        help="查询情报库（Sprint 4：结构化筛选；--id 单条详情）",
     )
     qp.add_argument("--source-id", default=None, help="按信源过滤")
+    qp.add_argument("--subject", default=None, help="按主体过滤（精确匹配，Sprint 4）")
+    qp.add_argument("--event-type", default=None, help="按事件类型过滤（精确匹配，Sprint 4）")
+    qp.add_argument("--tag", default=None, help="按标签过滤（JSONB containment，Sprint 4）")
     qp.add_argument("--limit", type=int, default=10, help="返回条数上限（默认 10）")
     qp.add_argument(
         "--before",
         default=None,
-        help="只返回 fetched_at 早于此时间的条目（ISO8601，如 2026-08-25T00:00:00+00:00）",
+        help="只返回 fetched_at 早于此时间的条目（ISO8601；仅与 --source-id 组合生效）",
     )
     qp.add_argument("--id", type=int, default=None, help="按 intel_item.id 查单条详情")
     qp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
+
+    prp = sub.add_parser(
+        "process",
+        help="批处理 pending 条目：粗筛→抽取→校验（LangGraph），写回结构化字段与状态（Sprint 4）",
+    )
+    prp.add_argument("--source-id", default=None, help="仅处理该信源的 pending 条目")
+    prp.add_argument("--limit", type=int, default=20, help="单次处理条数上限（默认 20）")
+    prp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
 
     return parser
 
@@ -253,8 +268,10 @@ def _cmd_collect(args: argparse.Namespace) -> int:
 
 
 def _cmd_query(args: argparse.Namespace) -> int:
-    if args.id is None and args.source_id is None:
-        print("须指定 --id 或 --source-id 之一", file=sys.stderr)
+    structured = [a for a in (args.subject, args.event_type, args.tag) if a]
+    if args.id is None and args.source_id is None and not structured:
+        print("须指定 --id 或筛选条件（--source-id/--subject/--event-type/--tag）之一",
+              file=sys.stderr)
         return EXIT_USAGE
     try:
         pool = get_pool()
@@ -271,24 +288,80 @@ def _cmd_query(args: argparse.Namespace) -> int:
             _print_record_detail(rec)
             return EXIT_OK
 
-        before = None
-        if args.before:
-            try:
-                before = datetime.fromisoformat(args.before)
-            except ValueError as exc:
-                print(f"✗ --before 解析失败：{exc}", file=sys.stderr)
-                return EXIT_USAGE
-        records = repo.list_by_source(args.source_id, limit=args.limit, before=before)
-        print(f"== 查询：source_id={args.source_id} limit={args.limit} ==")
+        if structured:
+            records = repo.list_by_filter(
+                subject=args.subject, event_type=args.event_type, tag=args.tag,
+                source_id=args.source_id, limit=args.limit,
+            )
+            conds = "、".join(
+                f"{k}={v}" for k, v in (
+                    ("subject", args.subject), ("event_type", args.event_type),
+                    ("tag", args.tag), ("source_id", args.source_id),
+                ) if v
+            )
+            print(f"== 查询：{conds} limit={args.limit} ==")
+        else:
+            before = None
+            if args.before:
+                try:
+                    before = datetime.fromisoformat(args.before)
+                except ValueError as exc:
+                    print(f"✗ --before 解析失败：{exc}", file=sys.stderr)
+                    return EXIT_USAGE
+            records = repo.list_by_source(args.source_id, limit=args.limit, before=before)
+            print(f"== 查询：source_id={args.source_id} limit={args.limit} ==")
         if not records:
-            print("（无结果）")
+            print("（无结果）——可放宽条件（如去掉 --tag 或换 --event-type）")
         for r in records:
             print(
                 f"  [{r.id}] {r.fetched_at:%Y-%m-%d %H:%M}  "
-                f"[{r.snapshot_id[:12]}…] {r.title}"
+                f"[{r.process_status or 'pending'}"
+                f"{f'/{r.event_type}' if r.event_type else ''}"
+                f"{f'/{r.admiralty_code}' if r.admiralty_code else ''}] {r.title}"
             )
         print(f"共 {len(records)} 条")
         return EXIT_OK
+    finally:
+        close_pool()
+
+
+def _cmd_process(args: argparse.Namespace) -> int:
+    path = Path(args.pack) if args.pack else _default_pack()
+    try:
+        pack = load(path)
+    except LoadError as exc:
+        print(f"领域包加载失败：{exc}", file=sys.stderr)
+        return EXIT_USAGE
+
+    try:
+        pool = get_pool()
+    except RuntimeError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        repo = IntelRepository(pool)
+        # 配置校验先于取条目：LLM env 缺失不产生半写状态（AC8）
+        runner = ProcessRunner(repo, pack)
+    except LLMConfigError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return EXIT_USAGE
+
+    try:
+        if args.source_id:
+            known = {s["id"] for s in pack["sources"]}
+            if args.source_id not in known:
+                print(
+                    f"未知信源 id：{args.source_id}（可用：{', '.join(sorted(known))}）",
+                    file=sys.stderr,
+                )
+                return EXIT_USAGE
+        stats = runner.run(source_id=args.source_id, limit=args.limit)
+        print(f"== 处理：source_id={args.source_id or '全部'} limit={args.limit} ==")
+        for line in stats.details:
+            print(f"  {line}")
+        print(stats.summary_line())
+        print(stats.token_line())
+        return EXIT_OK if stats.failed == 0 else EXIT_FAILED
     finally:
         close_pool()
 
@@ -308,6 +381,20 @@ def _print_record_detail(rec) -> None:
     print(f"内容指纹  : {rec.content_sha1}")
     print(f"入库时间  : {rec.created_at:%Y-%m-%d %H:%M:%S}")
     print(f"事件 ID   : {rec.event_id or '（未关联事件）'}")
+    # ---- Sprint 4 结构化字段（未处理条目仅显示状态）----
+    print(f"处理状态  : {rec.process_status or 'pending'}"
+          + (f"（{rec.process_error}）" if rec.process_error else ""))
+    if rec.subject is not None:
+        print(f"主体      : {rec.subject}")
+        print(f"事件类型  : {rec.event_type}")
+        print(f"事实描述  : {rec.facts}")
+        print(f"推断与判断: {rec.inferences or '（无）'}")
+        print(f"标签      : {'、'.join(rec.tags) if rec.tags else '（无）'}")
+        quant = "；".join(f"{k}={v}" for k, v in (rec.quant_params or {}).items())
+        print(f"量化参数  : {quant or '（无）'}")
+        print(f"Admiralty : {rec.admiralty_code}")
+    if rec.processed_at is not None:
+        print(f"处理时间  : {rec.processed_at:%Y-%m-%d %H:%M:%S}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -318,6 +405,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_probe(args)
         if args.command == "query":
             return _cmd_query(args)
+        if args.command == "process":
+            return _cmd_process(args)
         return _cmd_collect(args)
     except LoadError as exc:
         print(f"领域包加载失败：{exc}", file=sys.stderr)

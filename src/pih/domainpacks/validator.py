@@ -67,4 +67,30 @@ def validate(pack: dict) -> ValidationResult:
     validator = jsonschema.Draft202012Validator(DOMAIN_PACK_SCHEMA)
     errors = sorted(validator.iter_errors(pack), key=lambda e: list(e.absolute_path))
     issues = [_to_issue(e) for e in errors]
+    issues.extend(_check_prompt_placeholders(pack))
     return ValidationResult(ok=len(issues) == 0, issues=issues)
+
+
+# 抽取提示词必含的占位符 token（Sprint 4 D5）：process 层注入领域清单，
+# 枚举/标签树/主体清单的单一事实源是领域包各节，prompt 不重复维护清单。
+PROMPT_PLACEHOLDERS = ("<事件类型>", "<标签树>", "<主体清单>")
+
+
+def _check_prompt_placeholders(pack: dict) -> list[ValidationIssue]:
+    """语义检查：extraction_prompt 须含全部占位符 token（D5）。
+
+    JSON Schema 无子串包含校验，放校验器做；仅在 prompt 是字符串时检查
+    （类型错误已由 schema 报出，不重复报）。
+    """
+    prompt = pack.get("extraction_prompt")
+    if not isinstance(prompt, str):
+        return []
+    missing = [t for t in PROMPT_PLACEHOLDERS if t not in prompt]
+    if not missing:
+        return []
+    return [
+        ValidationIssue(
+            path="extraction_prompt",
+            message=f"缺占位符 {', '.join(missing)}（process 层注入领域清单，须保留 token）",
+        )
+    ]

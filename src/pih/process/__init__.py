@@ -1,13 +1,16 @@
-"""处理层·LangGraph 编排（架构 §4 PROCESS）。
+"""处理层·LangGraph 编排（架构 §4 PROCESS，Sprint 4 交付第一期）。
 
-模块职责（后续 Sprint 实现，本 Sprint 仅占位）：
-- 核实引擎：来源分级、Admiralty 评级、事实/推断分离；verify(item)→IntelItem(预核实)
-- 结构化抽取器：按 schema 抽取主体/事件/参数/标签；extract(item, pack)→IntelItem
-- 事件聚类器：同事件多源聚类，驱动交叉印证；cluster(item)→event_id
-- 时效管理器：有效期计算、过期降权、复核提醒
+模块：
+- llm.py        OpenAI 兼容客户端（trust_env=False / tier 路由 / 线性退避重试）
+- textprep.py   raw_html → 剥标签纯文本 + 截断（spike strip_html 口径）
+- extraction.py 抽取模型 + validate_pred（7 键 / 枚举 / 标签树 / 可信度校验）
+- graph.py      三节点图：粗筛→抽取→校验（SPK-3 工程化，领域包注入）
+- run.py        ProcessRunner：pending 批处理 + Admiralty 拼装 + 统计
 
-Sprint 0 设计输入（spike 遗留 Minor 沉淀为此层契约）：
-- 重试计数口径混计 → 重试计数须区分"schema 补问"与"真正重试"（ADR-007 范畴）
-- 评分口径改语义相似度 → SPK-2 发现字符串相等太严，生产期改语义相似度
-- 异常分支 state 缺 text → 流水线状态机须保证 text 字段始终在场
+Sprint 0 spike 遗留契约的落实情况（原占位说明沉淀的三条）：
+- 重试计数区分 schema 补问（validate_rounds）与 API 重试（api_retries）✅；
+- 评分口径改语义相似度——留提示词迭代（领域包版本化），非工程化范畴；
+- 流水线状态机保证 text 字段始终在场（Runner 构态契约 + 单测）✅。
+
+后续 Sprint：事件聚类器 / event 表 / verification_log / 时效管理器。
 """

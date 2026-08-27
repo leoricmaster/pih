@@ -29,7 +29,7 @@ DOMAIN_PACK_SCHEMA: dict = {
     "additionalProperties": False,
     "required": [
         "meta", "sources", "keywords", "competitors",
-        "tag_tree", "report_template", "extraction_prompt",
+        "tag_tree", "event_types", "report_template", "extraction_prompt",
     ],
     "properties": {
         "meta": {
@@ -111,13 +111,22 @@ DOMAIN_PACK_SCHEMA: dict = {
                 "minItems": 1,
             },
         },
+        "event_types": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": True,
+            "items": {"type": "string", "minLength": 1},
+            "description": "事件类型枚举（抽取输出的合法值域）；"
+            "含兜底类（如「其他」）以便与领域无关内容归类",
+        },
         "report_template": {
             "type": "string", "minLength": 1,
             "description": "报告模板，本 Sprint 占位字符串",
         },
         "extraction_prompt": {
             "type": "string", "minLength": 1,
-            "description": "抽取提示词，本 Sprint 占位",
+            "description": "抽取提示词模板，须含占位符 <事件类型>/<标签树>/<主体清单>"
+            "（校验器语义检查，缺失拒绝加载）；process 层注入领域清单",
         },
         "ranking": {
             "type": "object",

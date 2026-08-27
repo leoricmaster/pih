@@ -60,6 +60,41 @@ class TestValidatorPaths:
         assert not result.ok
         assert "keywords" in _paths(result.issues)
 
+    def test_missing_event_types_points_at_field(self):
+        # Sprint 4：缺 event_types 节 → path='event_types'
+        pack, _ = _load(FIXTURES / "bad" / "missing_event_types.yaml")
+        result = validate(pack)
+        assert not result.ok
+        assert "event_types" in _paths(result.issues)
+
+    def test_prompt_missing_placeholder_rejected(self):
+        """D5 语义检查：extraction_prompt 缺占位符 token → 拒绝并指出缺哪些。"""
+        pack, _ = _load(FIXTURES / "bad" / "prompt_missing_placeholder.yaml")
+        result = validate(pack)
+        assert not result.ok
+        issue = next(i for i in result.issues if i.path == "extraction_prompt")
+        # 该夹具三个 token 全缺
+        for token in ("<事件类型>", "<标签树>", "<主体清单>"):
+            assert token in issue.message
+
+    def test_prompt_partial_placeholder_names_only_missing(self):
+        """只缺部分 token 时，错误信息仅列缺失项。"""
+        pack, _ = _load(FIXTURES / "good" / "pack.yaml")
+        pack["extraction_prompt"] = "提示词，只保留 <事件类型> 一个占位符"
+        result = validate(pack)
+        assert not result.ok
+        issue = next(i for i in result.issues if i.path == "extraction_prompt")
+        assert "<事件类型>" not in issue.message
+        assert "<标签树>" in issue.message and "<主体清单>" in issue.message
+
+    def test_prompt_type_error_not_double_reported(self):
+        """extraction_prompt 非 str 时 schema 已报类型错，语义检查不重复报。"""
+        pack, _ = _load(FIXTURES / "good" / "pack.yaml")
+        pack["extraction_prompt"] = 123
+        result = validate(pack)
+        prompt_issues = [i for i in result.issues if i.path == "extraction_prompt"]
+        assert len(prompt_issues) == 1
+
     def test_required_issue_message_is_human_readable(self):
         pack, _ = _load(FIXTURES / "bad" / "missing_sources.yaml")
         result = validate(pack)
