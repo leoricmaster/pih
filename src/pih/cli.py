@@ -1,18 +1,19 @@
-"""PIH 运营者 CLI（Backlog S3.2.1 用户闭环：试抓取报告 + 采集门控）。
+"""PIH 运营者 CLI（Backlog S3.2.1 用户闭环 + Sprint 3 store 层落库与查询）。
 
 命令：
   pih probe-source <id> | --all   试抓取验证（robots→列表→详情→快照），产出成败报告
-  pih collect <id>                正式采集（enabled 门控），产出 RawItem 摘要
+  pih collect <id>                正式采集（enabled 门控）+ 默认落库（--no-ingest 回退）
+  pih query --source-id=<id>      查询库中情报（Sprint 3 T5）
 
 退出码：0 成功 / 1 抓取失败或门控拒绝 / 2 用法或环境错误。
-环境：从 cwd 的 .env 读取 MinIO 凭据（python-dotenv），未起 MinIO 时可用
---no-snapshot 跳过快照（仅 probe）。
+环境：从 cwd 的 .env 读取 MinIO 与 PG 凭据（python-dotenv）。
 """
 from __future__ import annotations
 
 import argparse
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -26,6 +27,9 @@ from pih.collect.run import SourceDisabledError, collect_source
 from pih.collect.snapshot import BUCKET, SnapshotStore
 from pih.domainpacks.errors import LoadError
 from pih.domainpacks.loader import DEFAULT_PACK_DIR, load
+from pih.store.db import close_pool, get_pool
+from pih.store.repository import IntelRepository, SaveOutcome
+from pih.store.source_sync import sync_sources
 
 EXIT_OK = 0
 EXIT_FAILED = 1
@@ -58,12 +62,31 @@ def _build_parser() -> argparse.ArgumentParser:
 
     cp = sub.add_parser(
         "collect",
-        help="正式采集单源（enabled 门控：仅运行领域包中 enabled: true 的信源）",
+        help="正式采集单源（enabled 门控：仅运行领域包中 enabled: true 的信源）+ 默认落库",
     )
     cp.add_argument("source_id", help="信源 id")
     cp.add_argument("--max-items", type=int, default=10, help="单次采集详情条数上限（默认 10）")
+    cp.add_argument(
+        "--no-ingest",
+        action="store_true",
+        help="不落库，仅 stdout 摘要（Sprint 2 行为）",
+    )
     cp.add_argument("--proxy-env", action="store_true", help="继承环境代理变量（默认不继承）")
     cp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
+
+    qp = sub.add_parser(
+        "query",
+        help="查询情报库（Sprint 3 T5：按信源列出最近入库 / 单条详情）",
+    )
+    qp.add_argument("--source-id", default=None, help="按信源过滤")
+    qp.add_argument("--limit", type=int, default=10, help="返回条数上限（默认 10）")
+    qp.add_argument(
+        "--before",
+        default=None,
+        help="只返回 fetched_at 早于此时间的条目（ISO8601，如 2026-08-25T00:00:00+00:00）",
+    )
+    qp.add_argument("--id", type=int, default=None, help="按 intel_item.id 查单条详情")
+    qp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
 
     return parser
 
@@ -75,10 +98,19 @@ def _default_pack() -> Path:
     return DEFAULT_PACK_DIR / "construction_machinery" / "pack.yaml"
 
 
-def _load_sources(pack_arg: str | None) -> list[SourceConfig]:
+def _load_pack(pack_arg: str | None) -> tuple[list[SourceConfig], str]:
+    """加载领域包，返回 (sources, domain_id)。"""
     path = Path(pack_arg) if pack_arg else _default_pack()
     pack = load(path)
-    return [SourceConfig.from_dict(d) for d in pack["sources"]]
+    sources = [SourceConfig.from_dict(d) for d in pack["sources"]]
+    domain_id = pack["meta"]["domain_id"]
+    return sources, domain_id
+
+
+def _load_sources(pack_arg: str | None) -> list[SourceConfig]:
+    """保留旧入口（probe 用），仅返回 sources。"""
+    sources, _ = _load_pack(pack_arg)
+    return sources
 
 
 def _make_snapshot_store(no_snapshot: bool) -> SnapshotStore | NullSnapshotStore | None:
@@ -167,7 +199,7 @@ def _cmd_probe(args: argparse.Namespace) -> int:
 
 
 def _cmd_collect(args: argparse.Namespace) -> int:
-    sources = _load_sources(args.pack)
+    sources, domain_id = _load_pack(args.pack)
     by_id = {s.id: s for s in sources}
     if args.source_id not in by_id:
         print(f"未知信源 id：{args.source_id}（可用：{', '.join(by_id)}）", file=sys.stderr)
@@ -178,9 +210,16 @@ def _cmd_collect(args: argparse.Namespace) -> int:
     if snapshots is None:
         return EXIT_USAGE
     http = HttpClient(trust_env=args.proxy_env)
+    repo: IntelRepository | None = None
     try:
+        if not args.no_ingest:
+            pool = get_pool()
+            sync_sources(sources, domain_id, pool)
+            repo = IntelRepository(pool)
         try:
-            items = collect_source(source, http, snapshots, max_items=args.max_items)
+            items, outcomes = collect_source(
+                source, http, snapshots, max_items=args.max_items, repository=repo
+            )
         except SourceDisabledError as exc:
             print(f"✗ 门控拒绝：{exc}", file=sys.stderr)
             return EXIT_FAILED
@@ -197,10 +236,78 @@ def _cmd_collect(args: argparse.Namespace) -> int:
         print(f"== 采集：{source.id}（{source.name}，已启用）==")
         for item in items:
             print(f"  ✓ [{item.snapshot_id[:12]}…] {item.title}")
-        print(f"产出 {len(items)} 条 RawItem（快照已存档，待 store 层落库）")
+        if args.no_ingest:
+            print(f"产出 {len(items)} 条 RawItem（--no-ingest 未落库）")
+        else:
+            saved = sum(1 for o in outcomes if o.status == SaveOutcome.SAVED)
+            skipped = sum(1 for o in outcomes if o.status == SaveOutcome.SKIPPED)
+            failed = sum(1 for o in outcomes if o.status == SaveOutcome.FAILED)
+            print(
+                f"产出 {len(items)} 条 RawItem → "
+                f"入库 {saved} 新增 / {skipped} 幂等跳过 / {failed} 失败"
+            )
         return EXIT_OK
     finally:
         http.close()
+        close_pool()
+
+
+def _cmd_query(args: argparse.Namespace) -> int:
+    if args.id is None and args.source_id is None:
+        print("须指定 --id 或 --source-id 之一", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        pool = get_pool()
+    except RuntimeError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    repo = IntelRepository(pool)
+    try:
+        if args.id is not None:
+            rec = repo.get(args.id)
+            if rec is None:
+                print(f"未找到 id={args.id}", file=sys.stderr)
+                return EXIT_FAILED
+            _print_record_detail(rec)
+            return EXIT_OK
+
+        before = None
+        if args.before:
+            try:
+                before = datetime.fromisoformat(args.before)
+            except ValueError as exc:
+                print(f"✗ --before 解析失败：{exc}", file=sys.stderr)
+                return EXIT_USAGE
+        records = repo.list_by_source(args.source_id, limit=args.limit, before=before)
+        print(f"== 查询：source_id={args.source_id} limit={args.limit} ==")
+        if not records:
+            print("（无结果）")
+        for r in records:
+            print(
+                f"  [{r.id}] {r.fetched_at:%Y-%m-%d %H:%M}  "
+                f"[{r.snapshot_id[:12]}…] {r.title}"
+            )
+        print(f"共 {len(records)} 条")
+        return EXIT_OK
+    finally:
+        close_pool()
+
+
+def _print_record_detail(rec) -> None:
+    """单条详情打印。"""
+    print(f"== 情报 #{rec.id} ==")
+    print(f"标题      : {rec.title}")
+    print(f"信源      : {rec.source_id}")
+    print(f"URL       : {rec.url}")
+    print(f"列表页    : {rec.list_url}")
+    print(f"抓取时间  : {rec.fetched_at:%Y-%m-%d %H:%M:%S}")
+    print(f"HTTP 状态 : {rec.http_status}")
+    print(f"Content-Type: {rec.content_type}")
+    print(f"编码      : {rec.encoding}")
+    print(f"快照 ID   : {rec.snapshot_id}")
+    print(f"内容指纹  : {rec.content_sha1}")
+    print(f"入库时间  : {rec.created_at:%Y-%m-%d %H:%M:%S}")
+    print(f"事件 ID   : {rec.event_id or '（未关联事件）'}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -209,6 +316,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "probe-source":
             return _cmd_probe(args)
+        if args.command == "query":
+            return _cmd_query(args)
         return _cmd_collect(args)
     except LoadError as exc:
         print(f"领域包加载失败：{exc}", file=sys.stderr)

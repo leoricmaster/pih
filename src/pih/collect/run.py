@@ -3,13 +3,20 @@
 collect_source 是调度器（后续 Sprint）将消费的正式采集入口：
 仅运行 enabled: true 的信源；未启用 → SourceDisabledError（附启用流程指引）。
 probe（probe.py）不受门控约束——它是启用前的验证手段。
+
+Sprint 3：可选 repository 参数——传入则落库，不传则只产出 RawItem（Sprint 2 行为）。
 """
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from .base import SourceConfig, get_adapter
 from .httpclient import HttpClient
 from .rawitem import RawItem
 from .snapshot import SnapshotStore
+
+if TYPE_CHECKING:
+    from pih.store.repository import IntelRepository, SaveOutcome
 
 DEFAULT_MAX_ITEMS = 10  # 首跑防爆量：列表通常 10–30 条，节流 2s/请求
 
@@ -23,8 +30,12 @@ def collect_source(
     http: HttpClient,
     snapshots: SnapshotStore,
     max_items: int = DEFAULT_MAX_ITEMS,
-) -> list[RawItem]:
+    repository: IntelRepository | None = None,
+) -> tuple[list[RawItem], list[SaveOutcome]]:
     """正式采集单源：门控 → 列表页 → 前 max_items 条详情（快照随 fetch_detail 存档）。
+
+    Args:
+        repository: 若给定，每条 RawItem 落库，返回 outcomes；None 则不落库（outcomes 为空）。
 
     Raises:
         SourceDisabledError: source.enabled 为 false。
@@ -42,4 +53,9 @@ def collect_source(
         item = adapter.fetch_detail(url, source)
         if item is not None:
             items.append(item)
-    return items
+
+    outcomes: list[SaveOutcome] = []
+    if repository is not None and items:
+        outcomes = repository.save_batch(items)
+    return items, outcomes
+

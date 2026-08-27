@@ -41,10 +41,11 @@ class TestUsageErrors:
         assert "暂无特化适配器" in out
 
     def test_collect_source_without_specialized_adapter(self, capsys, monkeypatch):
-        def _raise(source, http, snapshots, max_items=10):
+        def _raise(source, http, snapshots, max_items=10, repository=None):
             raise NotImplementedError
 
         monkeypatch.setattr("pih.cli.collect_source", _raise)
         monkeypatch.setattr("pih.cli._make_snapshot_store", lambda no_snapshot: NullSnapshotStore())
-        assert main(["collect", "ccma"]) == 1
+        # 用 --no-ingest 跳过 PG 连接（单元测试不依赖 DB）
+        assert main(["collect", "ccma", "--no-ingest"]) == 1
         assert "暂无特化适配器" in capsys.readouterr().err

@@ -45,12 +45,13 @@ class TestGate:
         assert "enabled 置 true" in str(exc_info.value)
 
     def test_enabled_source_collects(self):
-        items = collect_source(_source(enabled=True), http=None, snapshots=None)  # type: ignore[arg-type]
+        items, outcomes = collect_source(_source(enabled=True), http=None, snapshots=None)  # type: ignore[arg-type]
         assert len(items) == 3
         assert all(i.source_id == "test_run_src" for i in items)
+        assert outcomes == []  # 未传 repository 不落库
 
     def test_max_items_truncates(self):
-        items = collect_source(
+        items, _ = collect_source(
             _source(enabled=True), http=None, snapshots=None, max_items=2,  # type: ignore[arg-type]
         )
         assert len(items) == 2

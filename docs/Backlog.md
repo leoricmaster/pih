@@ -1,8 +1,8 @@
 # 情报中心 — 产品 Backlog（需求树）
 
-- 版本：V1.1（配合《Product Requirements.md》V1.0、《Architecture.md》V0.9）
+- 版本：V1.2（配合《Product Requirements.md》V1.0、《Architecture.md》V0.9）
 - 日期：2026-08-26
-- 变更：V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
+- 变更：V1.1→V1.2 Sprint 3 交付——新增 S4.5「情报库落库与基础检索」（已交付）：PG + alembic 迁移 + IntelRepository + `pih query` CLI；source/intel_item 两表落地，content_sha1 幂等约束（ADR-007）；原 S4.1.1 AC1「无快照不入库」备注跨 Sprint 满足（Sprint 2 快照 + Sprint 3 入库门控）。V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
 - **本文档定位**：需求的事实源与导读——开发前是具体的需求说明，开发后凭状态位反映实现现状
 
 **编写约定**：
@@ -299,6 +299,8 @@ AC3: Given 领域包 YAML 变更已提交
 
 > 作为消费者，注册的信源按其频率自动更新，且每条原文都存档快照，以便我日后能回溯原文。
 
+> AC1 跨 Sprint 满足：Sprint 2 已交付快照存档（MinIO + RawItem.snapshot_id），Sprint 3 已交付入库门控（intel_item.content_sha1 UNIQUE = 无快照不入库的下游约束）；本卡剩余范围 = APScheduler 调度器 + AC2 去重 + AC3 重试与 inbox。
+
 ```gherkin
 AC1: Given 信源配置频率为每日
      When 调度时间到达
@@ -381,6 +383,49 @@ AC1: Given 一条内容在处理阶段重试耗尽
 
 AC2: Given 同一内容被重复投递
      Then 幂等键（内容指纹）生效，不产生重复条目
+```
+
+### F4.5 情报库落库与基础检索
+
+#### S4.5（已交付）情报库落库与基础检索
+
+> 作为消费者，自动采集的 RawItem 落入情报库可查，以便后续处理与消费层接入。
+
+> 技术型 Story。Sprint 3 交付：PostgreSQL + alembic 迁移工具链 + `IntelRepository`（save/save_batch/list_by_source/get）+ `pih query` CLI + `pih collect` 默认落库（`--no-ingest` 回退 Sprint 2 行为）。schema 最小切片：`source` + `intel_item` 两表，不预置 process 层字段（主体/事件类型/置信度/标签等，类型未定型，等 process Sprint ADD COLUMN）。`event_id` 占位字段无 FK，event 表留 process Sprint。入库幂等靠 `content_sha1 UNIQUE` + `ON CONFLICT DO NOTHING`（ADR-007）。
+
+```gherkin
+AC1: Given docker compose up + 外网可达
+     When 运行 pih collect ccma --max-items=2
+     Then RawItem 抓取成功且落库
+     And stdout 显示「入库 N 新增 / 0 幂等跳过 / 0 失败」
+     And source 表含 ccma 行（enabled=true, level=L2）
+
+AC2: Given AC1 已执行（库中已有 ccma 情报）
+     When 再次运行 pih collect ccma --max-items=2
+     Then 入库 0 新增 / N 幂等跳过 / 0 失败（content_sha1 唯一约束生效）
+     And intel_item 表行数不变
+
+AC3: Given 库中有 ccma 情报 ≥1 条
+     When 运行 pih query --source-id=ccma --limit=10
+     Then 输出列表含 title / url / snapshot_id / fetched_at
+     And 按 fetched_at DESC 排序
+
+AC4: Given 一条情报的 content_sha1 与已存行冲突
+     When IntelRepository.save 该条
+     Then 返回 SKIPPED，不抛异常，不阻塞同批其他条目
+
+AC5: Given 领域包 sources 含 ccma/sany/cehome（enabled 各异）
+     When sync_sources 执行（collect 启动时自动）
+     Then source 表含三行，enabled 与 YAML 一致
+     And 重复执行不产生重复行（upsert 生效）
+
+AC6: Given alembic upgrade head
+     Then intel_item.content_sha1 有 UNIQUE 约束
+     And intel_item.source_id 有 FK 指向 source.id
+     And event_id 字段存在但无 FK（占位）
+
+AC7: Given alembic downgrade base
+     Then intel_item 与 source 表均消失（迁移可逆）
 ```
 
 ---

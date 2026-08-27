@@ -27,7 +27,7 @@
 | `domainpacks/` | 横切·配置治理 | ✅ Sprint 1 已交付（加载器+校验器+schema） |
 | `collect/` | 采集层 | ✅ Sprint 2 已交付（适配器+RawItem+快照+robots；CCMA/三一/cehome 三源）＋ probe/collect CLI 与 enabled 门控（S3.2.1 补交付） |
 | `process/` | 处理层（LangGraph） | 占位，后续 Sprint |
-| `store/` | 存储层 | 占位，后续 Sprint |
+| `store/` | 存储层 | ✅ Sprint 3 已交付（PG 落库 + alembic 迁移 + IntelRepository + query CLI；source/intel_item 两表） |
 | `consume/` | 消费层 | 占位，后续 Sprint |
 | `core/` | 五元模型命名空间 | 占位，后续 Sprint |
 
@@ -49,18 +49,26 @@ uv run pytest tests/integration -v
 uv run ruff check src/ tests/
 ```
 
-## 运营者 CLI（S3.2.1 验收入口）
+## 运营者 CLI
 
 信源启用走 enabled 门控：新增信源在领域包 YAML 中 `enabled: false` → 试抓取通过后
 人工置 `true`（工具不改 YAML，人是最终环节）；`collect` 仅运行已启用源。
 
 ```bash
-docker compose up -d                     # 快照存档需 MinIO
+docker compose up -d                     # 快照存档需 MinIO，落库需 postgres
+uv run alembic upgrade head              # 首次：建表（store 层，Sprint 3）
+
 uv run pih probe-source ccma             # 试抓取单源，产出成败报告（robots/列表/详情/快照）
 uv run pih probe-source --all            # 领域包全部信源逐一试抓取
 uv run pih probe-source khl --no-snapshot  # 不落快照的快速可达性验证
-uv run pih collect ccma                  # 正式采集（未启用源被门控拒绝并附启用指引）
+uv run pih collect ccma                  # 正式采集 + 默认落库（Sprint 3）
+uv run pih collect ccma --no-ingest      # 不落库，仅 stdout 摘要（Sprint 2 行为）
+uv run pih query --source-id=ccma --limit=10   # 查询库中按信源最近入库
+uv run pih query --id=42                      # 单条详情
 ```
+
+`collect` 输出末尾统计：`产出 N 条 RawItem → 入库 X 新增 / Y 幂等跳过 / Z 失败`
+（content_sha1 唯一约束保障重复抓取不产生重复行，ADR-007）。
 
 退出码：0 成功 / 1 抓取失败或门控拒绝 / 2 用法或环境错误。
 

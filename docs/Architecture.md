@@ -143,7 +143,7 @@ flowchart TB
 | 事件聚类器 | 同事件多源聚类，驱动交叉印证 | `cluster(item) → event_id` | M1（简版）/后续方向 |
 | 结构化抽取器 | 按 schema 抽取主体/事件/参数/标签 | `extract(item, pack) → IntelItem` | M1 |
 | 时效管理器 | 有效期计算、过期降权、复核提醒 | 定时任务 | M1 |
-| 情报库 | 情报主表 + 核实流转日志 | CRUD + 状态机 | M1 |
+| 情报库 | 情报主表 + 核实流转日志 | CRUD + 状态机 | M1（Sprint 3 已交付 source/intel_item 两表 + IntelRepository + alembic 迁移；event/verification_log 待 process Sprint） |
 | 竞品资产库 | 竞品档案、功能/参数矩阵 | 表结构 M1，自动维护为后续方向 | M1 |
 | 查询服务（Web + API） | 筛选列表 + 情报详情（含事件状态与核实历史），页面与 JSON API 同源 | FastAPI：服务端模板 + REST（ADR-006） | M1 |
 | RAG 问答服务 | 混合检索问答，答案强制带引用 | `ask(query) → answer + citations[]` | M2（混合检索，ADR-005） |
@@ -271,6 +271,7 @@ erDiagram
 ```
 
 - **PostgreSQL** 为单一事实源：`intel_item`、`entity`、`source`、`event`、`verification_log`、`domain_pack`、`competitor_profile`、`feature_matrix`、`param_matrix`；
+- **Sprint 3 落地状态**：`source` + `intel_item` 两表已交付（含 `content_sha1` UNIQUE 幂等约束与 `source_id` FK，ADR-007）；`event`/`verification_log`/`entity`/`competitor_profile`/`feature_matrix`/`param_matrix` 待 process Sprint；`intel_item.event_id` 为占位字段（无 FK），event 表上来后补约束；
 - **pgvector** 承载情报摘要向量 + **PG 中文全文检索**（zhparser 或 pg_jieba）承担 BM25 侧——混合检索在单库内闭环（M1 规模 < 10 万条，无需独立向量库）；
 - **MinIO** 存原文快照与附件，`intel_item.snapshot_id` 关联；
 - 事件（`event`）与情报（`intel_item`）一对多：交叉印证的载体，核实状态挂事件层、来源各挂各的；
