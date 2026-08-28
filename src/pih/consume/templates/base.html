@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}PIH 产品情报中心{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a class="brand" href="/">PIH 产品情报中心</a>
+    <span class="tagline">采集 → 核实 → 结构化 → 存储 → 消费</span>
+  </nav>
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

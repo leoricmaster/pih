@@ -53,3 +53,27 @@ services:
       - ./domain_packs:/app/domain_packs:ro
       - ./tests:/app/tests:ro
     command: sleep infinity
+
+  web:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # 容器内连 PG 用 postgres 主机名（覆盖 .env 的 localhost）
+      PG_DSN: postgresql://pih:pih@postgres:5432/${POSTGRES_DB:-pih}
+      # 容器内连 MinIO 用 minio 主机名（presigned URL 同 host，浏览器不可达时降级展示 ID）
+      MINIO_ENDPOINT: minio:9000
+    volumes:
+      - ./src:/app/src:ro
+    command: uvicorn pih.consume.web:app --host 0.0.0.0 --port 8000
+    ports:
+      - "${PIH_WEB_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/healthz').status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6

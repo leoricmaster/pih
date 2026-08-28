@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ rec.title }} · PIH{% endblock %}
+{% block content %}
+
+<article class="intel-detail">
+  <header class="detail-header">
+    <h1>{{ rec.title }}</h1>
+    <p class="meta-line">
+      <span>ID #{{ rec.id }}</span>
+      <span>信源 {{ rec.source_id }}</span>
+      <span>采集 {{ rec.fetched_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+      {% if rec.admiralty_code %}<span>置信度 {{ rec.admiralty_code }}</span>{% endif %}
+    </p>
+  </header>
+
+  <section class="block">
+    <h2>基础元信息</h2>
+    <dl class="kv">
+      <dt>原始 URL</dt>
+      <dd><a href="{{ rec.url }}" target="_blank" rel="noopener">{{ rec.url }}</a></dd>
+      <dt>内容指纹</dt><dd>{{ rec.content_sha1 }}</dd>
+      <dt>入库时间</dt><dd>{{ rec.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+    </dl>
+    <details class="tech-details">
+      <summary>技术详情</summary>
+      <dl class="kv">
+        <dt>列表页 URL</dt>
+        <dd><a href="{{ rec.list_url }}" target="_blank" rel="noopener">{{ rec.list_url }}</a></dd>
+        <dt>HTTP 状态</dt><dd>{{ rec.http_status }}</dd>
+        <dt>Content-Type</dt><dd>{{ rec.content_type or '—' }}</dd>
+        <dt>编码</dt><dd>{{ rec.encoding or '—' }}</dd>
+      </dl>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>结构化字段</h2>
+    <dl class="kv">
+      <dt>主体</dt><dd>{{ rec.subject or '—' }}</dd>
+      <dt>事件类型</dt><dd>{{ rec.event_type or '—' }}</dd>
+      <dt>标签</dt>
+      <dd>{% if rec.tags %}{% for t in rec.tags %}<span class="tag">{{ t }}</span> {% endfor %}{% else %}—{% endif %}</dd>
+      <dt>量化参数</dt>
+      <dd>{% if rec.quant_params %}{% for k, v in rec.quant_params.items() %}{{ k }}={{ v }}；{% endfor %}{% else %}—{% endif %}</dd>
+      <dt>Admiralty</dt><dd>{{ rec.admiralty_code or '—' }}</dd>
+    </dl>
+  </section>
+
+  <section class="block facts">
+    <h2>事实描述</h2>
+    {% set facts = rec.facts | split_facts %}
+    {% if facts %}
+    <ul class="fact-list">
+      {% for f in facts %}<li>{{ f }}</li>{% endfor %}
+    </ul>
+    {% else %}
+    <div class="prose">（未抽取）</div>
+    {% endif %}
+  </section>
+
+  <section class="block inferences">
+    <h2>推断与判断</h2>
+    {% set inferences = rec.inferences | split_facts %}
+    {% if inferences %}
+    <ul class="fact-list">
+      {% for inf in inferences %}<li>{{ inf }}</li>{% endfor %}
+    </ul>
+    {% else %}
+    <div class="prose">（无）</div>
+    {% endif %}
+  </section>
+
+  <section class="block">
+    <h2>原文与快照</h2>
+    <ul class="links">
+      <li><a href="{{ rec.url }}" target="_blank" rel="noopener">原始链接</a></li>
+      {% if snapshot_url %}
+      <li><a href="{{ snapshot_url }}" target="_blank" rel="noopener" title="HTML 快照，链接 1 小时内有效">原文快照</a></li>
+      {% else %}
+      <li>原文快照：MinIO 不可达，快照 ID <code>{{ rec.snapshot_id }}</code></li>
+      {% endif %}
+    </ul>
+  </section>
+
+  <section class="block">
+    <h2>处理状态</h2>
+    <dl class="kv">
+      <dt>状态</dt><dd>{{ rec.process_status or 'pending' }}</dd>
+      {% if rec.process_error %}<dt>错误</dt><dd>{{ rec.process_error }}</dd>{% endif %}
+      {% if rec.processed_at %}<dt>处理时间</dt><dd>{{ rec.processed_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>{% endif %}
+    </dl>
+  </section>
+
+  <section class="block event-status">
+    <h2>事件核实状态与跃迁历史</h2>
+    <p class="placeholder">{{ event_placeholder }}</p>
+  </section>
+
+  <p class="back"><a href="/">← 返回列表</a></p>
+</article>
+
+{% endblock %}

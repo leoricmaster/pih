@@ -38,3 +38,14 @@
 
 - 检索体验（北极星指标载体）有保障；
 - 后续 Web 化演进（核实操作页、RAG 问答）在同一应用内叠加。
+
+## 实施注脚
+
+**Sprint 5a 已落实**（2026-08-28）：`src/pih/consume/` 落地 FastAPI 单 app 双出口——
+`QueryService` 为单一事实源，Web 页面（`web.py` + Jinja2 模板）与 JSON API（`api.py` router）
+共用过滤/排序/引用拼装；同条件返回同 id 集合同序（集成测试 `test_api_e2e.py::TestAC4SameSource`
+断言）。鉴权：API 端点 `Authorization: Bearer <PIH_API_TOKEN>`（`hmac.compare_digest`
+常量时间比较），Web 内网默认开放。部署：docker-compose `web` service（独立容器，仅依赖 PG）
++ 本地 `uv run uvicorn pih.consume.web:app`。事件核实状态字段占位「待事件模型上线后自动激活」，
+event 表上线后查询服务自动填实。排序简版 `admiralty ASC + fetched_at DESC`，完整 score
+待事件+时效 Sprint。详见 `docs/superpowers/specs/2026-08-27-sprint5a-consume-design.md`。

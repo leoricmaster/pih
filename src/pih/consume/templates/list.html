@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}情报列表 · PIH{% endblock %}
+{% block content %}
+
+<form class="filters" method="get" action="/">
+  <label>主体<input type="text" name="subject" value="{{ filters.subject or '' }}"></label>
+  <label>事件类型<input type="text" name="event_type" value="{{ filters.event_type or '' }}"></label>
+  <label>标签<input type="text" name="tag" value="{{ filters.tag or '' }}"></label>
+  <label>置信度<input type="text" name="admiralty" value="{{ filters.admiralty or '' }}" placeholder="如 B2"></label>
+  <label>信源<input type="text" name="source_id" value="{{ filters.source_id or '' }}"></label>
+  <label>起始时间<input type="text" name="since" value="{{ filters.since.isoformat() if filters.since else '' }}" placeholder="ISO8601"></label>
+  <label>截止时间<input type="text" name="until" value="{{ filters.until.isoformat() if filters.until else '' }}" placeholder="ISO8601"></label>
+  <label>每页<input type="number" name="limit" value="{{ filters.limit }}" min="1" max="200"></label>
+  <button type="submit">筛选</button>
+  <a class="reset" href="/">重置</a>
+</form>
+
+{% if items %}
+<table class="intel-list">
+  <thead>
+    <tr>
+      <th>标题</th>
+      <th>主体</th>
+      <th>事件类型</th>
+      <th>置信度</th>
+      <th>采集时间</th>
+      <th>所属事件核实状态</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in items %}
+    <tr>
+      <td class="title"><a href="/intel/{{ r.id }}">{{ r.title }}</a></td>
+      <td>{{ r.subject or '—' }}</td>
+      <td>{{ r.event_type or '—' }}</td>
+      <td>{{ r.admiralty_code or '—' }}</td>
+      <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td class="placeholder">{{ event_placeholder }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if next_url %}
+<div class="pager">
+  <a href="{{ next_url }}">下一页 →</a>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty">
+  <p>无结果，建议放宽条件</p>
+  <ul>
+    <li>去掉标签或置信度筛选</li>
+    <li>扩大时间范围（如 since 改为更早）</li>
+    <li>清空主体改用事件类型浏览</li>
+  </ul>
+</div>
+{% endif %}
+
+{% endblock %}

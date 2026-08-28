@@ -312,10 +312,43 @@ class TestListByFilter:
         assert params[2].obj == ["电动化"]  # Json 包装的 containment 数组
         assert params[3] == 5
 
-    def test_orders_processed_desc(self):
+    def test_admiralty_since_until_before_build_clauses(self):
+        """Sprint 5a 新增参数：admiralty 精确 / since-until fetched_at 闭区间 / before 游标。"""
+        from datetime import datetime
+
+        m = _MockConn()
+        m.cursor_obj.fetchall.return_value = []
+        repo = IntelRepository(m.pool)
+        since = datetime(2026, 5, 1)
+        until = datetime(2026, 8, 27)
+        before = datetime(2026, 8, 26)
+        repo.list_by_filter(
+            admiralty="B2",
+            source_id="sany_news",
+            since=since,
+            until=until,
+            before=before,
+            limit=10,
+        )
+        sql = m.cursor_obj.execute.call_args.args[0]
+        params = m.cursor_obj.execute.call_args.args[1]
+        assert "admiralty_code = %s" in sql
+        assert "source_id = %s" in sql
+        assert "fetched_at >= %s" in sql
+        assert "fetched_at <= %s" in sql
+        assert "fetched_at < %s" in sql
+        assert params[0] == "B2"
+        assert params[1] == "sany_news"
+        assert params[2] == since
+        assert params[3] == until
+        assert params[4] == before
+        assert params[5] == 10
+
+    def test_orders_admiralty_then_fetched(self):
+        """Sprint 5a 排序简版：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC。"""
         m = _MockConn()
         m.cursor_obj.fetchall.return_value = []
         repo = IntelRepository(m.pool)
         repo.list_by_filter()
         sql = m.cursor_obj.execute.call_args.args[0]
-        assert "ORDER BY processed_at DESC NULLS LAST" in sql
+        assert "ORDER BY admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC" in sql

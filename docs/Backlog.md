@@ -1,8 +1,8 @@
 # 情报中心 — 产品 Backlog（需求树）
 
-- 版本：V1.3（配合《Product Requirements.md》V1.0、《Architecture.md》V0.9）
-- 日期：2026-08-27
-- 变更：V1.2→V1.3 Sprint 4 交付——process 层上线：S4.1.2「相关性粗筛」已交付（小模型二分类，粗筛日志=行级 filtered_out 标记，SQL 可审计）；S4.2.1「自动结构化抽取」已交付（LangGraph 三节点图 粗筛→抽取→校验，intel_item 增 11 结构化列 + 迁移 0002，`pih process` CLI；标签可为空数组口径见卡内备注）；S4.2.2 备注拆分——AC1 预评级简版 Sprint 4 满足（Admiralty=reliability×可信度），AC2/AC3 待事件聚类 Sprint；S1.1.1 备注——CLI 子集已交付（`pih query --subject/--event-type/--tag` 结构化筛选），Web/API 出口待消费层 Sprint。V1.1→V1.2 Sprint 3 交付——新增 S4.5「情报库落库与基础检索」（已交付）：PG + alembic 迁移 + IntelRepository + `pih query` CLI；source/intel_item 两表落地，content_sha1 幂等约束（ADR-007）；原 S4.1.1 AC1「无快照不入库」备注跨 Sprint 满足（Sprint 2 快照 + Sprint 3 入库门控）。V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
+- 版本：V1.5（配合《Product Requirements.md》V1.0、《Architecture.md》V0.10）
+- 日期：2026-08-28
+- 变更：V1.4→V1.5 Sprint 5a 验收规划调整——粗筛误放与抽取误读为批次性问题（时政/科普类误入库、主体误读栏目名/"未知"仍 extracted），错误样本需人工反馈积累：新增 S3.1.3「消费页人类反馈动作」（详情页内联反馈 + feedback 表 + 聚合视图，驱动 prompt/粗筛迭代）标下 Sprint 候选；新增 S4.2.3「抽取后验质量门」（主体"未知"→needs_manual，纯代码止损）标下 Sprint 候选——两卡同期交付，后验门拦增量、反馈样本根治；S4.2.1 已知质量问题注脚同步（主体误读页面装饰元素 + 粗筛口径宽漏放，修法依赖 S3.1.3 样本）。V1.3→V1.4 Sprint 5a 交付——消费层 Web/API 同源出口上线（ADR-006）：S1.1.1「多条件组合筛选」已交付（FastAPI Web 列表 + JSON API 同源，主体/事件类型/标签/置信度/时间范围/游标分页；AC3「已过期标识」待时效管理器 Sprint，expires_at 上线后自动激活）；S1.1.2「情报详情页」已交付（schema 全字段 + 事实/推断分区 + 原文/快照双入口；事件核实状态与跃迁历史占位「待事件模型上线后自动激活」）；S1.1.4「只读查询 API」已交付（同源一致性 + Bearer token 鉴权；AC2 响应含 event_verification_status 占位字段，待事件模型上线后自动激活）。V1.2→V1.3 Sprint 4 交付——process 层上线：S4.1.2「相关性粗筛」已交付（小模型二分类，粗筛日志=行级 filtered_out 标记，SQL 可审计）；S4.2.1「自动结构化抽取」已交付（LangGraph 三节点图 粗筛→抽取→校验，intel_item 增 11 结构化列 + 迁移 0002，`pih process` CLI；标签可为空数组口径见卡内备注）；S4.2.2 备注拆分——AC1 预评级简版 Sprint 4 满足（Admiralty=reliability×可信度），AC2/AC3 待事件聚类 Sprint；S1.1.1 备注——CLI 子集已交付（`pih query --subject/--event-type/--tag` 结构化筛选），Web/API 出口待消费层 Sprint。V1.1→V1.2 Sprint 3 交付——新增 S4.5「情报库落库与基础检索」（已交付）：PG + alembic 迁移 + IntelRepository + `pih query` CLI；source/intel_item 两表落地，content_sha1 幂等约束（ADR-007）；原 S4.1.1 AC1「无快照不入库」备注跨 Sprint 满足（Sprint 2 快照 + Sprint 3 入库门控）。V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
 - **本文档定位**：需求的事实源与导读——开发前是具体的需求说明，开发后凭状态位反映实现现状
 
 **编写约定**：
@@ -61,11 +61,11 @@
 
 ### F1.1 结构化筛选与浏览
 
-#### S1.1.1（待开发）多条件组合筛选
+#### S1.1.1（已交付）多条件组合筛选
 
 > 作为消费者，我想按 主体/事件类型/时间范围/标签/置信度/事件核实状态 组合筛选情报列表，以便快速定位某类信息。
 
-> Sprint 4 备注：CLI 子集已交付——`pih query --subject/--event-type/--tag`（JSONB containment）+ `--source-id/--before` 结构化筛选与列表展示（process_status/event_type/admiralty）；置信度（Admiralty）筛选与事件核实状态筛选待事件/消费层字段齐备后补；Web/API 出口待消费层 Sprint。
+> Sprint 5a 备注：Web 列表 + JSON API 同源交付（ADR-006）——FastAPI 单 app 双出口，QueryService 共用过滤/排序；主体/事件类型/标签/置信度（admiralty 精确）/信源/时间范围（since-until）/游标分页（before）。AC1/AC2 满足；AC3「已过期标识」待时效管理器 Sprint，expires_at 上线后自动激活（不交付子句）。事件核实状态列占位「待事件模型上线后自动激活」。排序简版 admiralty_code ASC NULLS LAST + fetched_at DESC，完整 score 待事件+时效 Sprint。
 
 ```gherkin
 AC1: Given 情报库已有 ≥60 条情报
@@ -80,9 +80,11 @@ AC3: Given 情报已超过有效期
      Then 列表中该条显示"已过期"标识且排序靠后
 ```
 
-#### S1.1.2（待开发）情报详情页
+#### S1.1.2（已交付）情报详情页
 
 > 作为消费者，我想查看单条情报的完整信息（事实描述、推断、来源快照、所属事件状态与核实流转），以便独立判断其可信度。
+
+> Sprint 5a 备注：Web 详情 + JSON API 详情同源交付——schema 全字段 + 事实/推断分区 + 原文 URL + 快照占位入口；事件核实状态与跃迁历史区占位「待事件模型上线后自动激活」，event 表上线后查询服务自动填实。
 
 ```gherkin
 AC1: Given 任意一条情报
@@ -92,9 +94,11 @@ AC1: Given 任意一条情报
      And 提供原文快照与原始链接两个入口
 ```
 
-#### S1.1.4（待开发）只读查询 API（Agent 消费者）
+#### S1.1.4（已交付）只读查询 API（Agent 消费者）
 
 > 作为 Agent 消费者（如产品规划 Agent），我想以 JSON API 按与 Web 相同的条件组合查询情报，以便程序化消费情报库，而非解析网页。
+
+> Sprint 5a 备注：JSON API 同源交付（ADR-006）——与 Web 列表/详情共用 QueryService，同条件返回同 id 集合与排序（AC1 集成测试断言）；Bearer token 鉴权（PIH_API_TOKEN env，hmac.compare_digest 常量时间比较）；AC2 响应含 event_verification_status 占位字段 + event_verification_note「待事件模型上线后自动激活」；Web 内网默认开放不鉴权。
 
 ```gherkin
 AC1: 同源一致性（ADR-006）
@@ -233,6 +237,34 @@ AC1: Given 一条情报待核实状态持续 7 天
      Then 其检索权重降级，并在巡检报表"积压提醒"中列出
 ```
 
+#### S3.1.3（待开发·下 Sprint 候选）消费页人类反馈动作
+
+> 作为消费者/运营者，我想在情报详情页对抽取结果一键标记反馈（主体错了、事实不准、事件类型错、不该入库），以便上游 process 层 prompt/粗筛据此迭代，形成人机闭环。
+
+> 优先级提升依据（Sprint 5a 验收）：粗筛误放与抽取误读是**批次性**问题，非个例——13 条里 5 条时政/科普类误入库或主体错抽（电池包技术文主体="未知"仍 extracted、政府调研文主体误读页面栏目名"铁建投资"）。错误样本只能靠人在消费时顺手标记积累；无此闭环则粗筛口径收紧全靠盲调，误杀真情报的风险不可控。与 S3.1.1 离线队列互补：本卡是详情页内联反馈，路径更短，消费即梳理。
+
+```gherkin
+AC1: Given 消费者打开情报详情页
+     When 看到"主体"字段与原文不符
+     Then 可点击"主体错了"反馈按钮，弹出输入框填正确主体（可从主体清单选或自由输入）
+     And 反馈记录写入 feedback 表（item_id, field=subject, wrong_value, correct_value, user_id, ts）
+
+AC2: Given 消费者看到事实描述不准
+     When 点击"事实不准"反馈按钮
+     Then 可选择具体哪条事实（按 ；拆分后的列表项）并填说明
+     And 反馈记录标注到具体事实项级别
+
+AC3: Given 消费者认为这条不该入库（粗筛漏放）
+     When 点击"不该入库"反馈按钮
+     Then 反馈写入 feedback 表，type=should_filter
+     And 该信号聚合到粗筛漏报审计视图（与 S4.1.2 粗筛日志互补）
+
+AC4: Given 运营者查看反馈聚合视图
+     When 某类反馈高频出现（如某信源主体错误率 >30%）
+     Then 视图高亮提示需迭代该信源的抽取 prompt 或调整粗筛阈值
+     And 反馈条目可导出为 process 层 prompt 迭代的 few-shot 样本
+```
+
 ### F3.2 信源管理
 
 #### S3.2.1（已交付）信源注册与试抓取
@@ -338,6 +370,8 @@ AC1: Given 一条新抓取内容
 > Sprint 4 交付：LangGraph 三节点图（粗筛→抽取→校验）+ `pih process` 批处理 CLI；领域包 v0.2.0 单一事实源（event_types 枚举 + 标签树 + 提示词占位符加载期校验）；intel_item 增 11 结构化列（迁移 0002，tags JSONB + GIN）；校验重问 ≤3 轮，API 重试独立计数（SPK-3 遗留契约）。
 >
 > 口径备注：AC1「标签均非空」按字段存在 + 合法性满足——标签可为空数组（`[]`），行业统计/组织人事类情报常无技术标签，强制非空会制造假标签；主体/事件类型/事实描述仍严格非空。AC2 满足：重问耗尽 → `process_status='needs_manual'`，条目保留可查（集成测试 AC2 验证）。
+>
+> 已知质量问题（Sprint 5a 验收发现，待 S3.1.3 反馈闭环积累样本后迭代）：① 主体抽取会把页面装饰元素（栏目名/作者名）当主体——如 cehome 「海南省省长刘小明调研临高金牌港项目」主体被抽成"中国铁建投资集团"（实为页面栏目"铁建投资"被误读，且违规加"中国"前缀）；② 粗筛对"政府调研项目"类新闻漏放（同批次「国铁集团党组学习」被正确过滤，但本条漏网）——粗筛阈值或 prompt 对"非竞品但含工程机械关键词"的场景判定不稳。修法分工：增量由 S4.2.3 后验门拦截（主体"未知"→needs_manual），根治靠 S3.1.3 反馈数据 → prompt 加"主体必须是正文出现的主语实体，不得取栏目名/作者"规则 + 粗筛加负样本 few-shot。
 
 ```gherkin
 AC1: Given 一条通过粗筛的内容
@@ -368,6 +402,18 @@ AC2: Given 新情报与已有事件的主体相同、时间窗 ±7 天、内容�
 
 AC3: Given 新情报未命中任何已有事件
      Then 新建事件，初始状态=待核实
+```
+
+#### S4.2.3（待开发·下 Sprint 候选）抽取后验质量门
+
+> 作为消费者，抽取明显失败的结果不混入正常情报，以便列表不被低质条目稀释。
+
+> 来源（Sprint 5a 验收）：主体抽成"未知"且事件类型"其他"的条目仍标记 extracted 入库（如电池包铜排技术文）。纯代码逻辑即可止损，不依赖 LLM 改进；与 S3.1.3 反馈闭环同期交付——后验门拦住增量，反馈样本驱动 prompt 根治。
+
+```gherkin
+AC1: Given 抽取完成的条目主体为"未知"或空值占位
+     When 校验节点后验检查执行
+     Then process_status 置 needs_manual（非 extracted），条目保留可查，进入 S3.1.1 人工核实队列
 ```
 
 ### F4.3 时效治理

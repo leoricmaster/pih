@@ -3,8 +3,8 @@
 > 一条"采集 → 核实 → 结构化 → 存储 → 消费"的情报流水线，核心域模型行业无关，行业知识以领域包（Domain Pack，repo 内 YAML 配置）注入。
 
 - 需求：`docs/Product Requirements.md`（V1.0）
-- 架构：`docs/Architecture.md`（V0.9）
-- Backlog：`docs/Backlog.md`（V1.3）
+- 架构：`docs/Architecture.md`（V0.10）
+- Backlog：`docs/Backlog.md`（V1.4）
 - ADR：`docs/adr/`
 
 ## 仓库布局
@@ -28,7 +28,7 @@
 | `collect/` | 采集层 | ✅ Sprint 2 已交付（适配器+RawItem+快照+robots；CCMA/三一/cehome 三源）＋ probe/collect CLI 与 enabled 门控（S3.2.1 补交付） |
 | `process/` | 处理层（LangGraph） | ✅ Sprint 4 已交付（LLM 客户端+粗筛→抽取→校验三节点图+ProcessRunner+process CLI；领域包 v0.2.0 枚举单一事实源） |
 | `store/` | 存储层 | ✅ Sprint 3 已交付（PG 落库 + alembic 迁移 + IntelRepository + query CLI；source/intel_item 两表） |
-| `consume/` | 消费层 | 占位，后续 Sprint |
+| `consume/` | 消费层 | ✅ Sprint 5a 已交付（FastAPI Web + JSON API 同源 + Jinja2 列表/详情 + Bearer token 鉴权；ADR-006） |
 | `core/` | 五元模型命名空间 | 占位，后续 Sprint |
 
 ## 工程化启动
@@ -80,6 +80,43 @@ Y / 待人工 Z / 失败 W`）+ token 用量。抽取成功条目带 Admiralty �
 降级 `needs_manual` 不丢弃（架构 §8）。
 
 退出码：0 成功 / 1 抓取失败或门控拒绝 / 2 用法或环境错误。
+
+## 消费层 Web/API（Sprint 5a，ADR-006）
+
+FastAPI 单 app 双出口——Web 列表/详情（Jinja2 服务端模板）与 JSON API 共用
+`QueryService`，同条件返回同集合同序。Web 内网默认开放；API 端点要求 Bearer token。
+
+```bash
+# 1. 起依赖 + 迁移 + 造数据
+docker compose up -d postgres
+uv run alembic upgrade head
+uv run pih collect sany_news --max-items 5    # 攒几条真实数据
+uv run pih process                              # 抽取结构化字段（需 .env 配 PIH_LLM_*）
+
+# 2. 配置 API token
+export PIH_API_TOKEN=dev-token                  # 或写进 .env
+
+# 3a. 容器启动（生产形态）
+docker compose up -d web
+# 3b. 本地开发启动（热重载）
+uv run uvicorn pih.consume.web:app --reload --port 8000
+
+# 4. 浏览器访问 http://127.0.0.1:8000 —— 列表页 + 筛选 form + 下一页游标
+#    点标题进入 /intel/{id} 详情页（事实/推断分区 + 快照入口占位）
+
+# 5. 调 JSON API（Agent 消费者）
+curl -H "Authorization: Bearer dev-token" \
+  "http://127.0.0.1:8000/api/intel/list?subject=三一&event_type=新品发布&limit=10"
+curl -H "Authorization: Bearer dev-token" \
+  http://127.0.0.1:8000/api/intel/1
+curl http://127.0.0.1:8000/api/intel/list       # 无 token → 401
+curl http://127.0.0.1:8000/api/healthz          # 健康检查（不鉴权）
+```
+
+事件核实状态字段（列表列与详情区）当前占位「待事件模型上线后自动激活」——
+event 表与核实状态机属下一 Sprint，上线后查询服务自动填实，无需改 consume 层。
+排序简版 `admiralty_code ASC NULLS LAST, fetched_at DESC`，完整 score
+（W_c × map(admiralty) × decay）待事件+时效 Sprint。
 
 ## 领域包机制
 

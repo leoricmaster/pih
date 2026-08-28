@@ -287,13 +287,19 @@ class IntelRepository:
         subject: str | None = None,
         event_type: str | None = None,
         tag: str | None = None,
+        admiralty: str | None = None,
         source_id: str | None = None,
+        since: datetime | None = None,
+        until: datetime | None = None,
+        before: datetime | None = None,
         limit: int = 50,
     ) -> list[IntelRecord]:
-        """结构化筛选（S1.1.1 的 CLI 子集，Sprint 4）。
+        """结构化筛选（S1.1.1，Sprint 4 CLI 子集 + Sprint 5a Web/API 同源扩展）。
 
-        subject/event_type 精确匹配；tag 用 JSONB containment（tags @> [tag]）；
-        排序 processed_at DESC（未处理条目最后）。
+        subject/event_type/admiralty 精确匹配；tag 用 JSONB containment（tags @> [tag]）；
+        since/until 走 fetched_at 闭区间；before 为游标（fetched_at < before，分页用）。
+        排序：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC（Sprint 5a 简版，
+        完整 score = W_c × map(admiralty) × decay 留事件+时效 Sprint）。
         """
         clauses: list[str] = []
         params: list = []
@@ -306,15 +312,27 @@ class IntelRepository:
         if tag is not None:
             clauses.append("tags @> %s")
             params.append(Json([tag]))
+        if admiralty is not None:
+            clauses.append("admiralty_code = %s")
+            params.append(admiralty)
         if source_id is not None:
             clauses.append("source_id = %s")
             params.append(source_id)
+        if since is not None:
+            clauses.append("fetched_at >= %s")
+            params.append(since)
+        if until is not None:
+            clauses.append("fetched_at <= %s")
+            params.append(until)
+        if before is not None:
+            clauses.append("fetched_at < %s")
+            params.append(before)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         sql = f"""
             SELECT {_COLUMNS}
             FROM intel_item
             {where}
-            ORDER BY processed_at DESC NULLS LAST, id DESC
+            ORDER BY admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC
             LIMIT %s
         """
         params.append(limit)

@@ -1,9 +1,9 @@
 # 产品情报中心（Product Intelligence Hub）架构设计
 
-- 版本：V0.9（Sprint 0 回写同步；ADR 拆分至 docs/adr/）
-- 日期：2026-08-25
-- 配套：《Product Requirements.md》V1.0、《Backlog.md》V0.9
-- 变更：V0.8→V0.9 Sprint 0 回写——§9.2 补 SPK-2/SPK-3 实测 token 与延迟值（大模型 2997+1729 tokens/20s，小模型与大模型同量级）；ADR-004 后果节补 SPK-3 实测结论（成功率 92%，ADR-004 维持）
+- 版本：V0.10（Sprint 5a 回写同步；ADR 拆分至 docs/adr/）
+- 日期：2026-08-28
+- 配套：《Product Requirements.md》V1.0、《Backlog.md》V1.4
+- 变更：V0.9→V0.10 Sprint 5a 回写——§4 模块表「查询服务（Web+API）」里程碑补「Sprint 5a 已交付」；§6.2 排序补注 Sprint 5a 简版（admiralty ASC + fetched_at DESC，完整 score 待事件+时效 Sprint）；§7 数据架构无表新增（消费层不落表）。V0.8→V0.9 Sprint 0 回写——§9.2 补 SPK-2/SPK-3 实测 token 与延迟值（大模型 2997+1729 tokens/20s，小模型与大模型同量级）；ADR-004 后果节补 SPK-3 实测结论（成功率 92%，ADR-004 维持）
 - 用途：指导 Backlog 梳理与模块设计；关键决策记录见 §10 索引
 
 ## 1. 概览
@@ -145,7 +145,7 @@ flowchart TB
 | 时效管理器 | 有效期计算、过期降权、复核提醒 | 定时任务 | M1 |
 | 情报库 | 情报主表 + 核实流转日志 | CRUD + 状态机 | M1（Sprint 3 已交付 source/intel_item 两表 + IntelRepository + alembic 迁移；Sprint 4 增 11 结构化列 + JSONB 标签 GIN + 结构化筛选；event/verification_log 待事件聚类 Sprint） |
 | 竞品资产库 | 竞品档案、功能/参数矩阵 | 表结构 M1，自动维护为后续方向 | M1 |
-| 查询服务（Web + API） | 筛选列表 + 情报详情（含事件状态与核实历史），页面与 JSON API 同源 | FastAPI：服务端模板 + REST（ADR-006） | M1 |
+| 查询服务（Web + API） | 筛选列表 + 情报详情（含事件状态与核实历史），页面与 JSON API 同源 | FastAPI：服务端模板 + REST（ADR-006） | M1（Sprint 5a 已交付：FastAPI 同源 + Jinja2 列表/详情 + Bearer token 鉴权 + 游标分页；事件状态字段占位「待事件模型上线后自动激活」；排序简版 admiralty ASC + fetched_at DESC，完整 score 待事件+时效 Sprint） |
 | RAG 问答服务 | 混合检索问答，答案强制带引用 | `ask(query) → answer + citations[]` | M2（混合检索，ADR-005） |
 | 报告服务 | 周/月报生成 | 模板由领域包提供 | M2 |
 | 推送服务 | 即时/定期推送 | 渠道可配置 | M2 |
@@ -252,6 +252,8 @@ stateDiagram-v2
 - `decay`：分段函数——有效期前 1/3 不衰减，中段线性衰减至 0.5，过期后 0.3 并叠加"已过期"标记；
 - `W_c`：事件状态权重——多源确认 1.0 / 单源确认 0.8 / 待核实 0.5 / 已证伪 0（默认不出现在结果中）；
 - 初始权重如上，作为领域包可调参数（`ranking:` 节），M1 运行期观察调优。
+
+> **Sprint 5a 简版**（2026-08-28）：W_c 依赖事件状态、decay 依赖 expires_at，二者均未上线。消费层 Sprint 5a 排序暂用 `admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC` 兜底——Admiralty 主键（A 最优）+ 采集时间近优先 + id 确定序。完整 score 待事件聚类 Sprint（W_c）+ 时效管理器 Sprint（decay）上线后切回。
 
 ### 6.3 领域包机制
 
