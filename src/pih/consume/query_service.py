@@ -21,6 +21,7 @@ class IntelFilters:
     tag: str | None = None
     admiralty: str | None = None
     source_id: str | None = None
+    process_status: str | None = None
     since: datetime | None = None
     until: datetime | None = None
     before: datetime | None = None
@@ -36,6 +37,7 @@ class IntelFilters:
                 ("tag", self.tag),
                 ("admiralty", self.admiralty),
                 ("source_id", self.source_id),
+                ("process_status", self.process_status),
                 ("since", self.since.isoformat() if self.since else None),
                 ("until", self.until.isoformat() if self.until else None),
                 ("before", self.before.isoformat() if self.before else None),
@@ -70,6 +72,7 @@ class QueryService:
             tag=filters.tag,
             admiralty=filters.admiralty,
             source_id=filters.source_id,
+            process_status=filters.process_status,
             since=filters.since,
             until=filters.until,
             before=filters.before,

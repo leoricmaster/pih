@@ -7,6 +7,7 @@ from pih.process.extraction import (
     IntelExtraction,
     PackVocab,
     ValidationFailure,
+    is_placeholder_subject,
     validate_pred,
 )
 
@@ -123,3 +124,15 @@ class TestValidatePredFailures:
         msg = result.message()
         assert "缺字段：标签" in msg
         assert "非法值" in msg
+
+
+class TestIsPlaceholderSubject:
+    """后验质量门谓词（S4.2.3）：strip + lower 后比对占位集。"""
+
+    @pytest.mark.parametrize("subject", ["未知", " 未知 ", "无", "不详", "Unknown", "UNKNOWN", ""])
+    def test_placeholder_hits(self, subject):
+        assert is_placeholder_subject(subject) is True
+
+    @pytest.mark.parametrize("subject", ["三一", "徐工集团", "未知重工商", "宁德时代"])
+    def test_real_subjects_pass(self, subject):
+        assert is_placeholder_subject(subject) is False

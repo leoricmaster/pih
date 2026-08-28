@@ -1,17 +1,20 @@
-"""FastAPI 应用——Web 出口 + JSON API 同源（Sprint 5a，ADR-006）。
+"""FastAPI 应用——Web 出口 + JSON API 同源（Sprint 5a ADR-006 + Sprint 5b 反馈闭环）。
 
-lifespan 起 PG pool；Jinja2 渲染列表/详情；include api router。
+lifespan 起 PG pool；Jinja2 渲染列表/详情；include api router；
+反馈三路由（POST /feedback 写入、GET /feedback 聚合视图、/feedback/export JSONL）。
 本地启动：uv run uvicorn pih.consume.web:app --reload --port 8000
 """
 from __future__ import annotations
 
+import dataclasses
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Form, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -20,6 +23,7 @@ from pih.consume.metrics import log_query
 from pih.consume.query_service import IntelFilters, QueryService
 from pih.consume.snapshot_url import make_snapshot_client, presigned_snapshot_url
 from pih.store.db import close_pool, get_pool
+from pih.store.feedback import FEEDBACK_TYPES, FeedbackRepository
 from pih.store.repository import IntelRepository
 
 _BASE = Path(__file__).parent
@@ -31,6 +35,30 @@ templates.env.filters["split_facts"] = lambda s: (
 )
 
 load_dotenv()
+
+
+def _load_pack_vocab() -> tuple[list[str], list[str]]:
+    """详情页反馈表单的候选清单（主体 datalist / 事件类型 select）。
+
+    与 cli._default_pack 同款路径解析：cwd 优先，回退包内默认目录。
+    领域包在 repo 内应恒可加载；万一失败降级空清单——datalist/select
+    为空时自由输入仍可用（反馈闭环不因包缺失中断）。
+    """
+    from pih.domainpacks.loader import DEFAULT_PACK_DIR, load
+
+    cwd_pack = Path("domain_packs/construction_machinery/pack.yaml")
+    fallback = DEFAULT_PACK_DIR / "construction_machinery" / "pack.yaml"
+    path = cwd_pack if cwd_pack.exists() else fallback
+    try:
+        pack = load(path)
+    except Exception:  # noqa: BLE001 反馈表单不因领域包缺失而崩
+        return [], []
+    subjects = [
+        name
+        for c in pack["competitors"]
+        for name in [c["display_name"], *c.get("aliases", [])]
+    ]
+    return subjects, list(pack["event_types"])
 
 
 @asynccontextmanager
@@ -72,6 +100,7 @@ def list_page(
     tag: str | None = Query(None),
     admiralty: str | None = Query(None),
     source_id: str | None = Query(None),
+    process_status: str | None = Query(None),
     since: datetime | None = Query(None),
     until: datetime | None = Query(None),
     before: datetime | None = Query(None),
@@ -84,6 +113,7 @@ def list_page(
         tag=tag,
         admiralty=admiralty,
         source_id=source_id,
+        process_status=process_status,
         since=since,
         until=until,
         before=before,
@@ -104,8 +134,10 @@ def list_page(
 
 
 @app.get("/intel/{intel_id}", response_class=HTMLResponse)
-def detail_page(intel_id: int, request: Request) -> HTMLResponse:
-    """详情页——schema 全字段 + 事实/推断分区 + 快照 presigned 入口。"""
+def detail_page(
+    intel_id: int, request: Request, fb: bool = Query(False)
+) -> HTMLResponse:
+    """详情页——schema 全字段 + 事实/推断分区 + 快照 presigned 入口 + 反馈区。"""
     rec = _svc(request).get(intel_id)
     if rec is None:
         raise HTTPException(status_code=404, detail=f"intel_item {intel_id} not found")
@@ -115,6 +147,7 @@ def detail_page(intel_id: int, request: Request) -> HTMLResponse:
     client = make_snapshot_client()
     if client is not None:
         snapshot_url = presigned_snapshot_url(client, rec.source_id, rec.content_sha1)
+    pack_subjects, pack_event_types = _load_pack_vocab()
     return templates.TemplateResponse(
         request,
         "detail.html",
@@ -122,5 +155,86 @@ def detail_page(intel_id: int, request: Request) -> HTMLResponse:
             "rec": rec,
             "snapshot_url": snapshot_url,
             "event_placeholder": "待事件模型上线后自动激活",
+            "feedbacked": fb,
+            "pack_subjects": pack_subjects,
+            "pack_event_types": pack_event_types,
         },
+    )
+
+
+# 反馈类型展示名（模板与导出共用口径）
+FEEDBACK_TYPE_LABELS = {
+    "subject_wrong": "主体错了",
+    "event_type_wrong": "事件类型错",
+    "fact_wrong": "事实不准",
+    "should_filter": "不该入库",
+}
+
+
+@app.post("/feedback")
+def submit_feedback(
+    request: Request,
+    intel_id: int = Form(...),
+    feedback_type: str = Form(...),
+    fact_index: int | None = Form(None),
+    wrong_value: str | None = Form(None),
+    correct_value: str | None = Form(None),
+    note: str | None = Form(None),
+    user_id: str = Form("operator"),
+) -> RedirectResponse:
+    """消费页反馈写入（S3.1.3）——303 回详情页，?fb=1 显示已记录。
+
+    无鉴权：与 Web 页面同信任域（Sprint 5a「内网默认开放」口径）；
+    feedback_type 合法性在此校验（store 层信任调用方）。
+    """
+    if feedback_type not in FEEDBACK_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"feedback_type 必须是 {'/'.join(FEEDBACK_TYPES)} 之一",
+        )
+    pool = request.app.state.pool
+    if IntelRepository(pool).get(intel_id) is None:
+        raise HTTPException(status_code=404, detail=f"intel_item {intel_id} not found")
+    FeedbackRepository(pool).save(
+        intel_id=intel_id,
+        feedback_type=feedback_type,
+        fact_index=fact_index,
+        wrong_value=wrong_value or None,
+        correct_value=correct_value or None,
+        note=note or None,
+        user_id=user_id or "operator",
+    )
+    log_query("web", {"feedback": feedback_type, "intel_id": intel_id}, 1)
+    return RedirectResponse(f"/intel/{intel_id}?fb=1", status_code=303)
+
+
+@app.get("/feedback", response_class=HTMLResponse)
+def feedback_page(request: Request) -> HTMLResponse:
+    """反馈聚合视图（S3.1.3 AC4）——按信源×类型计数 + 明细 + 导出入口。"""
+    repo = FeedbackRepository(request.app.state.pool)
+    return templates.TemplateResponse(
+        request,
+        "feedback.html",
+        {
+            "agg_rows": repo.aggregate(),
+            "recent": repo.list_recent(100),
+            "type_labels": FEEDBACK_TYPE_LABELS,
+            "highlight_threshold": 0.30,
+        },
+    )
+
+
+@app.get("/feedback/export")
+def feedback_export(request: Request) -> Response:
+    """反馈明细 JSONL 导出——process 层 prompt 迭代的 few-shot 素材（AC4）。"""
+    rows = FeedbackRepository(request.app.state.pool).list_recent(1000)
+    lines = []
+    for r in rows:
+        d = dataclasses.asdict(r)
+        d["created_at"] = r.created_at.isoformat()
+        d["feedback_type_label"] = FEEDBACK_TYPE_LABELS.get(r.feedback_type, r.feedback_type)
+        lines.append(json.dumps(d, ensure_ascii=False))
+    return Response(
+        "\n".join(lines) + ("\n" if lines else ""),
+        media_type="application/x-ndjson",
     )

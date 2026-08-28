@@ -13,6 +13,8 @@
   AC4  粗筛 API 失败（脚本化 chat 抛 LLMError）→ 灰条目保留，走抽取
   AC5  query --event-type=<实际抽取值> 召回 extracted 条目
   AC6  二次 process → 处理 0 条（pending 幂等）
+  AC7  主体占位值「未知」（脚本化 chat）→ needs_manual + 结构化字段保留
+      （Sprint 5b S4.2.3 后验质量门）
 
 断言结构不断言具体文本（LLM 输出不稳定，规格 §5）。
 """
@@ -194,6 +196,34 @@ class TestAC4GrayItemPolicy:
 
         rows = _q("SELECT process_status FROM intel_item WHERE source_id='ccma'")
         assert rows and rows[0][0] == "extracted"  # 落灰保留 → 正常抽取
+
+
+class TestAC7PostHocQualityGate:
+    """Sprint 5b S4.2.3 AC1：主体占位值 → needs_manual 且结构化字段保留。"""
+
+    def test_placeholder_subject_needs_manual_with_fields_kept(self, capsys):
+        _collect_fresh(1)
+        _run_scripted(ScriptChat(
+            small=lambda m: ({"relevant": True}, _usage()),
+            large=lambda m: (_ok_pred() | {"主体": "未知", "事件类型": "其他"}, _usage()),
+        ))
+
+        rows = _q(
+            "SELECT process_status, subject, event_type, admiralty_code, process_error "
+            "FROM intel_item WHERE source_id='ccma'"
+        )
+        assert rows
+        status, subject, event_type, admiralty, error = rows[0]
+        assert status == "needs_manual"  # 非 extracted——列表不被低质条目稀释
+        assert subject == "未知"  # 字段保留（复核依据）
+        assert event_type == "其他"
+        assert admiralty == "B2"  # reliability B × 可信度 2 照常拼装
+        assert "后验质量门" in error
+
+        code = main(["query", "--source-id=ccma"])
+        out = capsys.readouterr().out
+        assert code == 0
+        assert "needs_manual" in out  # 条目保留可查
 
 
 @REAL_LLM

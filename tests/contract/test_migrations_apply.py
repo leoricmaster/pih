@@ -8,6 +8,7 @@
 - AC7：downgrade base 后两张表均消失
 - Sprint 4 AC7：0002 加列齐全，process_status 默认 pending，GIN 索引在；
   downgrade 0001 后新列全部消失
+- Sprint 5b：0003 feedback 表列/FK 级联/索引；downgrade 0002 后表消失
 """
 from __future__ import annotations
 
@@ -166,4 +167,73 @@ def test_sprint4_downgrade_0001_drops_process_columns():
     )
     cols = {r[0] for r in rows}
     assert not (cols & set(PROCESS_COLUMNS)), f"downgrade 后仍存在列：{cols & set(PROCESS_COLUMNS)}"
+
+
+FEEDBACK_COLUMNS = [
+    "id", "intel_id", "feedback_type", "fact_index",
+    "wrong_value", "correct_value", "note", "user_id", "created_at",
+]
+
+
+def test_sprint5b_feedback_table_columns_exist():
+    """0003：feedback 列齐全，user_id 非空默认 operator。"""
+    rows = _q(
+        "SELECT column_name, column_default, is_nullable FROM information_schema.columns "
+        "WHERE table_name = 'feedback'"
+    )
+    cols = {r[0]: (r[1], r[2]) for r in rows}
+    for c in FEEDBACK_COLUMNS:
+        assert c in cols, f"缺列 {c}"
+    assert "'operator'" in (cols["user_id"][0] or "")
+    assert cols["user_id"][1] == "NO"
+    assert cols["feedback_type"][1] == "NO"
+
+
+def test_sprint5b_feedback_fk_cascades_and_indexes():
+    """0003：FK → intel_item ON DELETE CASCADE；intel_id/type 两索引在。"""
+    rows = _q(
+        "SELECT confrelid::regclass::text, confdeltype FROM pg_constraint "
+        "WHERE conrelid = 'feedback'::regclass AND contype = 'f'"
+    )
+    assert any(r[0] == "intel_item" and r[1] == "c" for r in rows), rows
+
+    idx = _q("SELECT indexname FROM pg_indexes WHERE tablename = 'feedback'")
+    names = {r[0] for r in idx}
+    assert "idx_feedback_intel" in names
+    assert "idx_feedback_type" in names
+
+
+def test_sprint5b_feedback_cascade_actually_deletes():
+    """级联真实生效：删情报行，其反馈随之消失。"""
+    with psycopg.connect(PG_DSN) as conn, conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO source (id, name, domain_id, url, list_url, level, reliability, enabled) "
+            "VALUES ('ccma', '测', 'd', 'http://x/', 'http://x/l', 'L2', 'B', true)"
+        )
+        cur.execute(
+            "INSERT INTO intel_item (source_id, url, title, list_url, fetched_at, "
+            "http_status, snapshot_id, content_sha1, raw_html) "
+            "VALUES ('ccma', 'http://x/1', 't', 'http://x/l', NOW(), 200, 's1', 's1', '<html/>') "
+            "RETURNING id"
+        )
+        intel_id = cur.fetchone()[0]
+        cur.execute(
+            "INSERT INTO feedback (intel_id, feedback_type, wrong_value, correct_value) "
+            "VALUES (%s, 'subject_wrong', '未知', '三一')", (intel_id,)
+        )
+        cur.execute("DELETE FROM intel_item WHERE id = %s", (intel_id,))
+    rows = _q("SELECT COUNT(*) FROM feedback")
+    assert rows == [(0,)]
+
+
+def test_sprint5b_downgrade_0002_drops_feedback():
+    """downgrade 到 0002：feedback 表消失。"""
+    _run(["downgrade", "0002"])
+    rows = _q(
+        "SELECT table_name FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'feedback'"
+    )
+    assert rows == []
+    cur = _run(["current"])
+    assert cur.returncode == 0
 

@@ -54,7 +54,7 @@ def list_intel(
     filters: IntelFilters = Depends(),
     svc: QueryService = Depends(get_query_service),
 ) -> dict:
-    """组合查询——主体/事件类型/标签/置信度/信源/时间范围/游标。"""
+    """组合查询——主体/事件类型/标签/置信度/信源/处理状态/时间范围/游标。"""
     result = svc.list(filters)
     log_query("api", filters.nonempty(), len(result.items))
     return {

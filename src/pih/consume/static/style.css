@@ -79,3 +79,30 @@ dl.kv dd { margin: 0; font-size: 0.9rem; word-break: break-all; }
 .placeholder { color: var(--muted); font-style: italic; font-size: 0.9rem; }
 .back { margin-top: 2rem; }
 .back a { color: var(--accent); text-decoration: none; }
+
+/* 状态徽章（Sprint 5b） */
+.status-badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 10px; font-size: 0.78rem; background: #f3f4f6; color: var(--muted); }
+.status-extracted { background: #dcfce7; color: #166534; }
+.status-needs_manual { background: #fef3c7; color: #92400e; }
+.status-filtered_out { background: #f3f4f6; color: var(--muted); }
+.status-pending { background: #e0e7ff; color: #3730a3; }
+a.fb-link { color: var(--accent); text-decoration: none; font-size: 0.85rem; }
+a.fb-link:hover { text-decoration: underline; }
+
+/* 详情页反馈区（Sprint 5b S3.1.3） */
+.feedback-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+.fb-form { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.75rem; background: #fafafa; border: 1px solid var(--border); border-radius: 4px; }
+.fb-form .fb-title { font-size: 0.85rem; font-weight: 600; }
+.fb-form input[type="text"], .fb-form select { padding: 0.3rem 0.5rem; border: 1px solid var(--border); border-radius: 3px; font-size: 0.9rem; }
+.fb-form button { padding: 0.35rem 0.9rem; border: 1px solid var(--accent); border-radius: 3px; background: var(--accent); color: #fff; font-size: 0.85rem; cursor: pointer; }
+.fb-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+.feedback-ok { padding: 0.5rem 0.75rem; background: #dcfce7; border: 1px solid #86efac; border-radius: 4px; color: #166534; font-size: 0.9rem; }
+.fb-hint { margin: 0.75rem 0 0; color: var(--muted); font-size: 0.85rem; }
+.fb-hint a { color: var(--accent); }
+
+/* 反馈聚合视图（Sprint 5b） */
+.feedback-page { background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 1.5rem; }
+.feedback-page .meta-line a { color: var(--accent); }
+.row-highlight td { background: #fef3c7; }
+.highlight-note { margin: 0.75rem 0 0; padding: 0.5rem 0.75rem; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px; color: #92400e; font-size: 0.88rem; }
+.recent-list td.wrong-to-right, .recent-list td.note-cell { font-size: 0.85rem; word-break: break-all; }

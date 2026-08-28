@@ -159,6 +159,53 @@ class TestRunnerStatusMapping:
         assert len(written) == 1 and written[0][0] == 2
 
 
+class TestPostHocQualityGate:
+    """S4.2.3：主体占位值 → needs_manual 且结构化字段保留。"""
+
+    def test_placeholder_subject_gates_to_needs_manual_with_fields_kept(self):
+        repo, written = _repo([_rec(reliability="B")])
+        pred = _ok_pred() | {"主体": "未知", "事件类型": "其他"}
+        chat = FakeChat([
+            ({"relevant": True}, _usage(10, 5)),
+            (pred, _usage(100, 60)),
+        ])
+        stats = ProcessRunner(repo, PACK, chat=chat).run()
+        assert stats.needs_manual == 1
+        assert stats.extracted == 0
+        _, result = written[0]
+        assert result.status == STATUS_NEEDS_MANUAL
+        # 字段保留（复核依据）+ Admiralty 照常拼装
+        assert result.subject == "未知"
+        assert result.event_type == "其他"
+        assert result.facts == "销量 1000 台"
+        assert result.admiralty_code == "B2"
+        assert "后验质量门" in result.error
+        assert "未知" in result.error
+
+    def test_english_placeholder_lowercase_hit(self):
+        repo, written = _repo([_rec()])
+        pred = _ok_pred() | {"主体": "Unknown"}
+        chat = FakeChat([
+            ({"relevant": True}, _usage()),
+            (pred, _usage()),
+        ])
+        ProcessRunner(repo, PACK, chat=chat).run()
+        _, result = written[0]
+        assert result.status == STATUS_NEEDS_MANUAL
+        assert result.subject == "Unknown"
+
+    def test_normal_subject_unaffected(self):
+        """正常主体回归：门不误伤。"""
+        repo, written = _repo([_rec()])
+        chat = FakeChat([
+            ({"relevant": True}, _usage()),
+            (_ok_pred(), _usage()),
+        ])
+        stats = ProcessRunner(repo, PACK, chat=chat).run()
+        assert stats.extracted == 1
+        assert written[0][1].status == STATUS_EXTRACTED
+
+
 class TestRunnerStats:
     def test_summary_line_format(self):
         stats = RunnerStats(total=5, extracted=3, filtered_out=1, needs_manual=1, failed=0)

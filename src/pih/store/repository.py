@@ -289,6 +289,7 @@ class IntelRepository:
         tag: str | None = None,
         admiralty: str | None = None,
         source_id: str | None = None,
+        process_status: str | None = None,
         since: datetime | None = None,
         until: datetime | None = None,
         before: datetime | None = None,
@@ -296,10 +297,13 @@ class IntelRepository:
     ) -> list[IntelRecord]:
         """结构化筛选（S1.1.1，Sprint 4 CLI 子集 + Sprint 5a Web/API 同源扩展）。
 
-        subject/event_type/admiralty 精确匹配；tag 用 JSONB containment（tags @> [tag]）；
-        since/until 走 fetched_at 闭区间；before 为游标（fetched_at < before，分页用）。
+        subject/event_type/admiralty/process_status 精确匹配；tag 用 JSONB
+        containment（tags @> [tag]）；since/until 走 fetched_at 闭区间；
+        before 为游标（fetched_at < before，分页用）。
         排序：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC（Sprint 5a 简版，
         完整 score = W_c × map(admiralty) × decay 留事件+时效 Sprint）。
+        process_status 筛选（Sprint 5b）：needs_manual 人工复核队列的可达路径
+        （S4.2.3 后验质量门拦下的条目由此进入视野）。
         """
         clauses: list[str] = []
         params: list = []
@@ -318,6 +322,9 @@ class IntelRepository:
         if source_id is not None:
             clauses.append("source_id = %s")
             params.append(source_id)
+        if process_status is not None:
+            clauses.append("process_status = %s")
+            params.append(process_status)
         if since is not None:
             clauses.append("fetched_at >= %s")
             params.append(since)

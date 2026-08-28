@@ -8,6 +8,14 @@
   <label>标签<input type="text" name="tag" value="{{ filters.tag or '' }}"></label>
   <label>置信度<input type="text" name="admiralty" value="{{ filters.admiralty or '' }}" placeholder="如 B2"></label>
   <label>信源<input type="text" name="source_id" value="{{ filters.source_id or '' }}"></label>
+  <label>处理状态
+    <select name="process_status">
+      <option value="">全部</option>
+      {% for s in ('extracted', 'needs_manual', 'filtered_out', 'pending') %}
+      <option value="{{ s }}" {% if filters.process_status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </label>
   <label>起始时间<input type="text" name="since" value="{{ filters.since.isoformat() if filters.since else '' }}" placeholder="ISO8601"></label>
   <label>截止时间<input type="text" name="until" value="{{ filters.until.isoformat() if filters.until else '' }}" placeholder="ISO8601"></label>
   <label>每页<input type="number" name="limit" value="{{ filters.limit }}" min="1" max="200"></label>
@@ -23,8 +31,10 @@
       <th>主体</th>
       <th>事件类型</th>
       <th>置信度</th>
+      <th>状态</th>
       <th>采集时间</th>
       <th>所属事件核实状态</th>
+      <th>反馈</th>
     </tr>
   </thead>
   <tbody>
@@ -34,8 +44,10 @@
       <td>{{ r.subject or '—' }}</td>
       <td>{{ r.event_type or '—' }}</td>
       <td>{{ r.admiralty_code or '—' }}</td>
+      <td><span class="status-badge status-{{ r.process_status or 'pending' }}">{{ r.process_status or 'pending' }}</span></td>
       <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
       <td class="placeholder">{{ event_placeholder }}</td>
+      <td><a class="fb-link" href="/intel/{{ r.id }}#feedback" title="对这条情报标记反馈">反馈</a></td>
     </tr>
     {% endfor %}
   </tbody>

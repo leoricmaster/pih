@@ -126,12 +126,46 @@ class TestAC4SameSource:
             assert web_r.status_code == 200
             assert api_r.status_code == 200
 
-            # 从 Web HTML 提取 /intel/{id} 序列
-            web_ids = re.findall(r"/intel/(\d+)", web_r.text)
+            # 从 Web HTML 提取标题链接的 /intel/{id} 序列（反馈列 href 带 #feedback 锚点，不匹配）
+            web_ids = re.findall(r'href="/intel/(\d+)"', web_r.text)
             # API JSON 提取 id 序列
             api_ids = [str(item["id"]) for item in api_r.json()["items"]]
 
             assert web_ids == api_ids, f"Web 与 API id 序列不一致：{web_ids} vs {api_ids}"
+
+
+class TestSprint5bProcessStatusFilter:
+    """Sprint 5b：process_status 筛选（needs_manual 复核队列可达）+ Web/API 同源。"""
+
+    def test_status_filter_same_source_web_and_api(self, api_token):
+        ids = _seed(20)
+        # 前 5 条改 needs_manual（后验质量门拦下的形态）
+        with psycopg.connect(PG_DSN) as conn, conn.cursor() as cur:
+            cur.execute(
+                "UPDATE intel_item SET process_status='needs_manual', "
+                "process_error='后验质量门：主体为占位值「未知」' "
+                "WHERE id = ANY(%s)", ([ids[0], ids[1], ids[2], ids[3], ids[4]],)
+            )
+        with TestClient(app) as client:
+            params = {"process_status": "needs_manual"}
+            web_r = client.get("/", params=params)
+            api_r = client.get("/api/intel/list", params=params, headers=_auth(api_token))
+            assert web_r.status_code == 200
+            assert api_r.status_code == 200
+
+            web_ids = re.findall(r'href="/intel/(\d+)"', web_r.text)
+            api_ids = [str(item["id"]) for item in api_r.json()["items"]]
+            assert sorted(web_ids) == sorted(str(i) for i in ids[:5])
+            assert web_ids == api_ids
+            for item in api_r.json()["items"]:
+                assert item["process_status"] == "needs_manual"
+
+    def test_status_column_in_list(self, api_token):
+        _seed(5)
+        with TestClient(app) as client:
+            html = client.get("/").text
+        assert "status-needs_manual" in html or "status-extracted" in html
+        assert 'name="process_status"' in html  # 筛选下拉在场
 
 
 class TestAC5ApiResponseFields:

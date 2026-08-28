@@ -91,6 +91,67 @@
     </dl>
   </section>
 
+  <section class="block feedback" id="feedback">
+    <h2>反馈</h2>
+    {% if feedbacked %}
+    <p class="feedback-ok">✓ 反馈已记录——将用于迭代抽取 prompt 与粗筛口径</p>
+    {% endif %}
+    {% set facts = rec.facts | split_facts %}
+    <div class="feedback-grid">
+      <form class="fb-form" method="post" action="/feedback">
+        <input type="hidden" name="intel_id" value="{{ rec.id }}">
+        <input type="hidden" name="feedback_type" value="subject_wrong">
+        <input type="hidden" name="wrong_value" value="{{ rec.subject or '' }}">
+        <span class="fb-title">主体错了</span>
+        <input type="text" name="correct_value" list="pack-subjects" required
+               placeholder="正确主体（可选清单或自由输入）">
+        <datalist id="pack-subjects">
+          {% for s in pack_subjects %}<option value="{{ s }}"></option>{% endfor %}
+        </datalist>
+        <button type="submit">提交</button>
+      </form>
+
+      <form class="fb-form" method="post" action="/feedback">
+        <input type="hidden" name="intel_id" value="{{ rec.id }}">
+        <input type="hidden" name="feedback_type" value="event_type_wrong">
+        <input type="hidden" name="wrong_value" value="{{ rec.event_type or '' }}">
+        <span class="fb-title">事件类型错</span>
+        <select name="correct_value" required>
+          <option value="" disabled selected>正确事件类型</option>
+          {% for et in pack_event_types %}<option value="{{ et }}">{{ et }}</option>{% endfor %}
+        </select>
+        <button type="submit">提交</button>
+      </form>
+
+      <form class="fb-form" method="post" action="/feedback">
+        <input type="hidden" name="intel_id" value="{{ rec.id }}">
+        <input type="hidden" name="feedback_type" value="fact_wrong">
+        <span class="fb-title">事实不准</span>
+        {% if facts %}
+        <select name="fact_index" required>
+          <option value="" disabled selected>哪条事实</option>
+          {% for f in facts %}
+          <option value="{{ loop.index }}">{{ loop.index }}. {{ f[:40] }}{% if f|length > 40 %}…{% endif %}</option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <select name="fact_index" disabled><option>（无已抽取事实）</option></select>
+        {% endif %}
+        <input type="text" name="note" placeholder="说明哪里不准">
+        <button type="submit" {% if not facts %}disabled{% endif %}>提交</button>
+      </form>
+
+      <form class="fb-form" method="post" action="/feedback">
+        <input type="hidden" name="intel_id" value="{{ rec.id }}">
+        <input type="hidden" name="feedback_type" value="should_filter">
+        <span class="fb-title">不该入库</span>
+        <input type="text" name="note" placeholder="可选：为何不该入库（粗筛漏放原因）">
+        <button type="submit">提交</button>
+      </form>
+    </div>
+    <p class="fb-hint">反馈明细与聚合见 <a href="/feedback">反馈聚合视图</a></p>
+  </section>
+
   <section class="block event-status">
     <h2>事件核实状态与跃迁历史</h2>
     <p class="placeholder">{{ event_placeholder }}</p>

@@ -29,6 +29,15 @@ ALL_KEYS = (
 
 CREDIBILITY_VALUES = ("1", "2", "3", "4", "5", "6")
 
+# 后验质量门（S4.2.3）：schema 校验拦不住的语义占位主体——命中即降 needs_manual。
+# Sprint 5a 实证样本是"未知"；集合保守，随反馈样本可扩充。
+PLACEHOLDER_SUBJECTS = frozenset({"", "未知", "无", "不详", "unknown"})
+
+
+def is_placeholder_subject(subject: str) -> bool:
+    """主体是否为占位值（strip + lower 后比对，中文不受 lower 影响）。"""
+    return subject.strip().lower() in PLACEHOLDER_SUBJECTS
+
 
 @dataclass(frozen=True)
 class PackVocab:

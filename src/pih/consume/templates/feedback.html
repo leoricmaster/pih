@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}反馈聚合 · PIH{% endblock %}
+{% block content %}
+
+<div class="feedback-page">
+  <header class="detail-header">
+    <h1>反馈聚合视图</h1>
+    <p class="meta-line">
+      <span>主体错误率 = 该信源 subject_wrong 反馈数 / extracted 条目数</span>
+      <span>高亮阈值 {{ (highlight_threshold * 100)|int }}%（提示需迭代该信源抽取 prompt 或粗筛阈值）</span>
+      <span><a href="/feedback/export">导出 JSONL（few-shot 素材）</a></span>
+    </p>
+  </header>
+
+  <section class="block">
+    <h2>按信源 × 反馈类型</h2>
+    {% if agg_rows %}
+    <table class="intel-list agg-list">
+      <thead>
+        <tr>
+          <th>信源</th>
+          <th>反馈类型</th>
+          <th>条数</th>
+          <th>该信源 extracted</th>
+          <th>主体错误率</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in agg_rows %}
+        <tr class="{{ 'row-highlight' if row.highlight }}">
+          <td>{{ row.source_id }}</td>
+          <td>{{ type_labels.get(row.feedback_type, row.feedback_type) }}</td>
+          <td>{{ row.count }}</td>
+          <td>{{ row.extracted_total }}</td>
+          <td>{{ '{:.0%}'.format(row.subject_error_rate) if row.subject_error_rate is not none else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if agg_rows | selectattr('highlight') | list %}
+    <p class="highlight-note">⚠ 高亮行：该信源主体错误率超过 {{ (highlight_threshold * 100)|int }}%，建议迭代其抽取 prompt（主体判据）或收紧粗筛口径</p>
+    {% endif %}
+    {% else %}
+    <div class="empty"><p>暂无反馈——在情报详情页点「反馈」按钮积累样本</p></div>
+    {% endif %}
+  </section>
+
+  <section class="block">
+    <h2>最近反馈（最多 100 条）</h2>
+    {% if recent %}
+    <table class="intel-list recent-list">
+      <thead>
+        <tr>
+          <th>时间</th>
+          <th>情报</th>
+          <th>类型</th>
+          <th>错值 → 正确值</th>
+          <th>说明</th>
+          <th>用户</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in recent %}
+        <tr>
+          <td class="ts">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td class="title"><a href="/intel/{{ r.intel_id }}">{{ r.intel_title or ('#' ~ r.intel_id) }}</a></td>
+          <td>{{ type_labels.get(r.feedback_type, r.feedback_type) }}{% if r.feedback_type == 'fact_wrong' and r.fact_index %}（第 {{ r.fact_index }} 条）{% endif %}</td>
+          <td class="wrong-to-right">
+            {% if r.correct_value or r.wrong_value %}
+              {{ r.wrong_value or '—' }} → {{ r.correct_value or '—' }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="note-cell">{{ r.note or '—' }}</td>
+          <td>{{ r.user_id }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><p>暂无反馈记录</p></div>
+    {% endif %}
+  </section>
+
+  <p class="back"><a href="/">← 返回列表</a></p>
+</div>
+
+{% endblock %}

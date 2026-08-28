@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from pih.process.extraction import is_placeholder_subject
 from pih.process.graph import ChatFn, ItemState, build_graph
 from pih.process.textprep import prepare_text
 from pih.store.repository import (
@@ -129,6 +130,25 @@ class ProcessRunner:
             )
 
         admiralty = assemble_admiralty(rec.source_reliability or "?", extraction.credibility)
+        if is_placeholder_subject(extraction.subject):
+            # 后验质量门（S4.2.3）：主体占位值不算抽取成功——结构化字段保留
+            # 供人工复核，状态降 needs_manual（列表不稀释正常情报）
+            reason = f"后验质量门：主体为占位值「{extraction.subject}」"
+            return (
+                ProcessResult(
+                    status=STATUS_NEEDS_MANUAL,
+                    subject=extraction.subject,
+                    event_type=extraction.event_type,
+                    facts=extraction.facts,
+                    inferences=extraction.inferences,
+                    tags=extraction.tags,
+                    quant_params=extraction.quant_params,
+                    admiralty_code=admiralty,
+                    error=reason,
+                    meta=meta,
+                ),
+                f"[{rec.id}] ⚠ needs_manual（{reason}）",
+            )
         return (
             ProcessResult(
                 status=STATUS_EXTRACTED,

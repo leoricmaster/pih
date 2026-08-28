@@ -131,6 +131,13 @@ class TestListRender:
 
 
 class TestDetailRender:
+    def _feedback_ctx(self) -> dict:
+        return {
+            "feedbacked": False,
+            "pack_subjects": ["三一", "徐工", "三一重工"],
+            "pack_event_types": ["新品发布", "财报", "其他"],
+        }
+
     def test_renders_all_sections(self):
         rec = _make_record()
         html = _render(
@@ -139,6 +146,7 @@ class TestDetailRender:
                 "rec": rec,
                 "snapshot_url": "http://minio.local/snap-abc123?token=x",
                 "event_placeholder": "待事件模型上线后自动激活",
+                **self._feedback_ctx(),
             },
         )
         assert "基础元信息" in html
@@ -162,12 +170,48 @@ class TestDetailRender:
         assert "原文快照</a>" in html
         assert "HTML，1小时有效" not in html
 
+    def test_renders_feedback_section(self):
+        """Sprint 5b S3.1.3：反馈区四表单 + datalist 主体清单注入。"""
+        rec = _make_record()
+        html = _render(
+            "detail.html",
+            {
+                "rec": rec,
+                "snapshot_url": None,
+                "event_placeholder": "x",
+                **self._feedback_ctx(),
+            },
+        )
+        assert 'id="feedback"' in html
+        for label in ("主体错了", "事件类型错", "事实不准", "不该入库"):
+            assert label in html
+        # datalist 主体清单选项
+        assert '<option value="三一重工">' in html
+        # 事件类型 select 选项
+        assert '<option value="新品发布">' in html
+        # hidden 透传当前错值
+        assert 'name="wrong_value" value="三一"' in html
+        # 未提交时不显示已记录提示
+        assert "反馈已记录" not in html
+
+    def test_feedbacked_flag_shows_notice(self):
+        html = _render(
+            "detail.html",
+            {
+                "rec": _make_record(),
+                "snapshot_url": None,
+                "event_placeholder": "x",
+                **(self._feedback_ctx() | {"feedbacked": True}),
+            },
+        )
+        assert "反馈已记录" in html
+
     def test_facts_split_into_list(self):
         """facts 按 '；' 拆成无序列表（事实间无顺序语义），每条事实一行。"""
         rec = _make_record()
         html = _render(
             "detail.html",
-            {"rec": rec, "snapshot_url": None, "event_placeholder": "x"},
+            {"rec": rec, "snapshot_url": None, "event_placeholder": "x", **self._feedback_ctx()},
         )
         # 事实区块用 <ul>（无序），不用 <ol>（避免引入不存在的顺序关系）
         assert "事实描述" in html
@@ -181,7 +225,7 @@ class TestDetailRender:
         rec = _make_record()
         html = _render(
             "detail.html",
-            {"rec": rec, "snapshot_url": None, "event_placeholder": "x"},
+            {"rec": rec, "snapshot_url": None, "event_placeholder": "x", **self._feedback_ctx()},
         )
         assert "MinIO 不可达" in html
         assert rec.snapshot_id in html
@@ -193,6 +237,7 @@ class TestDetailRender:
                 "rec": _make_record(),
                 "snapshot_url": None,
                 "event_placeholder": "待事件模型上线后自动激活",
+                **self._feedback_ctx(),
             },
         )
         assert "待事件模型上线后自动激活" in html

@@ -28,7 +28,7 @@
 | `collect/` | 采集层 | ✅ Sprint 2 已交付（适配器+RawItem+快照+robots；CCMA/三一/cehome 三源）＋ probe/collect CLI 与 enabled 门控（S3.2.1 补交付） |
 | `process/` | 处理层（LangGraph） | ✅ Sprint 4 已交付（LLM 客户端+粗筛→抽取→校验三节点图+ProcessRunner+process CLI；领域包 v0.2.0 枚举单一事实源） |
 | `store/` | 存储层 | ✅ Sprint 3 已交付（PG 落库 + alembic 迁移 + IntelRepository + query CLI；source/intel_item 两表） |
-| `consume/` | 消费层 | ✅ Sprint 5a 已交付（FastAPI Web + JSON API 同源 + Jinja2 列表/详情 + Bearer token 鉴权；ADR-006） |
+| `consume/` | 消费层 | ✅ Sprint 5a 已交付（FastAPI Web + JSON API 同源 + Jinja2 列表/详情 + Bearer token 鉴权；ADR-006）；Sprint 5b 增 process_status 筛选 + 反馈闭环（表单/聚合视图/JSONL 导出） |
 | `core/` | 五元模型命名空间 | 占位，后续 Sprint |
 
 ## 工程化启动
@@ -117,6 +117,25 @@ curl http://127.0.0.1:8000/api/healthz          # 健康检查（不鉴权）
 event 表与核实状态机属下一 Sprint，上线后查询服务自动填实，无需改 consume 层。
 排序简版 `admiralty_code ASC NULLS LAST, fetched_at DESC`，完整 score
 （W_c × map(admiralty) × decay）待事件+时效 Sprint。
+
+## 质量闭环（Sprint 5b）
+
+后验质量门 + 消费页人类反馈，拦住低质条目增量、积累错误样本驱动 prompt 迭代：
+
+- **后验质量门（S4.2.3）**：`pih process` 时主体抽成占位值（未知/无/不详/unknown）
+  → `process_status=needs_manual`（结构化字段保留供复核），不再混入 extracted；
+- **复核队列**：列表页/API 按 `?process_status=needs_manual` 筛出待复核条目
+  （Web 下拉或 API 参数，同源）；
+- **反馈（S3.1.3）**：详情页反馈区四动作——主体错了（datalist 主体清单可选）、
+  事件类型错、事实不准（标注到第几条事实）、不该入库；提交即写 `feedback` 表；
+- **聚合视图**：`/feedback` 按信源×类型计数，主体错误率 >30% 高亮提示迭代；
+  `/feedback/export` 导出 JSONL 作 prompt 迭代 few-shot 素材。
+
+```bash
+curl "http://127.0.0.1:8000/api/intel/list?process_status=needs_manual" \
+  -H "Authorization: Bearer dev-token"   # API 按状态筛
+curl http://127.0.0.1:8000/feedback/export | head -1   # 反馈明细 JSONL
+```
 
 ## 领域包机制
 
