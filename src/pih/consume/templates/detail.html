@@ -154,7 +154,36 @@
 
   <section class="block event-status">
     <h2>事件核实状态与跃迁历史</h2>
-    <p class="placeholder">{{ event_placeholder }}</p>
+    {% if event_with_log.event %}
+    {% set ev = event_with_log.event %}
+    <dl class="kv">
+      <dt>事件 ID</dt><dd>#{{ ev.id }}</dd>
+      <dt>主体</dt><dd>{{ ev.subject }}</dd>
+      <dt>事件类型</dt><dd>{{ ev.event_type }}</dd>
+      <dt>核实状态</dt><dd><span class="status-badge event-{{ ev.status }}">{{ status_labels[ev.status] }}</span></dd>
+      <dt>独立信源数</dt><dd>{{ ev.source_count }}</dd>
+      {% if ev.ready_for_manual %}<dt>待人工</dt><dd>已具备升级条件，可执行 <code>pih verify confirm {{ ev.id }}</code></dd>{% endif %}
+      <dt>首见时间</dt><dd>{{ ev.first_seen_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+      <dt>最近见</dt><dd>{{ ev.last_seen_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+    </dl>
+    <h3>状态跃迁历史</h3>
+    {% if event_with_log.logs %}
+    <ul class="timeline">
+      {% for log in event_with_log.logs %}
+      <li>
+        <span class="ts">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+        <span class="transition">{{ status_labels[log.from_status] if log.from_status else '（初始）' }} → {{ status_labels[log.to_status] }}</span>
+        <span class="operator">operator={{ log.operator }}</span>
+        {% if log.reason %}<span class="reason">{{ log.reason }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="prose">（无跃迁记录）</div>
+    {% endif %}
+    {% else %}
+    <div class="prose">未挂事件——条目为 needs_manual/filtered_out 或尚未跑 process。extracted 条目会在 process 时自动聚类挂入。</div>
+    {% endif %}
   </section>
 
   <p class="back"><a href="/">← 返回列表</a></p>

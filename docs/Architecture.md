@@ -1,9 +1,9 @@
 # 产品情报中心（Product Intelligence Hub）架构设计
 
-- 版本：V0.10（Sprint 5a 回写同步；ADR 拆分至 docs/adr/）
+- 版本：V0.11（Sprint 6 事件聚类回写；ADR 拆分至 docs/adr/）
 - 日期：2026-08-28
-- 配套：《Product Requirements.md》V1.0、《Backlog.md》V1.4
-- 变更：V0.9→V0.10 Sprint 5a 回写——§4 模块表「查询服务（Web+API）」里程碑补「Sprint 5a 已交付」；§6.2 排序补注 Sprint 5a 简版（admiralty ASC + fetched_at DESC，完整 score 待事件+时效 Sprint）；§7 数据架构无表新增（消费层不落表）。V0.8→V0.9 Sprint 0 回写——§9.2 补 SPK-2/SPK-3 实测 token 与延迟值（大模型 2997+1729 tokens/20s，小模型与大模型同量级）；ADR-004 后果节补 SPK-3 实测结论（成功率 92%，ADR-004 维持）
+- 配套：《Product Requirements.md》V1.0、《Backlog.md》V1.7
+- 变更：V0.10→V0.11 Sprint 6 回写——§4 模块表「事件聚类器」里程碑从「后续方向」改「Sprint 6 已交付」、情报库里程碑补「event/verification_log 落地」；§6.2 排序补注 Sprint 6 切到 W_c×map(admiralty)（decay 留时效 Sprint）；§7 数据架构补 event/verification_log 两表与 intel_item.event_id FK ON DELETE SET NULL。V0.9→V0.10 Sprint 5a 回写——§4 模块表「查询服务（Web+API）」里程碑补「Sprint 5a 已交付」；§6.2 排序补注 Sprint 5a 简版（admiralty ASC + fetched_at DESC，完整 score 待事件+时效 Sprint）；§7 数据架构无表新增（消费层不落表）。V0.8→V0.9 Sprint 0 回写——§9.2 补 SPK-2/SPK-3 实测 token 与延迟值（大模型 2997+1729 tokens/20s，小模型与大模型同量级）；ADR-004 后果节补 SPK-3 实测结论（成功率 92%，ADR-004 维持）
 - 用途：指导 Backlog 梳理与模块设计；关键决策记录见 §10 索引
 
 ## 1. 概览
@@ -140,10 +140,10 @@ flowchart TB
 | 相关性粗筛 | 关键词 + 小模型二分类 | `classify(RawItem) → keep/drop` | M1（Sprint 4 已交付：LLM small tier 二分类为图首节点，无关键词层；判无关行级标记 filtered_out 可审计） |
 | 快照采集 | 原文存档（HTML/PDF/截图） | 存 MinIO，返回快照 ID | M1 |
 | 核实引擎 | 来源分级、Admiralty 评级、事实/推断分离 | `verify(item) → IntelItem(预核实)` | M1（Sprint 4 交付预评级简版：Admiralty = source.reliability × LLM 可信度；核实流程待事件 Sprint） |
-| 事件聚类器 | 同事件多源聚类，驱动交叉印证 | `cluster(item) → event_id` | 后续方向 |
+| 事件聚类器 | 同事件多源聚类，驱动交叉印证 | `cluster(item) → event_id` | Sprint 6 已交付（硬规则聚类：主体归一化+事件类型+±7 天窗；EventService 在线挂 ProcessRunner._process_one 末尾；第二独立信源命中自动跃迁 pending→single_source；终态人工 CLI `pih verify confirm/refute` 写 verification_log；不引入 pgvector，留 M1 全文检索 Sprint） |
 | 结构化抽取器 | 按 schema 抽取主体/事件/参数/标签 | `extract(item, pack) → IntelItem` | M1（Sprint 4 已交付：LangGraph 三节点图 粗筛→抽取→校验，`pih process` 批处理，枚举单一事实源在领域包。Sprint 5b 增后验质量门：主体占位值 → needs_manual 且字段保留，低质条目不混入 extracted） |
 | 时效管理器 | 有效期计算、过期降权、复核提醒 | 定时任务 | M1 |
-| 情报库 | 情报主表 + 核实流转日志 | CRUD + 状态机 | M1（Sprint 3 已交付 source/intel_item 两表 + IntelRepository + alembic 迁移；Sprint 4 增 11 结构化列 + JSONB 标签 GIN + 结构化筛选；event/verification_log 待事件聚类 Sprint） |
+| 情报库 | 情报主表 + 核实流转日志 | CRUD + 状态机 | M1（Sprint 3 已交付 source/intel_item 两表 + IntelRepository + alembic 迁移；Sprint 4 增 11 结构化列 + JSONB 标签 GIN + 结构化筛选；Sprint 6 增 event + verification_log 两表 + intel_item.event_id FK ON DELETE SET NULL，EventRepository/EventService 在线聚类与终态跃迁） |
 | 竞品资产库 | 竞品档案、功能/参数矩阵 | 表结构 M1，自动维护为后续方向 | M1 |
 | 查询服务（Web + API） | 筛选列表 + 情报详情（含事件状态与核实历史），页面与 JSON API 同源 | FastAPI：服务端模板 + REST（ADR-006） | M1（Sprint 5a 已交付：FastAPI 同源 + Jinja2 列表/详情 + Bearer token 鉴权 + 游标分页；事件状态字段占位「待事件模型上线后自动激活」；排序简版 admiralty ASC + fetched_at DESC，完整 score 待事件+时效 Sprint。Sprint 5b 增 process_status 同源筛选（needs_manual 复核队列）与反馈闭环入口：详情页反馈表单 + 聚合视图 + JSONL 导出） |
 | RAG 问答服务 | 混合检索问答，答案强制带引用 | `ask(query) → answer + citations[]` | M2（混合检索，ADR-005） |
@@ -253,7 +253,7 @@ stateDiagram-v2
 - `W_c`：事件状态权重——多源确认 1.0 / 单源确认 0.8 / 待核实 0.5 / 已证伪 0（默认不出现在结果中）；
 - 初始权重如上，作为领域包可调参数（`ranking:` 节），M1 运行期观察调优。
 
-> **Sprint 5a 简版**（2026-08-28）：W_c 依赖事件状态、decay 依赖 expires_at，二者均未上线。消费层 Sprint 5a 排序暂用 `admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC` 兜底——Admiralty 主键（A 最优）+ 采集时间近优先 + id 确定序。完整 score 待事件聚类 Sprint（W_c）+ 时效管理器 Sprint（decay）上线后切回。
+> **Sprint 6 排序切换**（2026-08-28）：W_c 上线（事件状态机落地），排序切到 `W_c × map(admiralty) DESC, fetched_at DESC, id DESC`——W_c 由 event.status 查领域包 ranking.event_state_weights（confirmed=1.0/single_source=0.8/pending=0.5/refuted=0.0/expired=0.3），map(admiralty) = min(reliability_weight, credibility_weight)（短板决定，CASE WHEN 注入 SQL 不上 PG 函数）。decay 仍依赖 expires_at（时效 Sprint 才有），本 Sprint 兜底 1.0。未挂事件条目 W_c=0 排末尾。CLI 与未注入 ranking 的调用方仍走简版 `admiralty ASC + fetched_at DESC, id DESC`（QueryService 默认从领域包读 ranking 注入，Web/API 同源）。
 
 ### 6.3 领域包机制
 
@@ -274,7 +274,7 @@ erDiagram
 ```
 
 - **PostgreSQL** 为单一事实源：`intel_item`、`entity`、`source`、`event`、`verification_log`、`domain_pack`、`competitor_profile`、`feature_matrix`、`param_matrix`、`feedback`；
-- **落地状态**：Sprint 3 交付 `source` + `intel_item` 两表（含 `content_sha1` UNIQUE 幂等约束与 `source_id` FK，ADR-007）；Sprint 4 增 `intel_item` 11 结构化列（主体/事件类型/事实/推断/标签 JSONB+GIN/量化参数/Admiralty/处理状态机/处理元数据，迁移 0002），标签 containment 筛选可用；Sprint 5b 增 `feedback` 表（消费页人类反馈，`intel_id` FK ON DELETE CASCADE，feedback_type 四类 + fact_index 事实项级标注，迁移 0003）——错误样本积累驱动 process 层 prompt/粗筛迭代；`event`/`verification_log`/`entity`/`competitor_profile`/`feature_matrix`/`param_matrix` 待事件聚类 Sprint；`intel_item.event_id` 为占位字段（无 FK），event 表上来后补约束；
+- **落地状态**：Sprint 3 交付 `source` + `intel_item` 两表（含 `content_sha1` UNIQUE 幂等约束与 `source_id` FK，ADR-007）；Sprint 4 增 `intel_item` 11 结构化列（主体/事件类型/事实/推断/标签 JSONB+GIN/量化参数/Admiralty/处理状态机/处理元数据，迁移 0002），标签 containment 筛选可用；Sprint 5b 增 `feedback` 表（消费页人类反馈，`intel_id` FK ON DELETE CASCADE，feedback_type 四类 + fact_index 事实项级标注，迁移 0003）——错误样本积累驱动 process 层 prompt/粗筛迭代；Sprint 6 增 `event` + `verification_log` 两表 + `intel_item.event_id` FK ON DELETE SET NULL（迁移 0004）——事件聚类与核实状态机落地，自动跃迁 pending→single_source + 人工终态 confirm/refute；`entity`/`competitor_profile`/`feature_matrix`/`param_matrix` 待远期 Sprint；
 - **pgvector** 承载情报摘要向量 + **PG 中文全文检索**（zhparser 或 pg_jieba）承担 BM25 侧——混合检索在单库内闭环（M1 规模 < 10 万条，无需独立向量库）；
 - **MinIO** 存原文快照与附件，`intel_item.snapshot_id` 关联；
 - 事件（`event`）与情报（`intel_item`）一对多：交叉印证的载体，核实状态挂事件层、来源各挂各的；

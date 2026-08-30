@@ -4,11 +4,13 @@
 - upgrade head → current 指向最新版本
 - downgrade base → current 为空（base）
 - 重复 upgrade head 幂等（不报错）
-- AC6：intel_item.content_sha1 有 UNIQUE；source_id 有 FK；event_id 字段存在但无 FK
+- AC6：intel_item.content_sha1 有 UNIQUE；source_id 有 FK；event_id 有 FK → event（Sprint 6 起）
 - AC7：downgrade base 后两张表均消失
 - Sprint 4 AC7：0002 加列齐全，process_status 默认 pending，GIN 索引在；
   downgrade 0001 后新列全部消失
 - Sprint 5b：0003 feedback 表列/FK 级联/索引；downgrade 0002 后表消失
+- Sprint 6：0004 event + verification_log 两表 + intel_item.event_id FK ON DELETE SET NULL；
+  downgrade 0003 后两表消失
 """
 from __future__ import annotations
 
@@ -70,7 +72,7 @@ def test_upgrade_is_idempotent():
 
 
 def test_ac6_intel_item_constraints():
-    """AC6：UNIQUE content_sha1 + FK source_id + event_id 占位无 FK。"""
+    """AC6：UNIQUE content_sha1 + FK source_id + FK event_id → event（Sprint 6 起）。"""
     # UNIQUE 约束存在
     rows = _q(
         "SELECT conname FROM pg_constraint "
@@ -85,18 +87,21 @@ def test_ac6_intel_item_constraints():
     )
     assert any(r[0] == "intel_item_source_id_fkey" and r[1] == "source" for r in rows), rows
 
-    # event_id 字段存在但无 FK
+    # event_id 字段存在 + FK → event（Sprint 6 加约束）
     cols = _q(
         "SELECT column_name FROM information_schema.columns "
         "WHERE table_name = 'intel_item' AND column_name = 'event_id'"
     )
     assert cols, "event_id 字段不存在"
     fks = _q(
-        "SELECT conname FROM pg_constraint "
+        "SELECT conname, confrelid::regclass::text, confdeltype FROM pg_constraint "
         "WHERE conrelid = 'intel_item'::regclass AND contype = 'f' "
         "AND conname LIKE '%event_id%'"
     )
-    assert not fks, f"event_id 不应有 FK，但存在：{fks}"
+    assert any(
+        r[0] == "intel_item_event_id_fkey" and r[1] == "event" and r[2] == "n"
+        for r in fks
+    ), f"event_id FK 应指向 event 且 ON DELETE SET NULL（confdeltype='n'），实际：{fks}"
 
 
 def test_ac7_downgrade_base_drops_tables():
@@ -234,6 +239,115 @@ def test_sprint5b_downgrade_0002_drops_feedback():
         "WHERE table_schema = 'public' AND table_name = 'feedback'"
     )
     assert rows == []
+    cur = _run(["current"])
+    assert cur.returncode == 0
+
+
+EVENT_COLUMNS = [
+    "id", "subject", "event_type", "status", "source_count",
+    "ready_for_manual", "first_seen_at", "last_seen_at",
+]
+
+VLOG_COLUMNS = [
+    "id", "event_id", "from_status", "to_status", "operator", "reason", "created_at",
+]
+
+
+def test_sprint6_event_table_columns_exist():
+    """0004：event 列齐全，status 非空默认 pending，source_count 默认 0（attach 时累加）。"""
+    rows = _q(
+        "SELECT column_name, column_default, is_nullable FROM information_schema.columns "
+        "WHERE table_name = 'event'"
+    )
+    cols = {r[0]: (r[1], r[2]) for r in rows}
+    for c in EVENT_COLUMNS:
+        assert c in cols, f"缺列 {c}"
+    assert "'pending'" in (cols["status"][0] or "")
+    assert cols["status"][1] == "NO"
+    assert "0" in (cols["source_count"][0] or "")
+    assert cols["source_count"][1] == "NO"
+    assert cols["ready_for_manual"][1] == "NO"
+
+
+def test_sprint6_event_indexes_exist():
+    """0004：event 表三索引——status / (subject,event_type) / ready 部分索引。"""
+    rows = _q("SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'event'")
+    defs = {r[0]: r[1] for r in rows}
+    assert "idx_event_status" in defs
+    assert "idx_event_subject_type" in defs
+    assert "idx_event_ready" in defs
+    assert "where ready_for_manual" in defs["idx_event_ready"].lower()
+
+
+def test_sprint6_verification_log_table_and_fk():
+    """0004：verification_log 列齐全 + FK → event ON DELETE CASCADE + 索引。"""
+    rows = _q(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'verification_log'"
+    )
+    cols = {r[0] for r in rows}
+    for c in VLOG_COLUMNS:
+        assert c in cols, f"缺列 {c}"
+
+    fks = _q(
+        "SELECT confrelid::regclass::text, confdeltype FROM pg_constraint "
+        "WHERE conrelid = 'verification_log'::regclass AND contype = 'f'"
+    )
+    assert any(r[0] == "event" and r[1] == "c" for r in fks), f"FK 应级联删除：{fks}"
+
+    idx = _q("SELECT indexname FROM pg_indexes WHERE tablename = 'verification_log'")
+    assert "idx_vlog_event" in {r[0] for r in idx}
+
+
+def test_sprint6_intel_item_event_id_index():
+    """0004：intel_item.event_id 索引在（按 event 反查情报）。"""
+    idx = _q("SELECT indexname FROM pg_indexes WHERE tablename = 'intel_item'")
+    assert "idx_intel_item_event_id" in {r[0] for r in idx}
+
+
+def test_sprint6_event_fk_set_null_on_delete():
+    """ON DELETE SET NULL 真实生效：删 event 行，挂在其下的 intel_item.event_id 变 NULL。"""
+    with psycopg.connect(PG_DSN) as conn, conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO source (id, name, domain_id, url, list_url, level, reliability, enabled) "
+            "VALUES ('ccma', '测', 'd', 'http://x/', 'http://x/l', 'L2', 'B', true)"
+        )
+        cur.execute(
+            "INSERT INTO event (subject, event_type, status) "
+            "VALUES ('三一', '新品发布', 'pending') RETURNING id"
+        )
+        event_id = cur.fetchone()[0]
+        cur.execute(
+            "INSERT INTO intel_item (source_id, url, title, list_url, fetched_at, "
+            "http_status, snapshot_id, content_sha1, raw_html, event_id) "
+            "VALUES ('ccma', 'http://x/1', 't', 'http://x/l', NOW(), 200, 's1', 's1', "
+            "'<html/>', %s)", (event_id,)
+        )
+        cur.execute("DELETE FROM event WHERE id = %s", (event_id,))
+    rows = _q("SELECT event_id FROM intel_item WHERE content_sha1 = 's1'")
+    assert rows == [(None,)], f"删事件后 intel_item.event_id 应为 NULL：{rows}"
+
+
+def test_sprint6_downgrade_0003_drops_event_tables():
+    """downgrade 到 0003：event 与 verification_log 表消失，intel_item.event_id 回到无 FK 占位。"""
+    _run(["downgrade", "0003"])
+    rows = _q(
+        "SELECT table_name FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name IN ('event', 'verification_log')"
+    )
+    assert rows == [], f"downgrade 后仍存在表：{rows}"
+    # event_id 字段仍在（0001 创建时就是占位列），但 FK 已撤销
+    cols = _q(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'intel_item' AND column_name = 'event_id'"
+    )
+    assert cols, "event_id 占位列应仍在"
+    fks = _q(
+        "SELECT conname FROM pg_constraint "
+        "WHERE conrelid = 'intel_item'::regclass AND contype = 'f' "
+        "AND conname LIKE '%event_id%'"
+    )
+    assert not fks, f"FK 应已撤销：{fks}"
     cur = _run(["current"])
     assert cur.returncode == 0
 

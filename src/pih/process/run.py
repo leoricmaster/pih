@@ -5,19 +5,23 @@
 - 逐条构造初始 state（text 在场契约：prepare_text 产物）；
 - 图结果映射 ProcessResult 写回——extracted（Admiralty 拼装
   reliability + credibility）/ filtered_out / needs_manual；
+- extracted 条目挂事件聚类（Sprint 6 S4.2.2，在线增量）；
 - 汇总统计与 token 用量（成本可观测，架构 §9.2；token 记在
   ProcessResult.meta，run() 聚合进 RunnerStats）。
 
 错误边界：单条写库失败不阻塞其余条目（架构 §8 容错口径）；
+事件聚类失败不阻塞主流程——log warning，可由 `pih cluster --backfill` 补；
 LLM 配置缺失在构造阶段快速失败（AC8，先于取条目，不产生半写状态）。
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from pih.process.event import EventService
 from pih.process.extraction import is_placeholder_subject
 from pih.process.graph import ChatFn, ItemState, build_graph
 from pih.process.textprep import prepare_text
+from pih.store.event_repository import EventRepository
 from pih.store.repository import (
     STATUS_EXTRACTED,
     STATUS_FILTERED_OUT,
@@ -66,11 +70,22 @@ def assemble_admiralty(reliability: str, credibility: str) -> str:
 class ProcessRunner:
     """离线批处理入口（pih process 背后）。"""
 
-    def __init__(self, repository: IntelRepository, pack: dict, chat: ChatFn | None = None):
+    def __init__(
+        self,
+        repository: IntelRepository,
+        pack: dict,
+        chat: ChatFn | None = None,
+        event_repo: EventRepository | None = None,
+    ):
         # chat=None 时构造真实客户端：LLM 配置缺失在此抛 LLMConfigError
         # （AC8 快速失败，先于取条目，不产生半写状态）。
         self._graph = build_graph(pack, chat=chat)
         self._repo = repository
+        self._pack = pack
+        # 事件聚类 store 层：默认从 IntelRepository 的 pool 构造（测试可注入 fake）
+        if event_repo is None:
+            event_repo = EventRepository(repository._pool)
+        self._events = EventService(event_repo, repository, pack)
 
     def run(self, source_id: str | None = None, limit: int = 20) -> RunnerStats:
         records = self._repo.list_pending(source_id=source_id, limit=limit)
@@ -89,6 +104,14 @@ class ProcessRunner:
                 continue
             if result.status == STATUS_EXTRACTED:
                 stats.extracted += 1
+                # 事件聚类（Sprint 6 S4.2.2）：extracted 写库成功后挂事件。
+                # 失败不阻塞——warning 入 stats.details，可由 cluster --backfill 补。
+                try:
+                    event_id = self._events.cluster(rec.id)
+                    if event_id is not None:
+                        stats.details.append(f"[{rec.id}] ⋄ 挂入事件 #{event_id}")
+                except Exception as exc:  # noqa: BLE001 聚类失败不阻塞主流程
+                    stats.details.append(f"[{rec.id}] ⚠ 事件聚类失败：{exc}")
             elif result.status == STATUS_FILTERED_OUT:
                 stats.filtered_out += 1
             else:

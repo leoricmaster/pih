@@ -1,8 +1,8 @@
 # 情报中心 — 产品 Backlog（需求树）
 
-- 版本：V1.6（配合《Product Requirements.md》V1.0、《Architecture.md》V0.10）
+- 版本：V1.7（配合《Product Requirements.md》V1.0、《Architecture.md》V0.11）
 - 日期：2026-08-28
-- 变更：V1.5→V1.6 Sprint 5b 交付——质量闭环两卡同期上线：S4.2.3「抽取后验质量门」已交付（主体占位值集合 {"",未知,无,不详,unknown} 命中 → needs_manual 且结构化字段保留供复核，process_error 记「后验质量门」；条目经 `?process_status=needs_manual` 筛选进入复核视野）；S3.1.3「消费页人类反馈动作」已交付最小切片（迁移 0003 feedback 表 FK 级联、详情页反馈区四表单：主体错了 datalist 主体清单可选/事件类型错/事实不准 fact_index 标注/不该入库；Web 表单 POST /feedback 无鉴权（内网口径，tokened API 写反馈留后续）；GET /feedback 聚合视图主体错误率>30% 高亮 + GET /feedback/export JSONL 导出 few-shot 素材）；支撑项：列表/API 增 process_status 同源筛选。V1.4→V1.5 Sprint 5a 验收规划调整——粗筛误放与抽取误读为批次性问题（时政/科普类误入库、主体误读栏目名/"未知"仍 extracted），错误样本需人工反馈积累：新增 S3.1.3「消费页人类反馈动作」（详情页内联反馈 + feedback 表 + 聚合视图，驱动 prompt/粗筛迭代）标下 Sprint 候选；新增 S4.2.3「抽取后验质量门」（主体"未知"→needs_manual，纯代码止损）标下 Sprint 候选——两卡同期交付，后验门拦增量、反馈样本根治；S4.2.1 已知质量问题注脚同步（主体误读页面装饰元素 + 粗筛口径宽漏放，修法依赖 S3.1.3 样本）。V1.3→V1.4 Sprint 5a 交付——消费层 Web/API 同源出口上线（ADR-006）：S1.1.1「多条件组合筛选」已交付（FastAPI Web 列表 + JSON API 同源，主体/事件类型/标签/置信度/时间范围/游标分页；AC3「已过期标识」待时效管理器 Sprint，expires_at 上线后自动激活）；S1.1.2「情报详情页」已交付（schema 全字段 + 事实/推断分区 + 原文/快照双入口；事件核实状态与跃迁历史占位「待事件模型上线后自动激活」）；S1.1.4「只读查询 API」已交付（同源一致性 + Bearer token 鉴权；AC2 响应含 event_verification_status 占位字段，待事件模型上线后自动激活）。V1.2→V1.3 Sprint 4 交付——process 层上线：S4.1.2「相关性粗筛」已交付（小模型二分类，粗筛日志=行级 filtered_out 标记，SQL 可审计）；S4.2.1「自动结构化抽取」已交付（LangGraph 三节点图 粗筛→抽取→校验，intel_item 增 11 结构化列 + 迁移 0002，`pih process` CLI；标签可为空数组口径见卡内备注）；S4.2.2 备注拆分——AC1 预评级简版 Sprint 4 满足（Admiralty=reliability×可信度），AC2/AC3 待事件聚类 Sprint；S1.1.1 备注——CLI 子集已交付（`pih query --subject/--event-type/--tag` 结构化筛选），Web/API 出口待消费层 Sprint。V1.1→V1.2 Sprint 3 交付——新增 S4.5「情报库落库与基础检索」（已交付）：PG + alembic 迁移 + IntelRepository + `pih query` CLI；source/intel_item 两表落地，content_sha1 幂等约束（ADR-007）；原 S4.1.1 AC1「无快照不入库」备注跨 Sprint 满足（Sprint 2 快照 + Sprint 3 入库门控）。V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
+- 变更：V1.6→V1.7 Sprint 6 事件聚类——S4.2.2「自动预评级与交叉印证」已交付 AC2/AC3（迁移 0004 event + verification_log 两表 + intel_item.event_id FK ON DELETE SET NULL；EventRepository/EventService 在线聚类挂 ProcessRunner._process_one 末尾，extracted 写库成功后触发；聚类规则 D1：主体归一化（领域包 competitors.aliases → display_name）+ event_type 精确 + ±7 天窗；第二独立信源命中 → pending→single_source 自动跃迁 + ready_for_manual=TRUE 进人工队列；终态人工 CLI `pih verify list/confirm/refute`；`pih cluster --backfill` 历史回填；占位激活：list.html/detail.html/api.py 三处「待事件模型上线后自动激活」全部填实，QueryService.IntelFilters 加 event_status 筛选；排序切 W_c×map(admiralty)（架构 §6.2 简化，decay 留时效 Sprint）；状态枚举英文 key 与领域包 ranking.event_state_weights 对齐：pending/single_source/confirmed/refuted/expired，展示层 STATUS_LABELS 映射中文；expired 状态本 Sprint 仅占位权重，触发逻辑留时效 Sprint）。S3.1.1 备注：CLI verify 子命令交付最小切片（ready_for_manual 队列 + 终态跃迁写 log），离线队列 Web 页未建。V1.5→V1.6 Sprint 5b 交付——质量闭环两卡同期上线：S4.2.3「抽取后验质量门」已交付（主体占位值集合 {"",未知,无,不详,unknown} 命中 → needs_manual 且结构化字段保留供复核，process_error 记「后验质量门」；条目经 `?process_status=needs_manual` 筛选进入复核视野）；S3.1.3「消费页人类反馈动作」已交付最小切片（迁移 0003 feedback 表 FK 级联、详情页反馈区四表单：主体错了 datalist 主体清单可选/事件类型错/事实不准 fact_index 标注/不该入库；Web 表单 POST /feedback 无鉴权（内网口径，tokened API 写反馈留后续）；GET /feedback 聚合视图主体错误率>30% 高亮 + GET /feedback/export JSONL 导出 few-shot 素材）；支撑项：列表/API 增 process_status 同源筛选。V1.4→V1.5 Sprint 5a 验收规划调整——粗筛误放与抽取误读为批次性问题（时政/科普类误入库、主体误读栏目名/"未知"仍 extracted），错误样本需人工反馈积累：新增 S3.1.3「消费页人类反馈动作」（详情页内联反馈 + feedback 表 + 聚合视图，驱动 prompt/粗筛迭代）标下 Sprint 候选；新增 S4.2.3「抽取后验质量门」（主体"未知"→needs_manual，纯代码止损）标下 Sprint 候选——两卡同期交付，后验门拦增量、反馈样本根治；S4.2.1 已知质量问题注脚同步（主体误读页面装饰元素 + 粗筛口径宽漏放，修法依赖 S3.1.3 样本）。V1.3→V1.4 Sprint 5a 交付——消费层 Web/API 同源出口上线（ADR-006）：S1.1.1「多条件组合筛选」已交付（FastAPI Web 列表 + JSON API 同源，主体/事件类型/标签/置信度/时间范围/游标分页；AC3「已过期标识」待时效管理器 Sprint，expires_at 上线后自动激活）；S1.1.2「情报详情页」已交付（schema 全字段 + 事实/推断分区 + 原文/快照双入口；事件核实状态与跃迁历史占位「待事件模型上线后自动激活」）；S1.1.4「只读查询 API」已交付（同源一致性 + Bearer token 鉴权；AC2 响应含 event_verification_status 占位字段，待事件模型上线后自动激活）。V1.2→V1.3 Sprint 4 交付——process 层上线：S4.1.2「相关性粗筛」已交付（小模型二分类，粗筛日志=行级 filtered_out 标记，SQL 可审计）；S4.2.1「自动结构化抽取」已交付（LangGraph 三节点图 粗筛→抽取→校验，intel_item 增 11 结构化列 + 迁移 0002，`pih process` CLI；标签可为空数组口径见卡内备注）；S4.2.2 备注拆分——AC1 预评级简版 Sprint 4 满足（Admiralty=reliability×可信度），AC2/AC3 待事件聚类 Sprint；S1.1.1 备注——CLI 子集已交付（`pih query --subject/--event-type/--tag` 结构化筛选），Web/API 出口待消费层 Sprint。V1.1→V1.2 Sprint 3 交付——新增 S4.5「情报库落库与基础检索」（已交付）：PG + alembic 迁移 + IntelRepository + `pih query` CLI；source/intel_item 两表落地，content_sha1 幂等约束（ADR-007）；原 S4.1.1 AC1「无快照不入库」备注跨 Sprint 满足（Sprint 2 快照 + Sprint 3 入库门控）。V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
 - **本文档定位**：需求的事实源与导读——开发前是具体的需求说明，开发后凭状态位反映实现现状
 
 **编写约定**：
@@ -65,7 +65,7 @@
 
 > 作为消费者，我想按 主体/事件类型/时间范围/标签/置信度/事件核实状态 组合筛选情报列表，以便快速定位某类信息。
 
-> Sprint 5a 备注：Web 列表 + JSON API 同源交付（ADR-006）——FastAPI 单 app 双出口，QueryService 共用过滤/排序；主体/事件类型/标签/置信度（admiralty 精确）/信源/时间范围（since-until）/游标分页（before）。AC1/AC2 满足；AC3「已过期标识」待时效管理器 Sprint，expires_at 上线后自动激活（不交付子句）。事件核实状态列占位「待事件模型上线后自动激活」。排序简版 admiralty_code ASC NULLS LAST + fetched_at DESC，完整 score 待事件+时效 Sprint。
+> Sprint 5a 备注：Web 列表 + JSON API 同源交付（ADR-006）——FastAPI 单 app 双出口，QueryService 共用过滤/排序；主体/事件类型/标签/置信度（admiralty 精确）/信源/时间范围（since-until）/游标分页（before）。AC1/AC2 满足；AC3「已过期标识」待时效管理器 Sprint，expires_at 上线后自动激活（不交付子句）。事件核实状态列 Sprint 6 占位激活（JOIN event 实查 + 中文展示）+ event_status 筛选字段。排序 Sprint 6 切 W_c×map(admiralty)（架构 §6.2 简化，decay 留时效 Sprint）。
 
 ```gherkin
 AC1: Given 情报库已有 ≥60 条情报
@@ -84,7 +84,7 @@ AC3: Given 情报已超过有效期
 
 > 作为消费者，我想查看单条情报的完整信息（事实描述、推断、来源快照、所属事件状态与核实流转），以便独立判断其可信度。
 
-> Sprint 5a 备注：Web 详情 + JSON API 详情同源交付——schema 全字段 + 事实/推断分区 + 原文 URL + 快照占位入口；事件核实状态与跃迁历史区占位「待事件模型上线后自动激活」，event 表上线后查询服务自动填实。
+> Sprint 5a 备注：Web 详情 + JSON API 详情同源交付——schema 全字段 + 事实/推断分区 + 原文 URL + 快照占位入口；事件核实状态与跃迁历史区 Sprint 6 占位激活（JOIN event + verification_log 时间线渲染）。
 
 ```gherkin
 AC1: Given 任意一条情报
@@ -98,7 +98,7 @@ AC1: Given 任意一条情报
 
 > 作为 Agent 消费者（如产品规划 Agent），我想以 JSON API 按与 Web 相同的条件组合查询情报，以便程序化消费情报库，而非解析网页。
 
-> Sprint 5a 备注：JSON API 同源交付（ADR-006）——与 Web 列表/详情共用 QueryService，同条件返回同 id 集合与排序（AC1 集成测试断言）；Bearer token 鉴权（PIH_API_TOKEN env，hmac.compare_digest 常量时间比较）；AC2 响应含 event_verification_status 占位字段 + event_verification_note「待事件模型上线后自动激活」；Web 内网默认开放不鉴权。
+> Sprint 5a 备注：JSON API 同源交付（ADR-006）——与 Web 列表/详情共用 QueryService，同条件返回同 id 集合与排序（AC1 集成测试断言）；Bearer token 鉴权（PIH_API_TOKEN env，hmac.compare_digest 常量时间比较）；AC2 响应 event_verification_status Sprint 6 起实查 event.status（未挂事件返 None + "未挂事件"）；Web 内网默认开放不鉴权。
 
 ```gherkin
 AC1: 同源一致性（ADR-006）
@@ -206,9 +206,11 @@ AC3: Given 缺失或无效凭据的调用
 
 ### F3.1 人工核实
 
-#### S3.1.1（待开发）待核实队列处理
+#### S3.1.1（待开发·Sprint 6 交付 CLI 最小切片）待核实队列处理
 
 > 作为运营者，我想在一个队列里逐条查看待人工处理的情报（低置信、冲突、已具备升级条件的事件），一键确认或证伪，以便控制入库质量。
+
+> Sprint 6 备注：CLI `pih verify list/confirm/refute` 已交付最小切片——ready_for_manual=TRUE 事件列表 + 单源确认/证伪终态跃迁写 verification_log。完整版（Web 队列页 + 低置信度/冲突情报子队列）留后续。
 
 ```gherkin
 AC1: Given 存在需人工处理的情报/事件
@@ -385,11 +387,11 @@ AC2: Given LLM 返回的结构化输出未通过 schema 校验
      Then 自动重问（≤3 次），仍失败则条目降级为"待人工"，不丢弃
 ```
 
-#### S4.2.2（待开发）自动预评级与交叉印证
+#### S4.2.2（已交付·Sprint 6）自动预评级与交叉印证
 
 > 作为消费者，每条情报自动带来源层级与 Admiralty 预评级，同一事件的多源报道自动归并，以便我一眼看出可信度。
 
-> Sprint 4 备注：AC1 已以简版满足——来源层级继承 source 表 reliability（collect 期 sync），Admiralty = reliability × 信息可信度（抽取 prompt 输出 1–6 枚举），extracted 条目 `admiralty_code` 非空（如 B2）；「核实引擎处理完成」中的核实流程未做。AC2/AC3（事件聚类/双独立信源跃迁/事件表）待事件聚类 Sprint（先例：S4.1.1 AC1 跨 Sprint 备注）。
+> Sprint 6 备注：AC2/AC3 已交付——迁移 0004 event + verification_log 两表 + intel_item.event_id FK；EventService 在线聚类挂 ProcessRunner._process_one 末尾（extracted 写库后触发），规则 = 主体归一化（competitors.aliases → display_name）+ event_type 精确 + ±7 天窗；命中已有事件挂入，第二独立信源命中自动跃迁 pending→single_source + ready_for_manual=TRUE；未命中新建 pending 事件；终态人工 CLI `pih verify confirm/refute` 写 verification_log；`pih cluster --backfill` 回填存量。AC1 Sprint 4 已交付（Admiralty = reliability × credibility，简版预评级）。expired 状态机不在本 Sprint（留时效 Sprint）。排序切 W_c×map(admiralty)（架构 §6.2 简化，decay 留时效 Sprint）。
 
 ```gherkin
 AC1: Given 一条新情报

@@ -1,4 +1,4 @@
-"""JSON API router（Sprint 5a，ADR-006 同源出口之二）。
+"""JSON API router（Sprint 5a，ADR-006 同源出口之二 + Sprint 6 ranking 注入）。
 
 路由：
   GET /api/intel/list       列表（依赖 Bearer token）
@@ -6,6 +6,7 @@
   GET /healthz              健康检查（不鉴权）
 
 与 Web 出口共用 QueryService——同条件返回同集合同序（S1.1.4 AC1）。
+Sprint 6：ranking 注入与 Web 同源（_pack_ranking 共用），否则排序函数不同会破同源。
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from pih.consume.auth import verify_api_token
 from pih.consume.metrics import log_query
+from pih.consume.pack_loader import pack_ranking
 from pih.consume.query_service import IntelFilters, QueryService
 from pih.consume.snapshot_url import make_snapshot_client, presigned_snapshot_url
 from pih.store.repository import IntelRepository
@@ -23,9 +25,12 @@ router = APIRouter(prefix="/api")
 
 
 def get_query_service(request: Request) -> QueryService:
-    """从 app.state.pool 构造 QueryService（lifespan 已建 pool）。"""
+    """从 app.state.pool 构造 QueryService（lifespan 已建 pool）。
+
+    ranking 与 Web 出口同源注入（pack_ranking 共用），保证 S1.1.4 AC1 同序。
+    """
     pool = request.app.state.pool
-    return QueryService(IntelRepository(pool))
+    return QueryService(IntelRepository(pool), ranking=pack_ranking())
 
 
 def _record_to_dict(rec) -> dict:
@@ -33,9 +38,10 @@ def _record_to_dict(rec) -> dict:
     d = dataclasses.asdict(rec)
     # 不暴露 raw_html（大字段，API 消费者用不上下文；详情页 Web 渲染才用）
     d.pop("raw_html", None)
-    # 事件核实状态占位（待事件模型上线后自动激活）
-    d["event_verification_status"] = None
-    d["event_verification_note"] = "待事件模型上线后自动激活"
+    # Sprint 6：事件核实状态实查（占位激活——之前硬塞 None + 占位文案）
+    # rec.event_status 由 IntelRepository.get/list_by_filter LEFT JOIN event 填充（未挂事件为 None）
+    d["event_verification_status"] = rec.event_status
+    d["event_verification_note"] = "" if rec.event_status else "未挂事件"
     # 来源引用（S1.1.4 AC2 要求字段）——快照 presigned URL，MinIO 不可达时为 None
     snapshot_url = None
     client = make_snapshot_client()

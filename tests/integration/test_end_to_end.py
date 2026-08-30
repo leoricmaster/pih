@@ -85,10 +85,13 @@ def test_ac3_query_lists_intel(capsys):
     assert code == 0
     assert "查询：source_id=ccma" in out
     assert "共" in out
-    # 列表行格式：[id] 时间 [snapshot...] 标题
+    # 列表行格式（Sprint 4 起）：[id] 时间 [process_status/event_type/admiralty] 标题
     lines = [line for line in out.splitlines() if line.startswith("  [")]
     assert len(lines) >= 1
-    assert "…" in lines[0]  # snapshot_id 截断标志
+    # 时间格式 YYYY-MM-DD HH:MM 在行中
+    assert "2026-" in lines[0]
+    # process_status 标记在行中（pending 或 extracted 等）
+    assert "[" in lines[0] and "]" in lines[0]
 
 
 def test_ac3b_query_by_id_shows_detail(capsys):

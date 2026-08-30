@@ -80,10 +80,12 @@ class TestListPassesFilters:
             admiralty="B2",
             source_id="sany_news",
             process_status="needs_manual",
+            event_status=None,
             since=since,
             until=until,
             before=before,
             limit=20,
+            ranking=None,
         )
 
     def test_defaults_limit_50(self):

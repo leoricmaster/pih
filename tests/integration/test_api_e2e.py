@@ -64,8 +64,9 @@ class TestAC1ListFilters:
             # 列表表头列齐全
             for col in ("标题", "主体", "事件类型", "置信度", "采集时间", "所属事件核实状态"):
                 assert col in html
-            # 事件核实状态占位
-            assert "待事件模型上线后自动激活" in html
+            # Sprint 6 事件占位激活：未挂事件行显示 —，挂事件显示中文标签；
+            # seed 数据未挂事件，应见 —
+            assert "—" in html
             # 筛选结果只含三一+新品发布（factory 循环：60 条里 12 条三一，其中 ~2 条新品发布）
             # 至少有 1 条命中
             assert "/intel/" in html
@@ -104,8 +105,8 @@ class TestAC3DetailPage:
             # 原文 URL + 快照入口（MinIO 起着→presigned URL；否则降级 ID 文本）
             assert f"http://sany_news.example/item-{0}" in html
             assert "原文快照" in html
-            # 事件状态占位
-            assert "待事件模型上线后自动激活" in html
+            # Sprint 6 事件占位激活：seed 数据未挂事件，详情页显示「未挂事件」提示
+            assert "未挂事件" in html
 
     def test_detail_404_for_missing(self, api_token):
         with TestClient(app) as client:
@@ -189,9 +190,9 @@ class TestAC5ApiResponseFields:
             assert "url" in item["references"]
             assert "snapshot_id" in item["references"]
             assert "snapshot_url" in item["references"]
-            # 事件核实状态占位字段
+            # Sprint 6 事件占位激活：seed 数据未挂事件，API 返回 None + "未挂事件"
             assert item["event_verification_status"] is None
-            assert "待事件模型上线后自动激活" in item["event_verification_note"]
+            assert item["event_verification_note"] == "未挂事件"
 
     def test_detail_response_fields(self, api_token):
         ids = _seed(60)

@@ -46,6 +46,11 @@ _COLUMNS = """
     admiralty_code, process_status, process_error, process_meta, processed_at
 """
 
+# Sprint 6 LEFT JOIN event 后需 i. 前缀防 id 字段歧义；带回 event_status
+_COLUMNS_WITH_EVENT = ", ".join(
+    f"i.{c.strip()}" for c in _COLUMNS.split(",") if c.strip()
+) + ", e.status AS event_status"
+
 # JOIN 查询用的 i. 限定版（list_pending 与 source 表联结防歧义）
 _COLUMNS_I = ", ".join(f"i.{c.strip()}" for c in _COLUMNS.split(","))
 
@@ -91,6 +96,7 @@ class IntelRecord:
     基础字段同 RawItem + id/created_at；Sprint 4 结构化字段与治理字段
     带默认值（迁移 0002 之前的语义/旧行均为空）。source_reliability 非表列，
     仅 list_pending 的 JOIN source 填充（Admiralty 拼装用）。
+    Sprint 6 增 event_status 字段（LEFT JOIN event 填充，未挂事件为 None）。
     """
 
     id: int
@@ -119,6 +125,7 @@ class IntelRecord:
     process_meta: dict | None = None
     processed_at: datetime | None = None
     source_reliability: str | None = None
+    event_status: str | None = None  # Sprint 6: LEFT JOIN event 填充，未挂事件为 None
 
 
 class IntelRepository:
@@ -204,9 +211,10 @@ class IntelRepository:
 
     def get(self, intel_id: int) -> IntelRecord | None:
         sql = f"""
-            SELECT {_COLUMNS}
-            FROM intel_item
-            WHERE id = %s
+            SELECT {_COLUMNS_WITH_EVENT}
+            FROM intel_item i
+            LEFT JOIN event e ON e.id = i.event_id
+            WHERE i.id = %s
         """
         with self._pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute(sql, (intel_id,))
@@ -290,56 +298,77 @@ class IntelRepository:
         admiralty: str | None = None,
         source_id: str | None = None,
         process_status: str | None = None,
+        event_status: str | None = None,
         since: datetime | None = None,
         until: datetime | None = None,
         before: datetime | None = None,
         limit: int = 50,
+        ranking: dict | None = None,
     ) -> list[IntelRecord]:
-        """结构化筛选（S1.1.1，Sprint 4 CLI 子集 + Sprint 5a Web/API 同源扩展）。
+        """结构化筛选（S1.1.1，Sprint 4 CLI 子集 + Sprint 5a Web/API 同源扩展 + Sprint 6 事件）。
 
-        subject/event_type/admiralty/process_status 精确匹配；tag 用 JSONB
+        subject/event_type/admiralty/process_status/event_status 精确匹配；tag 用 JSONB
         containment（tags @> [tag]）；since/until 走 fetched_at 闭区间；
         before 为游标（fetched_at < before，分页用）。
-        排序：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC（Sprint 5a 简版，
-        完整 score = W_c × map(admiralty) × decay 留事件+时效 Sprint）。
-        process_status 筛选（Sprint 5b）：needs_manual 人工复核队列的可达路径
-        （S4.2.3 后验质量门拦下的条目由此进入视野）。
+
+        排序（Sprint 6 切换）：
+        - ranking=None（默认回退简版）：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC
+          （Sprint 5a 简版，CLI 与未注入 ranking 的调用方用）
+        - ranking 给定：score = W_c(event.status) × map(admiralty) DESC, fetched_at DESC, id DESC
+          （架构 §6.2；decay 留时效 Sprint，本 Sprint 兜底 1.0）
+          ranking 形如 {event_state_weights: {...}, reliability_weights: {...}, credibility_weights: {...}}
+          从领域包 pack.ranking 读取，由 QueryService 注入（store 层不依赖领域包）。
+
+        process_status 筛选（Sprint 5b）：needs_manual 人工复核队列的可达路径。
+        event_status 筛选（Sprint 6）：按事件核实状态筛选（LEFT JOIN event）。
         """
         clauses: list[str] = []
         params: list = []
         if subject is not None:
-            clauses.append("subject = %s")
+            clauses.append("i.subject = %s")
             params.append(subject)
         if event_type is not None:
-            clauses.append("event_type = %s")
+            clauses.append("i.event_type = %s")
             params.append(event_type)
         if tag is not None:
-            clauses.append("tags @> %s")
+            clauses.append("i.tags @> %s")
             params.append(Json([tag]))
         if admiralty is not None:
-            clauses.append("admiralty_code = %s")
+            clauses.append("i.admiralty_code = %s")
             params.append(admiralty)
         if source_id is not None:
-            clauses.append("source_id = %s")
+            clauses.append("i.source_id = %s")
             params.append(source_id)
         if process_status is not None:
-            clauses.append("process_status = %s")
+            clauses.append("i.process_status = %s")
             params.append(process_status)
+        if event_status is not None:
+            clauses.append("e.status = %s")
+            params.append(event_status)
         if since is not None:
-            clauses.append("fetched_at >= %s")
+            clauses.append("i.fetched_at >= %s")
             params.append(since)
         if until is not None:
-            clauses.append("fetched_at <= %s")
+            clauses.append("i.fetched_at <= %s")
             params.append(until)
         if before is not None:
-            clauses.append("fetched_at < %s")
+            clauses.append("i.fetched_at < %s")
             params.append(before)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+        if ranking is not None:
+            order_sql = _build_ranked_order_sql(ranking)
+        else:
+            order_sql = (
+                "i.admiralty_code ASC NULLS LAST, i.fetched_at DESC, i.id DESC"
+            )
+
         sql = f"""
-            SELECT {_COLUMNS}
-            FROM intel_item
+            SELECT {_COLUMNS_WITH_EVENT}
+            FROM intel_item i
+            LEFT JOIN event e ON e.id = i.event_id
             {where}
-            ORDER BY admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC
+            ORDER BY {order_sql}
             LIMIT %s
         """
         params.append(limit)
@@ -347,3 +376,33 @@ class IntelRepository:
             cur.execute(sql, tuple(params))
             rows = cur.fetchall()
         return [IntelRecord(**r) for r in rows]
+
+
+def _build_ranked_order_sql(ranking: dict) -> str:
+    """从领域包 ranking 节拼 CASE WHEN 权重列到 ORDER BY（架构 §6.2 简化版）。
+
+    score = W_c(event.status) × min(rel_weight(admiralty[0]), cred_weight(admiralty[1]))
+    decay 留时效 Sprint，本 Sprint 兜底 1.0；未挂事件（event.status NULL）W_c=0 排末尾。
+
+    SQL 不上 PG 函数——Python 侧读领域包后用 CASE WHEN 注入数值，避免迁移加函数。
+    """
+    event_w = ranking.get("event_state_weights", {})
+    rel_w = ranking.get("reliability_weights", {})
+    cred_w = ranking.get("credibility_weights", {})
+
+    def case_str(mapping: dict, expr: str, default: str = "0.0") -> str:
+        """生成 CASE expr WHEN k THEN v ... ELSE default END。"""
+        if not mapping:
+            return default
+        branches = " ".join(
+            f"WHEN {expr} = '{k}' THEN {float(v)}" for k, v in mapping.items()
+        )
+        return f"CASE {branches} ELSE {default} END"
+
+    w_c = case_str(event_w, "e.status", "0.0")
+    rel = case_str(rel_w, "LEFT(i.admiralty_code, 1)", "0.0")
+    cred = case_str(cred_w, "SUBSTRING(i.admiralty_code FROM 2 FOR 1)", "0.0")
+    # Admiralty 权重 = min(rel, cred)（架构 §6.2 短板决定）
+    admiralty_w = f"LEAST({rel}, {cred})"
+    score = f"({w_c} * {admiralty_w})"
+    return f"{score} DESC NULLS LAST, i.fetched_at DESC, i.id DESC"

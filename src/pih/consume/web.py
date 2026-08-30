@@ -1,7 +1,8 @@
-"""FastAPI 应用——Web 出口 + JSON API 同源（Sprint 5a ADR-006 + Sprint 5b 反馈闭环）。
+"""FastAPI 应用——Web 出口 + JSON API 同源（Sprint 5a ADR-006 + Sprint 5b 反馈闭环 + Sprint 6 事件）。
 
 lifespan 起 PG pool；Jinja2 渲染列表/详情；include api router；
 反馈三路由（POST /feedback 写入、GET /feedback 聚合视图、/feedback/export JSONL）。
+Sprint 6：列表/详情页事件核实状态占位激活（JOIN event 实查）+ 排序切 W_c×map(admiralty)。
 本地启动：uv run uvicorn pih.consume.web:app --reload --port 8000
 """
 from __future__ import annotations
@@ -20,9 +21,12 @@ from fastapi.templating import Jinja2Templates
 
 from pih.consume.api import router as api_router
 from pih.consume.metrics import log_query
+from pih.consume.pack_loader import load_pack, load_pack_vocab, pack_ranking
 from pih.consume.query_service import IntelFilters, QueryService
 from pih.consume.snapshot_url import make_snapshot_client, presigned_snapshot_url
+from pih.process.event import STATUS_LABELS, STATUS_ORDER, EventService
 from pih.store.db import close_pool, get_pool
+from pih.store.event_repository import EventRepository
 from pih.store.feedback import FEEDBACK_TYPES, FeedbackRepository
 from pih.store.repository import IntelRepository
 
@@ -40,25 +44,22 @@ load_dotenv()
 def _load_pack_vocab() -> tuple[list[str], list[str]]:
     """详情页反馈表单的候选清单（主体 datalist / 事件类型 select）。
 
-    与 cli._default_pack 同款路径解析：cwd 优先，回退包内默认目录。
-    领域包在 repo 内应恒可加载；万一失败降级空清单——datalist/select
-    为空时自由输入仍可用（反馈闭环不因包缺失中断）。
+    委托 pack_loader.load_pack_vocab——web 与 api 共用，避免循环 import。
     """
-    from pih.domainpacks.loader import DEFAULT_PACK_DIR, load
+    return load_pack_vocab()
 
-    cwd_pack = Path("domain_packs/construction_machinery/pack.yaml")
-    fallback = DEFAULT_PACK_DIR / "construction_machinery" / "pack.yaml"
-    path = cwd_pack if cwd_pack.exists() else fallback
-    try:
-        pack = load(path)
-    except Exception:  # noqa: BLE001 反馈表单不因领域包缺失而崩
-        return [], []
-    subjects = [
-        name
-        for c in pack["competitors"]
-        for name in [c["display_name"], *c.get("aliases", [])]
-    ]
-    return subjects, list(pack["event_types"])
+
+def _pack_ranking() -> dict | None:
+    """从领域包取 ranking 节（注入 QueryService 排序权重）。
+
+    委托 pack_loader.pack_ranking——web 与 api 共用，保证同源排序。
+    """
+    return pack_ranking()
+
+
+def _load_pack() -> dict | None:
+    """加载领域包 dict（EventService 主体归一化用）。委托 pack_loader.load_pack。"""
+    return load_pack()
 
 
 @asynccontextmanager
@@ -77,7 +78,20 @@ app.include_router(api_router)
 
 
 def _svc(request: Request) -> QueryService:
-    return QueryService(IntelRepository(request.app.state.pool))
+    return QueryService(
+        IntelRepository(request.app.state.pool),
+        ranking=_pack_ranking(),
+    )
+
+
+def _event_svc(request: Request) -> EventService:
+    """详情页事件区实查用——EventService 持有 pack 做主体归一化（详情页只读，归一化已落 event.subject 不再调用）。"""
+    pool = request.app.state.pool
+    return EventService(
+        EventRepository(pool),
+        IntelRepository(pool),
+        _load_pack() or {},
+    )
 
 
 def _build_next_url(filters: IntelFilters, next_before: str | None) -> str | None:
@@ -101,6 +115,7 @@ def list_page(
     admiralty: str | None = Query(None),
     source_id: str | None = Query(None),
     process_status: str | None = Query(None),
+    event_status: str | None = Query(None),
     since: datetime | None = Query(None),
     until: datetime | None = Query(None),
     before: datetime | None = Query(None),
@@ -114,6 +129,7 @@ def list_page(
         admiralty=admiralty,
         source_id=source_id,
         process_status=process_status,
+        event_status=event_status,
         since=since,
         until=until,
         before=before,
@@ -128,7 +144,8 @@ def list_page(
             "items": result.items,
             "filters": filters,
             "next_url": _build_next_url(filters, result.next_before),
-            "event_placeholder": "待事件模型上线后自动激活",
+            "status_labels": STATUS_LABELS,
+            "status_options": STATUS_ORDER,
         },
     )
 
@@ -137,7 +154,7 @@ def list_page(
 def detail_page(
     intel_id: int, request: Request, fb: bool = Query(False)
 ) -> HTMLResponse:
-    """详情页——schema 全字段 + 事实/推断分区 + 快照 presigned 入口 + 反馈区。"""
+    """详情页——schema 全字段 + 事实/推断分区 + 快照 presigned 入口 + 反馈区 + 事件状态与跃迁历史。"""
     rec = _svc(request).get(intel_id)
     if rec is None:
         raise HTTPException(status_code=404, detail=f"intel_item {intel_id} not found")
@@ -148,13 +165,16 @@ def detail_page(
     if client is not None:
         snapshot_url = presigned_snapshot_url(client, rec.source_id, rec.content_sha1)
     pack_subjects, pack_event_types = _load_pack_vocab()
+    # Sprint 6：事件状态与跃迁历史实查（占位激活）
+    event_with_log = _event_svc(request).get_event_with_log(rec.event_id)
     return templates.TemplateResponse(
         request,
         "detail.html",
         {
             "rec": rec,
             "snapshot_url": snapshot_url,
-            "event_placeholder": "待事件模型上线后自动激活",
+            "event_with_log": event_with_log,
+            "status_labels": STATUS_LABELS,
             "feedbacked": fb,
             "pack_subjects": pack_subjects,
             "pack_event_types": pack_event_types,

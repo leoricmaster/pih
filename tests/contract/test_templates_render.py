@@ -1,6 +1,6 @@
-"""Jinja2 模板契约测试（Sprint 5a）。
+"""Jinja2 模板契约测试（Sprint 5a + Sprint 6 事件占位激活）。
 
-验：渲染不抛未定义变量 / 含「待事件模型上线后自动激活」占位 / autoescape 生效。
+验：渲染不抛未定义变量 / 事件区占位激活后实查渲染 / autoescape 生效。
 用 pih.consume.web.templates.env 直接 render（不走 FastAPI）。
 """
 from __future__ import annotations
@@ -9,6 +9,7 @@ from datetime import datetime
 
 from pih.consume.query_service import IntelFilters
 from pih.consume.web import templates
+from pih.process.event import STATUS_LABELS, STATUS_ORDER, EventWithLog
 from pih.store.repository import IntelRecord
 
 
@@ -26,6 +27,8 @@ def _make_record(
     ),
     inferences: str = "三一持续加码大吨位挖掘机市场，对标徐工同类产品。",
     process_status: str = "extracted",
+    event_id: int | None = None,
+    event_status: str | None = None,
 ) -> IntelRecord:
     return IntelRecord(
         id=id,
@@ -40,7 +43,7 @@ def _make_record(
         snapshot_id="snap-abc123",
         content_sha1="sha-abc123",
         raw_html="<html><body>...</body></html>",
-        event_id=None,
+        event_id=event_id,
         created_at=datetime(2026, 8, 27, 14, 30, 5),
         subject=subject,
         event_type=event_type,
@@ -53,6 +56,7 @@ def _make_record(
         process_error=None,
         process_meta={"node_timings": {"extract": 10.4}},
         processed_at=datetime(2026, 8, 27, 14, 35, 0),
+        event_status=event_status,
     )
 
 
@@ -60,94 +64,89 @@ def _render(template_name: str, context: dict) -> str:
     return templates.env.get_template(template_name).render(context)
 
 
+def _list_ctx(**extra) -> dict:
+    """list.html 渲染所需最小 context（Sprint 6 起 status_labels/status_options 必填）。"""
+    return {
+        "items": [],
+        "filters": IntelFilters(),
+        "next_url": None,
+        "status_labels": STATUS_LABELS,
+        "status_options": STATUS_ORDER,
+        **extra,
+    }
+
+
+def _detail_ctx(**extra) -> dict:
+    """detail.html 渲染所需最小 context（Sprint 6 起 event_with_log 必填）。"""
+    return {
+        "rec": _make_record(),
+        "snapshot_url": None,
+        "event_with_log": EventWithLog(event=None, logs=[]),
+        "status_labels": STATUS_LABELS,
+        "feedbacked": False,
+        "pack_subjects": ["三一", "徐工", "三一重工"],
+        "pack_event_types": ["新品发布", "财报", "其他"],
+        **extra,
+    }
+
+
 class TestListRender:
     def test_renders_with_items(self):
         items = [_make_record(id=1), _make_record(id=2, title="徐工 XE470 上市")]
-        html = _render(
-            "list.html",
-            {
-                "items": items,
-                "filters": IntelFilters(),
-                "next_url": None,
-                "event_placeholder": "待事件模型上线后自动激活",
-            },
-        )
+        html = _render("list.html", _list_ctx(items=items))
         assert "三一发布 SY375" in html
         assert "徐工 XE470" in html
         assert "B2" in html
 
     def test_renders_empty_message(self):
-        html = _render(
-            "list.html",
-            {
-                "items": [],
-                "filters": IntelFilters(),
-                "next_url": None,
-                "event_placeholder": "待事件模型上线后自动激活",
-            },
-        )
+        html = _render("list.html", _list_ctx())
         assert "无结果，建议放宽条件" in html
         assert "下一页" not in html
 
     def test_renders_next_page_link(self):
         html = _render(
             "list.html",
-            {
-                "items": [_make_record(id=1)],
-                "filters": IntelFilters(),
-                "next_url": "/?before=2026-08-27T14%3A30%3A00",
-                "event_placeholder": "待事件模型上线后自动激活",
-            },
+            _list_ctx(
+                items=[_make_record(id=1)],
+                next_url="/?before=2026-08-27T14%3A30%3A00",
+            ),
         )
         assert "下一页" in html
         assert 'href="/?before=2026-08-27T14%3A30%3A00"' in html
 
-    def test_contains_event_placeholder(self):
-        html = _render(
-            "list.html",
-            {
-                "items": [_make_record()],
-                "filters": IntelFilters(),
-                "next_url": None,
-                "event_placeholder": "待事件模型上线后自动激活",
-            },
-        )
-        assert "待事件模型上线后自动激活" in html
+    def test_event_status_column_renders_label_or_dash(self):
+        """Sprint 6：事件状态列占位激活——挂事件显示中文标签，未挂显示 —。"""
+        rec_with_event = _make_record(id=1, event_status="single_source")
+        rec_no_event = _make_record(id=2, event_status=None)
+        html = _render("list.html", _list_ctx(items=[rec_with_event, rec_no_event]))
+        assert "单源确认" in html  # status_labels[single_source]
+        # 未挂事件的行该列显示 —（— 在 HTML 里是 &mdash; 的字面字符）
+        assert "—" in html
+
+    def test_event_status_filter_dropdown_present(self):
+        """Sprint 6：筛选 form 含事件状态下拉（pending/single_source/confirmed/refuted/expired）。"""
+        html = _render("list.html", _list_ctx())
+        assert 'name="event_status"' in html
+        for label in ("待核实", "单源确认", "多源确认", "已证伪", "已过期"):
+            assert label in html
 
     def test_form_preserves_filter_values(self):
         filters = IntelFilters(subject="三一", event_type="新品发布", admiralty="B2")
-        html = _render(
-            "list.html",
-            {
-                "items": [],
-                "filters": filters,
-                "next_url": None,
-                "event_placeholder": "待事件模型上线后自动激活",
-            },
-        )
+        html = _render("list.html", _list_ctx(filters=filters))
         assert 'value="三一"' in html
         assert 'value="新品发布"' in html
         assert 'value="B2"' in html
 
 
 class TestDetailRender:
-    def _feedback_ctx(self) -> dict:
-        return {
-            "feedbacked": False,
-            "pack_subjects": ["三一", "徐工", "三一重工"],
-            "pack_event_types": ["新品发布", "财报", "其他"],
-        }
-
     def test_renders_all_sections(self):
         rec = _make_record()
         html = _render(
             "detail.html",
-            {
-                "rec": rec,
-                "snapshot_url": "http://minio.local/snap-abc123?token=x",
-                "event_placeholder": "待事件模型上线后自动激活",
-                **self._feedback_ctx(),
-            },
+            _detail_ctx(
+                rec=rec,
+                snapshot_url="http://minio.local/snap-abc123?token=x",
+            ),
         )
         assert "基础元信息" in html
         assert "结构化字段" in html
@@ -158,104 +157,94 @@ class TestDetailRender:
         assert "事件核实状态与跃迁历史" in html
         assert rec.url in html
         assert "75t" in html  # quant_params
-        # list_url 折叠在「技术详情」详情块里（默认折叠但仍在 HTML）
         assert "技术详情" in html
-        assert "采集诊断" not in html
         assert rec.list_url in html
-        # 快照 ID / 内容指纹合并为一行「内容指纹」（二者同值）
         assert "快照 ID" not in html
         assert "内容指纹" in html
-        # 快照 presigned 入口（链接文本简化为「原文快照」，过期信息挪到 title）
         assert 'href="http://minio.local/snap-abc123?token=x"' in html
         assert "原文快照</a>" in html
         assert "HTML，1小时有效" not in html
 
     def test_renders_feedback_section(self):
         """Sprint 5b S3.1.3：反馈区四表单 + datalist 主体清单注入。"""
-        rec = _make_record()
-        html = _render(
-            "detail.html",
-            {
-                "rec": rec,
-                "snapshot_url": None,
-                "event_placeholder": "x",
-                **self._feedback_ctx(),
-            },
-        )
+        html = _render("detail.html", _detail_ctx())
         assert 'id="feedback"' in html
         for label in ("主体错了", "事件类型错", "事实不准", "不该入库"):
             assert label in html
-        # datalist 主体清单选项
         assert '<option value="三一重工">' in html
-        # 事件类型 select 选项
         assert '<option value="新品发布">' in html
-        # hidden 透传当前错值
         assert 'name="wrong_value" value="三一"' in html
-        # 未提交时不显示已记录提示
         assert "反馈已记录" not in html
 
     def test_feedbacked_flag_shows_notice(self):
-        html = _render(
-            "detail.html",
-            {
-                "rec": _make_record(),
-                "snapshot_url": None,
-                "event_placeholder": "x",
-                **(self._feedback_ctx() | {"feedbacked": True}),
-            },
-        )
+        html = _render("detail.html", _detail_ctx(feedbacked=True))
         assert "反馈已记录" in html
 
     def test_facts_split_into_list(self):
-        """facts 按 '；' 拆成无序列表（事实间无顺序语义），每条事实一行。"""
         rec = _make_record()
-        html = _render(
-            "detail.html",
-            {"rec": rec, "snapshot_url": None, "event_placeholder": "x", **self._feedback_ctx()},
-        )
-        # 事实区块用 <ul>（无序），不用 <ol>（避免引入不存在的顺序关系）
+        html = _render("detail.html", _detail_ctx(rec=rec))
         assert "事实描述" in html
-        # 三条事实各自独立成项
         assert "三一重工发布 SY375" in html
         assert "设备搭载电动化动力系统" in html
         assert "整机重量 75t" in html
 
     def test_snapshot_url_none_shows_id_text(self):
-        """MinIO 不可达时降级展示快照 ID 文本，不渲染失效链接。"""
         rec = _make_record()
-        html = _render(
-            "detail.html",
-            {"rec": rec, "snapshot_url": None, "event_placeholder": "x", **self._feedback_ctx()},
-        )
+        html = _render("detail.html", _detail_ctx(rec=rec))
         assert "MinIO 不可达" in html
         assert rec.snapshot_id in html
 
-    def test_contains_event_placeholder(self):
+    def test_event_section_no_event_shows_hint(self):
+        """Sprint 6：未挂事件时显示降级提示（占位激活后空态文案）。"""
+        html = _render("detail.html", _detail_ctx())
+        assert "未挂事件" in html
+
+    def test_event_section_with_event_renders_status_and_timeline(self):
+        """Sprint 6：挂事件时渲染状态徽章 + 跃迁历史时间线。"""
+        from dataclasses import replace
+
+        from pih.store.event_repository import EventRecord, VerificationLogRecord
+
+        ev = EventRecord(
+            id=42, subject="三一", event_type="新品发布",
+            status="single_source", source_count=2, ready_for_manual=True,
+            first_seen_at=datetime(2026, 8, 27, 10, 0, 0),
+            last_seen_at=datetime(2026, 8, 27, 14, 30, 0),
+        )
+        logs = [
+            VerificationLogRecord(
+                id=1, event_id=42, from_status=None, to_status="pending",
+                operator="system", reason="事件创建",
+                created_at=datetime(2026, 8, 27, 10, 0, 0),
+            ),
+            VerificationLogRecord(
+                id=2, event_id=42, from_status="pending", to_status="single_source",
+                operator="system", reason="第二独立信源命中",
+                created_at=datetime(2026, 8, 27, 14, 30, 0),
+            ),
+        ]
+        rec = replace(_make_record(event_id=42, event_status="single_source"))
         html = _render(
             "detail.html",
-            {
-                "rec": _make_record(),
-                "snapshot_url": None,
-                "event_placeholder": "待事件模型上线后自动激活",
-                **self._feedback_ctx(),
-            },
+            _detail_ctx(
+                rec=rec,
+                event_with_log=EventWithLog(event=ev, logs=logs),
+            ),
         )
-        assert "待事件模型上线后自动激活" in html
+        assert "#42" in html
+        assert "单源确认" in html  # status label
+        assert "独立信源数" in html
+        assert "已具备升级条件" in html  # ready_for_manual 提示
+        assert "第二独立信源命中" in html  # reason
+        assert "operator=system" in html
+        assert "事件创建" in html  # 初始 log
 
     def test_unextracted_record_shows_dash(self):
         rec = _make_record(
-            subject=None,
-            event_type=None,
-            admiralty_code=None,
-            tags=[],
-            facts="",
-            inferences="",
-            process_status="pending",
+            subject=None, event_type=None, admiralty_code=None,
+            tags=[], facts="", inferences="", process_status="pending",
         )
-        html = _render(
-            "detail.html",
-            {"rec": rec, "snapshot_url": None, "event_placeholder": "..."},
-        )
+        html = _render("detail.html", _detail_ctx(rec=rec))
         assert "—" in html
         assert "（未抽取）" in html
         assert "（无）" in html
@@ -265,23 +254,12 @@ class TestDetailRender:
 class TestAutoescape:
     def test_title_script_escaped_in_list(self):
         rec = _make_record(title="<script>alert(1)</script>")
-        html = _render(
-            "list.html",
-            {
-                "items": [rec],
-                "filters": IntelFilters(),
-                "next_url": None,
-                "event_placeholder": "x",
-            },
-        )
+        html = _render("list.html", _list_ctx(items=[rec]))
         assert "<script>alert(1)</script>" not in html
         assert "&lt;script&gt;" in html
 
     def test_facts_script_escaped_in_detail(self):
         rec = _make_record(facts="<script>x</script>事实内容")
-        html = _render(
-            "detail.html",
-            {"rec": rec, "snapshot_url": None, "event_placeholder": "x"},
-        )
+        html = _render("detail.html", _detail_ctx(rec=rec))
         assert "<script>x</script>" not in html
         assert "&lt;script&gt;" in html

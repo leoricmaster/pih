@@ -1,11 +1,12 @@
-"""QueryService：消费层同源查询服务（Sprint 5a，ADR-006）。
+"""QueryService：消费层同源查询服务（Sprint 5a，ADR-006 + Sprint 6 事件）。
 
 Web 页面与 JSON API 出口共用此服务——同条件调用必返同集合同序。
 内部委托 IntelRepository.list_by_filter / get，统一 IntelFilters 入参。
+Sprint 6：注入领域包 ranking 节用于排序权重（W_c × map(admiralty)）。
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
@@ -22,6 +23,7 @@ class IntelFilters:
     admiralty: str | None = None
     source_id: str | None = None
     process_status: str | None = None
+    event_status: str | None = None  # Sprint 6：按事件核实状态筛选
     since: datetime | None = None
     until: datetime | None = None
     before: datetime | None = None
@@ -38,6 +40,7 @@ class IntelFilters:
                 ("admiralty", self.admiralty),
                 ("source_id", self.source_id),
                 ("process_status", self.process_status),
+                ("event_status", self.event_status),
                 ("since", self.since.isoformat() if self.since else None),
                 ("until", self.until.isoformat() if self.until else None),
                 ("before", self.before.isoformat() if self.before else None),
@@ -57,8 +60,11 @@ class ListResult:
 class QueryService:
     """消费层查询服务（Web 与 JSON API 同源，ADR-006）。"""
 
-    def __init__(self, repo: IntelRepository) -> None:
+    def __init__(self, repo: IntelRepository, ranking: dict | None = None) -> None:
         self._repo = repo
+        # ranking 节从领域包 pack['ranking'] 读取（event_state_weights /
+        # reliability_weights / credibility_weights）；None 时回退简版排序
+        self._ranking = ranking
 
     def list(self, filters: IntelFilters) -> ListResult:
         """按 filters 检索情报列表，返回 items + next_before 游标。
@@ -73,10 +79,12 @@ class QueryService:
             admiralty=filters.admiralty,
             source_id=filters.source_id,
             process_status=filters.process_status,
+            event_status=filters.event_status,
             since=filters.since,
             until=filters.until,
             before=filters.before,
             limit=filters.limit,
+            ranking=self._ranking,
         )
         next_before = None
         if len(records) == filters.limit and records:

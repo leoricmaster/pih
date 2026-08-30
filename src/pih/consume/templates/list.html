@@ -16,6 +16,14 @@
       {% endfor %}
     </select>
   </label>
+  <label>事件状态
+    <select name="event_status">
+      <option value="">全部</option>
+      {% for s in status_options %}
+      <option value="{{ s }}" {% if filters.event_status == s %}selected{% endif %}>{{ status_labels[s] }}</option>
+      {% endfor %}
+    </select>
+  </label>
   <label>起始时间<input type="text" name="since" value="{{ filters.since.isoformat() if filters.since else '' }}" placeholder="ISO8601"></label>
   <label>截止时间<input type="text" name="until" value="{{ filters.until.isoformat() if filters.until else '' }}" placeholder="ISO8601"></label>
   <label>每页<input type="number" name="limit" value="{{ filters.limit }}" min="1" max="200"></label>
@@ -46,7 +54,7 @@
       <td>{{ r.admiralty_code or '—' }}</td>
       <td><span class="status-badge status-{{ r.process_status or 'pending' }}">{{ r.process_status or 'pending' }}</span></td>
       <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
-      <td class="placeholder">{{ event_placeholder }}</td>
+      <td>{% if r.event_status %}<span class="status-badge event-{{ r.event_status }}">{{ status_labels[r.event_status] }}</span>{% else %}—{% endif %}</td>
       <td><a class="fb-link" href="/intel/{{ r.id }}#feedback" title="对这条情报标记反馈">反馈</a></td>
     </tr>
     {% endfor %}

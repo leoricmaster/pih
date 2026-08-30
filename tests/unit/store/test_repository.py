@@ -345,10 +345,16 @@ class TestListByFilter:
         assert params[5] == 10
 
     def test_orders_admiralty_then_fetched(self):
-        """Sprint 5a 排序简版：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC。"""
+        """Sprint 5a 排序简版（ranking=None 回退）：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC。
+
+        Sprint 6 起 SQL 列名加 i. 前缀（LEFT JOIN event 防歧义）。
+        """
         m = _MockConn()
         m.cursor_obj.fetchall.return_value = []
         repo = IntelRepository(m.pool)
         repo.list_by_filter()
         sql = m.cursor_obj.execute.call_args.args[0]
-        assert "ORDER BY admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC" in sql
+        assert (
+            "ORDER BY i.admiralty_code ASC NULLS LAST, i.fetched_at DESC, i.id DESC"
+            in sql
+        )

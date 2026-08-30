@@ -235,6 +235,7 @@ ranking:
     "6": 0.0
   event_state_weights:
     confirmed: 1.0
-    single: 0.8
+    single_source: 0.8
     pending: 0.5
     refuted: 0.0
+    expired: 0.3
