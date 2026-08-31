@@ -487,33 +487,17 @@ def _cmd_cluster(args: argparse.Namespace) -> int:
         attached = 0
         advanced = 0
         for intel_id in ids:
-            rec = intel_repo.get(intel_id)
-            if rec is None or not rec.subject or not rec.event_type:
+            outcome = svc.cluster(intel_id)
+            if outcome is None:
                 continue
-            from pih.process.event import normalize_subject
-
-            subject_norm = normalize_subject(rec.subject, pack)
-            event_id = event_repo.find_matching_event(
-                subject_norm, rec.event_type, rec.fetched_at
-            )
-            if event_id is None:
-                event_id = event_repo.create_event(
-                    subject_norm, rec.event_type, rec.fetched_at
-                )
-            outcome = event_repo.attach_and_advance(
-                intel_id=intel_id,
-                event_id=event_id,
-                source_id=rec.source_id,
-                fetched_at=rec.fetched_at,
-            )
             attached += 1
             if outcome.status_advanced:
                 advanced += 1
                 print(
-                    f"  [{intel_id}] ⋄ 挂入事件 #{event_id} → 单源确认（第二独立信源）"
+                    f"  [{intel_id}] ⋄ 挂入事件 #{outcome.event_id} → 单源确认（第二独立信源）"
                 )
             else:
-                print(f"  [{intel_id}] ⋄ 挂入事件 #{event_id}")
+                print(f"  [{intel_id}] ⋄ 挂入事件 #{outcome.event_id}")
         print(f"完成：挂入 {attached} 条，触发自动跃迁 {advanced} 次")
         return EXIT_OK if attached == len(ids) else EXIT_FAILED
     finally:

@@ -2,7 +2,17 @@
 
 - 版本：V1.7（配合《Product Requirements.md》V1.0、《Architecture.md》V0.11）
 - 日期：2026-08-28
-- 变更：V1.6→V1.7 Sprint 6 事件聚类——S4.2.2「自动预评级与交叉印证」已交付 AC2/AC3（迁移 0004 event + verification_log 两表 + intel_item.event_id FK ON DELETE SET NULL；EventRepository/EventService 在线聚类挂 ProcessRunner._process_one 末尾，extracted 写库成功后触发；聚类规则 D1：主体归一化（领域包 competitors.aliases → display_name）+ event_type 精确 + ±7 天窗；第二独立信源命中 → pending→single_source 自动跃迁 + ready_for_manual=TRUE 进人工队列；终态人工 CLI `pih verify list/confirm/refute`；`pih cluster --backfill` 历史回填；占位激活：list.html/detail.html/api.py 三处「待事件模型上线后自动激活」全部填实，QueryService.IntelFilters 加 event_status 筛选；排序切 W_c×map(admiralty)（架构 §6.2 简化，decay 留时效 Sprint）；状态枚举英文 key 与领域包 ranking.event_state_weights 对齐：pending/single_source/confirmed/refuted/expired，展示层 STATUS_LABELS 映射中文；expired 状态本 Sprint 仅占位权重，触发逻辑留时效 Sprint）。S3.1.1 备注：CLI verify 子命令交付最小切片（ready_for_manual 队列 + 终态跃迁写 log），离线队列 Web 页未建。V1.5→V1.6 Sprint 5b 交付——质量闭环两卡同期上线：S4.2.3「抽取后验质量门」已交付（主体占位值集合 {"",未知,无,不详,unknown} 命中 → needs_manual 且结构化字段保留供复核，process_error 记「后验质量门」；条目经 `?process_status=needs_manual` 筛选进入复核视野）；S3.1.3「消费页人类反馈动作」已交付最小切片（迁移 0003 feedback 表 FK 级联、详情页反馈区四表单：主体错了 datalist 主体清单可选/事件类型错/事实不准 fact_index 标注/不该入库；Web 表单 POST /feedback 无鉴权（内网口径，tokened API 写反馈留后续）；GET /feedback 聚合视图主体错误率>30% 高亮 + GET /feedback/export JSONL 导出 few-shot 素材）；支撑项：列表/API 增 process_status 同源筛选。V1.4→V1.5 Sprint 5a 验收规划调整——粗筛误放与抽取误读为批次性问题（时政/科普类误入库、主体误读栏目名/"未知"仍 extracted），错误样本需人工反馈积累：新增 S3.1.3「消费页人类反馈动作」（详情页内联反馈 + feedback 表 + 聚合视图，驱动 prompt/粗筛迭代）标下 Sprint 候选；新增 S4.2.3「抽取后验质量门」（主体"未知"→needs_manual，纯代码止损）标下 Sprint 候选——两卡同期交付，后验门拦增量、反馈样本根治；S4.2.1 已知质量问题注脚同步（主体误读页面装饰元素 + 粗筛口径宽漏放，修法依赖 S3.1.3 样本）。V1.3→V1.4 Sprint 5a 交付——消费层 Web/API 同源出口上线（ADR-006）：S1.1.1「多条件组合筛选」已交付（FastAPI Web 列表 + JSON API 同源，主体/事件类型/标签/置信度/时间范围/游标分页；AC3「已过期标识」待时效管理器 Sprint，expires_at 上线后自动激活）；S1.1.2「情报详情页」已交付（schema 全字段 + 事实/推断分区 + 原文/快照双入口；事件核实状态与跃迁历史占位「待事件模型上线后自动激活」）；S1.1.4「只读查询 API」已交付（同源一致性 + Bearer token 鉴权；AC2 响应含 event_verification_status 占位字段，待事件模型上线后自动激活）。V1.2→V1.3 Sprint 4 交付——process 层上线：S4.1.2「相关性粗筛」已交付（小模型二分类，粗筛日志=行级 filtered_out 标记，SQL 可审计）；S4.2.1「自动结构化抽取」已交付（LangGraph 三节点图 粗筛→抽取→校验，intel_item 增 11 结构化列 + 迁移 0002，`pih process` CLI；标签可为空数组口径见卡内备注）；S4.2.2 备注拆分——AC1 预评级简版 Sprint 4 满足（Admiralty=reliability×可信度），AC2/AC3 待事件聚类 Sprint；S1.1.1 备注——CLI 子集已交付（`pih query --subject/--event-type/--tag` 结构化筛选），Web/API 出口待消费层 Sprint。V1.1→V1.2 Sprint 3 交付——新增 S4.5「情报库落库与基础检索」（已交付）：PG + alembic 迁移 + IntelRepository + `pih query` CLI；source/intel_item 两表落地，content_sha1 幂等约束（ADR-007）；原 S4.1.1 AC1「无快照不入库」备注跨 Sprint 满足（Sprint 2 快照 + Sprint 3 入库门控）。V1.0→V1.1 S3.2.1 补交付——`pih probe-source`/`pih collect` CLI（运营者入口）+ schema sources 增 `enabled` 必填门控，AC1「报告成败，成功才允许启用」用户闭环补齐；V0.9→V1.0 Sprint 2 状态位更新——S3.2.1 拆分：缩范围为「信源注册与试抓取」（已交付），原 AC2 告警拆至新卡 S3.2.3（待开发，调度器前置）；Sprint 0 SPK-1/2/3 已交付、SPK-4 待开发、法务待用户推进
+- 变更简史（详细交付口径见各卡内备注与 git log）：
+  | 版本 | Sprint | 要点 |
+  |---|---|---|
+  | V1.7 | 6 | 事件聚类上线（S4.2.2 AC2/AC3）：event/verification_log 两表 + 在线聚类 + `pih verify`/`pih cluster`；消费层事件字段/筛选/排序激活 |
+  | V1.6 | 5b | 质量闭环：S4.2.3 后验质量门 + S3.1.3 消费页反馈动作（feedback 表/聚合视图/JSONL 导出） |
+  | V1.5 | 5a 规划 | 新增 S3.1.3 / S4.2.3 两卡（粗筛误放与抽取误读的批次性问题治理） |
+  | V1.4 | 5a | 消费层 Web/API 同源出口上线（ADR-006）：S1.1.1 / S1.1.2 / S1.1.4 |
+  | V1.3 | 4 | process 层上线：S4.1.2 粗筛 + S4.2.1 结构化抽取（LangGraph 三节点图） |
+  | V1.2 | 3 | S4.5 落库与基础检索（PG + alembic + query CLI） |
+  | V1.1 | 2 补 | S3.2.1 probe-source/collect CLI + enabled 门控 |
+  | V1.0 | 2 | S3.2.1 拆分缩范围；SPK-1/2/3 交付 |
 - **本文档定位**：需求的事实源与导读——开发前是具体的需求说明，开发后凭状态位反映实现现状
 
 **编写约定**：
@@ -502,7 +512,7 @@ AC7: Given alembic downgrade base
 
 > 作为贡献者，我想把文本/文件/录音丢进一个入口，30 秒内完成，系统自动结构化入库，以便我的见闻不流失。
 
-> 当前约束：仅交付 `RawItem` 模型与 `ingest()` 接口定义及契约测试，不交付 UI。
+> 支撑现状：`RawItem` 模型与落库路径（`IntelRepository.save`，S4.5）已交付，可承载直录数据；录入 UI 与网关未建。
 
 ---
 

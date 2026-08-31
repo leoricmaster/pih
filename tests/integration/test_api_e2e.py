@@ -7,37 +7,19 @@ AC3「已过期标识」不交付（expires_at 未上线）。
 """
 from __future__ import annotations
 
-import os
 import re
-import subprocess
-from pathlib import Path
 
 import psycopg
 import pytest
-from _factory import seed_intel_items
+from _factory import PG_DSN, seed_intel_items
 from starlette.testclient import TestClient
 
 from pih.consume.web import app
 from pih.envs import load_env
 
-pytestmark = pytest.mark.integration
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ALEMBIC = ["uv", "run", "alembic"]
-# 尊重 .env/.env.defaults 覆盖（load_env 先行）；剥 +psycopg driver 前缀（psycopg.connect 需裸 DSN）
-# 分层 env 先行：.env/.env.defaults 的覆盖在此生效（模块级取值在其后）
 load_env()
-PG_DSN = os.environ.get(
-    "PG_DSN", "postgresql://pih:pih@localhost:5432/pih"
-).replace("+psycopg", "")
 
-
-@pytest.fixture(autouse=True)
-def _clean_db():
-    """每个测试前置 downgrade base + upgrade head，保证干净库。"""
-    subprocess.run(ALEMBIC + ["downgrade", "base"], cwd=REPO_ROOT, check=True, capture_output=True)
-    subprocess.run(ALEMBIC + ["upgrade", "head"], cwd=REPO_ROOT, check=True, capture_output=True)
-    yield
+pytestmark = pytest.mark.integration
 
 
 @pytest.fixture

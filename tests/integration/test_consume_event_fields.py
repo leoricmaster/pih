@@ -9,12 +9,11 @@
 from __future__ import annotations
 
 import os
-import subprocess
 from datetime import datetime
-from pathlib import Path
 
 import psycopg
 import pytest
+from _factory import PG_DSN
 from fastapi.testclient import TestClient
 
 from pih.consume.web import app
@@ -25,18 +24,11 @@ load_env()
 
 pytestmark = pytest.mark.integration
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ALEMBIC = ["uv", "run", "alembic"]
-PG_DSN = os.environ.get(
-    "PG_DSN", "postgresql://pih:pih@localhost:5432/pih"
-).replace("+psycopg", "")
 API_TOKEN = os.environ.get("PIH_API_TOKEN", "test-token")
 
 
 @pytest.fixture(autouse=True)
-def _clean_db():
-    subprocess.run(ALEMBIC + ["downgrade", "base"], cwd=REPO_ROOT, check=True, capture_output=True)
-    subprocess.run(ALEMBIC + ["upgrade", "head"], cwd=REPO_ROOT, check=True, capture_output=True)
+def _close_pool():
     yield
     close_pool()
 

@@ -3,8 +3,8 @@
 > 一条"采集 → 核实 → 结构化 → 存储 → 消费"的情报流水线，核心域模型行业无关，行业知识以领域包（Domain Pack，repo 内 YAML 配置）注入。
 
 - 需求：`docs/Product Requirements.md`（V1.0）
-- 架构：`docs/Architecture.md`（V0.10）
-- Backlog：`docs/Backlog.md`（V1.4）
+- 架构：`docs/Architecture.md`（V0.11）
+- Backlog：`docs/Backlog.md`（V1.7）
 - ADR：`docs/adr/`
 
 ## 仓库布局
@@ -14,7 +14,7 @@
 | `src/pih/` | 工程包，src-layout；分层对齐架构 §4 |
 | `domain_packs/` | 领域包 YAML 事实源（架构 §6.3） |
 | `tests/` | unit / contract / integration 三层 |
-| `docker-compose.yml` | 本地环境：PG+pgvector / MinIO / app（架构 §3） |
+| `docker-compose.yml` | 本地环境：PG+pgvector / MinIO / app / web（架构 §3） |
 | `docs/` | 需求/架构/Backlog/ADR |
 
 ### 包分层（`src/pih/`）
@@ -25,9 +25,9 @@
 |---|---|---|
 | `domainpacks/` | 横切·配置治理 | ✅ Sprint 1 已交付（加载器+校验器+schema） |
 | `collect/` | 采集层 | ✅ Sprint 2 已交付（适配器+RawItem+快照+robots；CCMA/三一/cehome 三源）＋ probe/collect CLI 与 enabled 门控（S3.2.1 补交付） |
-| `process/` | 处理层（LangGraph） | ✅ Sprint 4 已交付（LLM 客户端+粗筛→抽取→校验三节点图+ProcessRunner+process CLI；领域包 v0.2.0 枚举单一事实源） |
-| `store/` | 存储层 | ✅ Sprint 3 已交付（PG 落库 + alembic 迁移 + IntelRepository + query CLI；source/intel_item 两表） |
-| `consume/` | 消费层 | ✅ Sprint 5a 已交付（FastAPI Web + JSON API 同源 + Jinja2 列表/详情 + Bearer token 鉴权；ADR-006）；Sprint 5b 增 process_status 筛选 + 反馈闭环（表单/聚合视图/JSONL 导出） |
+| `process/` | 处理层（LangGraph） | ✅ Sprint 4 已交付（LLM 客户端+粗筛→抽取→校验三节点图+ProcessRunner+process CLI；领域包 v0.2.0 枚举单一事实源）；Sprint 6 增事件聚类（EventService） |
+| `store/` | 存储层 | ✅ Sprint 3 已交付（PG 落库 + alembic 迁移 + IntelRepository + query CLI；source/intel_item 两表）；Sprint 6 增 event/verification_log 两表（EventRepository） |
+| `consume/` | 消费层 | ✅ Sprint 5a 已交付（FastAPI Web + JSON API 同源 + Jinja2 列表/详情 + Bearer token 鉴权；ADR-006）；Sprint 5b 增 process_status 筛选 + 反馈闭环（表单/聚合视图/JSONL 导出）；Sprint 6 激活事件核实状态字段与筛选 |
 
 ## 工程化启动
 
@@ -43,8 +43,11 @@
 # 依赖（需 uv；安装见 https://docs.astral.sh/uv/）
 uv sync --extra dev
 
-# 单元 + 契约测试（无需容器，无需 .env）
-uv run pytest tests/unit tests/contract -v
+# 单元测试（无需容器，无需 .env）
+uv run pytest tests/unit -v
+
+# 契约测试（其中 test_migrations_apply 需 postgres；纯 YAML/模板部分同上）
+uv run pytest tests/contract -v
 
 # 集成测试（需 docker compose up）
 docker compose up -d
@@ -73,6 +76,12 @@ uv run pih query --source-id=ccma --limit=10   # 查询库中按信源最近入�
 uv run pih query --event-type=新品发布          # 按事件类型筛选（结构化，Sprint 4）
 uv run pih query --subject=三一 --tag=电动化    # 按主体/标签筛选（JSONB containment）
 uv run pih query --id=42                      # 单条详情（含 Admiralty 与结构化字段）
+
+# 事件聚类与人工核实（Sprint 6）
+uv run pih verify list                        # 待人工核实事件队列（双独立信源命中后进队）
+uv run pih verify confirm 42                  # 跃迁 single_source → confirmed（人工终态）
+uv run pih verify refute 42 --reason="主体误读"  # 跃迁 → refuted（必填理由）
+uv run pih cluster --backfill --limit=200     # 对存量 extracted 未挂事件条目聚类回填
 ```
 
 `collect` 输出末尾统计：`产出 N 条 RawItem → 入库 X 新增 / Y 幂等跳过 / Z 失败`
@@ -95,7 +104,7 @@ FastAPI 单 app 双出口——Web 列表/详情（Jinja2 服务端模板）与 
 # 1. 起依赖 + 迁移 + 造数据
 docker compose up -d postgres
 uv run alembic upgrade head
-uv run pih collect sany_news --max-items 5    # 攒几条真实数据
+uv run pih collect sany --max-items 5          # 攒几条真实数据
 uv run pih process                              # 抽取结构化字段（需 .env 配 PIH_LLM_*）
 
 # 2. 配置 API token
@@ -118,10 +127,11 @@ curl http://127.0.0.1:8000/api/intel/list       # 无 token → 401
 curl http://127.0.0.1:8000/api/healthz          # 健康检查（不鉴权）
 ```
 
-事件核实状态字段（列表列与详情区）当前占位「待事件模型上线后自动激活」——
-event 表与核实状态机属下一 Sprint，上线后查询服务自动填实，无需改 consume 层。
-排序简版 `admiralty_code ASC NULLS LAST, fetched_at DESC`，完整 score
-（W_c × map(admiralty) × decay）待事件+时效 Sprint。
+事件核实状态（Sprint 6 已激活）：列表「所属事件核实状态」列与详情页事件区显示
+挂载事件的状态中文标签（待核实/单源确认/多源确认/已证伪）+ 跃迁历史时间线；
+未挂事件条目显示 —。可按 `?event_status=` 筛选（Web/API 同源）。
+排序 `W_c(event.status) × map(admiralty) DESC, fetched_at DESC`（架构 §6.2 简化，
+权重来自领域包 ranking 节，CASE WHEN 注入 SQL；decay 待时效 Sprint）。
 
 ## 质量闭环（Sprint 5b）
 
@@ -141,6 +151,13 @@ curl "http://127.0.0.1:8000/api/intel/list?process_status=needs_manual" \
   -H "Authorization: Bearer dev-token"   # API 按状态筛
 curl http://127.0.0.1:8000/feedback/export | head -1   # 反馈明细 JSONL
 ```
+
+## 事件聚类与核实状态机（Sprint 6）
+
+extracted 条目自动按聚类规则挂事件（架构 §6.1）：主体归一化（领域包别名 →
+display_name）+ event_type 精确匹配 + ±7 天时间窗。第二独立信源命中 →
+pending → single_source 自动跃迁并进人工队列；多源确认/证伪为人工终态
+（`pih verify confirm/refute`，全程写 verification_log 留痕，ADR-002）。
 
 ## 领域包机制
 

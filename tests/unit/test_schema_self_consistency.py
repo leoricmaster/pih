@@ -10,7 +10,7 @@ from __future__ import annotations
 import jsonschema
 import pytest
 
-from pih.domainpacks.schema import DOMAIN_PACK_SCHEMA, get_schema
+from pih.domainpacks.schema import DOMAIN_PACK_SCHEMA
 
 
 def _minimal_valid_pack() -> dict:
@@ -48,9 +48,6 @@ class TestSchemaIntegrity:
     def test_schema_is_valid_draft(self):
         """schema 本身是合法的 Draft 2020-12。"""
         jsonschema.Draft202012Validator.check_schema(DOMAIN_PACK_SCHEMA)
-
-    def test_get_schema_returns_same_object(self):
-        assert get_schema() is DOMAIN_PACK_SCHEMA
 
     def test_minimal_pack_passes(self):
         _assert_valid(_minimal_valid_pack())

@@ -12,6 +12,10 @@
   refute:   pending/single_source → refuted（必填 reason）
 
 中文展示映射 STATUS_LABELS 供模板与 CLI 共用。
+
+排序权重口径（W_c × map(admiralty)）的唯一实现在
+store/repository.py:_build_ranked_order_sql（SQL CASE WHEN 注入），
+权重表来自领域包 ranking 节——本模块不重复实现。
 """
 from __future__ import annotations
 
@@ -23,6 +27,7 @@ from pih.store.event_repository import (
     STATUS_PENDING,
     STATUS_REFUTED,
     STATUS_SINGLE_SOURCE,
+    AttachOutcome,
     EventRecord,
     EventRepository,
     VerificationLogRecord,
@@ -91,8 +96,8 @@ class EventService:
         self._intel = intel_repo
         self._pack = pack
 
-    def cluster(self, intel_id: int) -> int | None:
-        """对单条 extracted 情报执行聚类，返回挂入的 event_id（失败返回 None）。
+    def cluster(self, intel_id: int) -> AttachOutcome | None:
+        """对单条 extracted 情报执行聚类，返回 AttachOutcome（失败返回 None）。
 
         流程：
         1. 取 intel_item（含 subject/event_type/fetched_at/source_id）
@@ -101,6 +106,7 @@ class EventService:
         4. 失败不抛——调用方（ProcessRunner）容错主流程不阻塞
 
         非 extracted 条目调用方不应传入；本方法不强校验（容错）。
+        AttachOutcome.status_advanced 供 CLI 回填打印跃迁明细。
         """
         rec = self._intel.get(intel_id)
         if rec is None or not rec.subject or not rec.event_type:
@@ -115,13 +121,12 @@ class EventService:
                 subject_norm, rec.event_type, rec.fetched_at
             )
 
-        self._repo.attach_and_advance(
+        return self._repo.attach_and_advance(
             intel_id=intel_id,
             event_id=event_id,
             source_id=rec.source_id,
             fetched_at=rec.fetched_at,
         )
-        return event_id
 
     # ---- 人工终态 ----
 
@@ -145,30 +150,3 @@ class EventService:
             return EventWithLog(event=None, logs=[])
         logs = self._repo.list_verification_log(event_id)
         return EventWithLog(event=event, logs=logs)
-
-
-def event_state_weight(status: str | None, pack: dict) -> float:
-    """从领域包 ranking.event_state_weights 读 W_c；缺省回退默认 0.5。
-
-    SQL ORDER BY 拼接用——不上 SQL 函数，Python 侧读领域包后用 CASE WHEN 注入。
-    """
-    if status is None:
-        return 0.0  # 未挂事件（pending 条目或非 extracted）排在最后
-    weights = pack.get("ranking", {}).get("event_state_weights", {})
-    return float(weights.get(status, 0.5))
-
-
-def admiralty_weight(admiralty_code: str | None, pack: dict) -> float:
-    """Admiralty 码 → 数值权重（架构 §6.2 简化：取 reliability×credibility 较小值线性组合）。
-
-    admiralty_code 形如 "B2"——首字符 reliability（A-F），次字符 credibility（1-6）。
-    两者分别查领域包权重表，取较小值（短板决定，架构 §6.2 原文）。
-    """
-    if not admiralty_code or len(admiralty_code) < 2:
-        return 0.0
-    ranking = pack.get("ranking", {})
-    rel_w = ranking.get("reliability_weights", {})
-    cred_w = ranking.get("credibility_weights", {})
-    rel = rel_w.get(admiralty_code[0], 0.0)
-    cred = cred_w.get(admiralty_code[1], 0.0)
-    return min(float(rel), float(cred))

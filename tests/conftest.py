@@ -19,8 +19,6 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-DOMAIN_PACKS_DIR = REPO_ROOT / "domain_packs"
-
 # 收集代码 env 引用的文件范围（src / migrations / compose）
 _ENV_REF_GLOBS = ("src/**/*.py", "migrations/**/*.py", "docker-compose.yml")
 _ENV_KEY_RE = re.compile(
@@ -83,6 +81,3 @@ def pytest_collection_modifyitems(items):
     for item in items:
         if integration_dir in Path(item.fspath).resolve().parents:
             item.add_marker("integration")
-
-
-__all__ = ["DOMAIN_PACKS_DIR", "REPO_ROOT"]

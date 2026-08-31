@@ -21,11 +21,10 @@
 from __future__ import annotations
 
 import os
-import subprocess
-from pathlib import Path
 
-import psycopg
 import pytest
+from _factory import ScriptChat, ok_pred, usage
+from conftest import q as _q
 
 from pih.cli import _default_pack, main
 from pih.domainpacks.loader import load
@@ -39,7 +38,7 @@ load_env()
 
 LLM_ENV_VARS = (
     "PIH_LLM_BASE_URL", "PIH_LLM_API_KEY",
-    "PIH_LLM_LARGE_MODEL", "PIH_LLM_SMALL_MODEL",
+    "PIH_LLM_SMALL_MODEL", "PIH_LLM_LARGE_MODEL",
 )
 REAL_LLM = pytest.mark.skipif(
     not all(os.environ.get(v) for v in LLM_ENV_VARS),
@@ -47,62 +46,11 @@ REAL_LLM = pytest.mark.skipif(
 )
 pytestmark = pytest.mark.integration
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ALEMBIC = ["uv", "run", "alembic"]
-PG_DSN = os.environ.get(
-    "PG_DSN", "postgresql://pih:pih@localhost:5432/pih"
-).replace("+psycopg", "")
-
-
-@pytest.fixture(autouse=True)
-def _clean_db():
-    """每个测试前置 downgrade base + upgrade head，保证干净库。"""
-    subprocess.run(ALEMBIC + ["downgrade", "base"], cwd=REPO_ROOT, check=True, capture_output=True)
-    subprocess.run(ALEMBIC + ["upgrade", "head"], cwd=REPO_ROOT, check=True, capture_output=True)
-    yield
-
-
-def _q(sql: str, params: tuple = ()) -> list[tuple]:
-    with psycopg.connect(PG_DSN) as conn, conn.cursor() as cur:
-        cur.execute(sql, params)
-        return cur.fetchall()
-
 
 def _collect_fresh(n: int = 3) -> None:
     """采集 n 条 ccma 情报作为 process 输入。"""
     code = main(["collect", "ccma", "--max-items", str(n)])
     assert code == 0, "采集失败（前置条件不满足）"
-
-
-def _ok_pred() -> dict:
-    """能过真实领域包（construction_machinery v0.2.0）validate_pred 的输出。"""
-    return {
-        "主体": "三一",
-        "事件类型": "新品发布",
-        "事实描述": "发布新品挖掘机",
-        "推断与判断": "依据：正文",
-        "标签": ["电动化"],
-        "量化参数": {},
-        "信息可信度": "2",
-    }
-
-
-def _usage() -> dict:
-    """ChatFn 契约三键（graph 按下标取 retries）。"""
-    return {"prompt_tokens": 1, "completion_tokens": 1, "retries": 0}
-
-
-class ScriptChat:
-    """脚本化 chat：按 tier 分派（AC2/AC3/AC4 复用，LLM 不可注入确定性失败）。"""
-
-    def __init__(self, small, large) -> None:
-        self._small = small
-        self._large = large
-
-    def __call__(self, messages: list[dict], tier: str):
-        if tier == "small":
-            return self._small(messages)
-        return self._large(messages)
 
 
 def _run_scripted(chat) -> None:
@@ -148,10 +96,10 @@ class TestAC2NeedsManualKeepsItem:
         _collect_fresh(1)
 
         def large(messages):
-            return _ok_pred() | {"事件类型": "瞎写"}, _usage()
+            return ok_pred() | {"事件类型": "瞎写"}, usage()
 
         _run_scripted(ScriptChat(
-            small=lambda m: ({"relevant": True}, _usage()),
+            small=lambda m: ({"relevant": True}, usage()),
             large=large,
         ))
 
@@ -173,8 +121,8 @@ class TestAC3FilteredOutAuditable:
         """AC3：粗筛判无关 → filtered_out，行保留可查（审计口径）。"""
         _collect_fresh(1)
         _run_scripted(ScriptChat(
-            small=lambda m: ({"relevant": False}, _usage()),
-            large=lambda m: (_ok_pred(), _usage()),  # 不应被调用
+            small=lambda m: ({"relevant": False}, usage()),
+            large=lambda m: (ok_pred(), usage()),  # 不应被调用
         ))
 
         rows = _q("SELECT process_status, subject FROM intel_item WHERE source_id='ccma'")
@@ -194,7 +142,7 @@ class TestAC4GrayItemPolicy:
         def small(messages):
             raise LLMError("模拟限流")
 
-        _run_scripted(ScriptChat(small=small, large=lambda m: (_ok_pred(), _usage())))
+        _run_scripted(ScriptChat(small=small, large=lambda m: (ok_pred(), usage())))
 
         rows = _q("SELECT process_status FROM intel_item WHERE source_id='ccma'")
         assert rows and rows[0][0] == "extracted"  # 落灰保留 → 正常抽取
@@ -206,8 +154,8 @@ class TestAC7PostHocQualityGate:
     def test_placeholder_subject_needs_manual_with_fields_kept(self, capsys):
         _collect_fresh(1)
         _run_scripted(ScriptChat(
-            small=lambda m: ({"relevant": True}, _usage()),
-            large=lambda m: (_ok_pred() | {"主体": "未知", "事件类型": "其他"}, _usage()),
+            small=lambda m: ({"relevant": True}, usage()),
+            large=lambda m: (ok_pred() | {"主体": "未知", "事件类型": "其他"}, usage()),
         ))
 
         rows = _q(

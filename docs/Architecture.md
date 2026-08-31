@@ -76,8 +76,10 @@ flowchart TB
 | intel-pipeline | 调度、LangGraph 处理流水线、查询服务（Web + API） | 单容器单进程族，代码资产可测试（ADR-004） |
 | postgres + pgvector | 单一事实源 + 向量/全文索引 | ADR-005 |
 | minio | 原文快照与附件 | §5.3 |
-| changedetection.io | 网页变更监控，检测到变更回调流水线 | 官方镜像自部署，不二次开发 |
+| changedetection.io | 网页变更监控，检测到变更回调流水线 | 规划中（compose 尚未部署，引入时机随调度器 Sprint 定） |
 
+> **落地现状**（2026-08-31）：docker-compose 实际运行为 postgres / minio / app（CLI 运维容器）/ web（uvicorn）四服务；changedetection.io 未部署（上图属目标态）。
+>
 > **Sprint 1 实测**（2026-08-25，工程脚手架）：`pgvector/pgvector:pg16` 镜像 `CREATE EXTENSION vector` 验证通过；中文分词扩展（zhparser/pg_jieba）不含于该镜像，推迟到 M1 全文检索 Sprint 单独验证镜像选型（本 Sprint 仅验 pgvector 本体可用，与 §7"M1 规模"无矛盾）。MinIO bucket 可建、app 容器可 `import pih` 并端到端加载领域包。
 
 
@@ -137,15 +139,15 @@ flowchart TB
 | 信源适配器 | 按类型抓取（RSS/网页/API/变更监控），插件化 | `fetch(source) → RawItem[]` | M1 |
 | 调度器 | 按信源频率触发，失败重试与告警 | APScheduler + 进程内任务队列 | M1 |
 | 去重器 | URL 指纹 + 内容相似度 | `dedup(RawItem) → bool` | M1 |
-| 相关性粗筛 | 关键词 + 小模型二分类 | `classify(RawItem) → keep/drop` | M1（Sprint 4 已交付：LLM small tier 二分类为图首节点，无关键词层；判无关行级标记 filtered_out 可审计） |
+| 相关性粗筛 | 关键词 + 小模型二分类 | `classify(RawItem) → keep/drop` | M1（已交付，见 Backlog S4.1.2） |
 | 快照采集 | 原文存档（HTML/PDF/截图） | 存 MinIO，返回快照 ID | M1 |
-| 核实引擎 | 来源分级、Admiralty 评级、事实/推断分离 | `verify(item) → IntelItem(预核实)` | M1（Sprint 4 交付预评级简版：Admiralty = source.reliability × LLM 可信度；核实流程待事件 Sprint） |
-| 事件聚类器 | 同事件多源聚类，驱动交叉印证 | `cluster(item) → event_id` | Sprint 6 已交付（硬规则聚类：主体归一化+事件类型+±7 天窗；EventService 在线挂 ProcessRunner._process_one 末尾；第二独立信源命中自动跃迁 pending→single_source；终态人工 CLI `pih verify confirm/refute` 写 verification_log；不引入 pgvector，留 M1 全文检索 Sprint） |
-| 结构化抽取器 | 按 schema 抽取主体/事件/参数/标签 | `extract(item, pack) → IntelItem` | M1（Sprint 4 已交付：LangGraph 三节点图 粗筛→抽取→校验，`pih process` 批处理，枚举单一事实源在领域包。Sprint 5b 增后验质量门：主体占位值 → needs_manual 且字段保留，低质条目不混入 extracted） |
+| 核实引擎 | 来源分级、Admiralty 评级、事实/推断分离 | `verify(item) → IntelItem(预核实)` | M1（预评级简版已交付，见 Backlog S4.2.2 AC1） |
+| 事件聚类器 | 同事件多源聚类，驱动交叉印证 | `cluster(item) → event_id` | Sprint 6 已交付（见 Backlog S4.2.2 AC2/AC3） |
+| 结构化抽取器 | 按 schema 抽取主体/事件/参数/标签 | `extract(item, pack) → IntelItem` | M1（已交付，见 Backlog S4.2.1 / S4.2.3） |
 | 时效管理器 | 有效期计算、过期降权、复核提醒 | 定时任务 | M1 |
-| 情报库 | 情报主表 + 核实流转日志 | CRUD + 状态机 | M1（Sprint 3 已交付 source/intel_item 两表 + IntelRepository + alembic 迁移；Sprint 4 增 11 结构化列 + JSONB 标签 GIN + 结构化筛选；Sprint 6 增 event + verification_log 两表 + intel_item.event_id FK ON DELETE SET NULL，EventRepository/EventService 在线聚类与终态跃迁） |
+| 情报库 | 情报主表 + 核实流转日志 | CRUD + 状态机 | M1（已交付，见 Backlog S4.5 / S4.2.1 / S4.2.2） |
 | 竞品资产库 | 竞品档案、功能/参数矩阵 | 表结构 M1，自动维护为后续方向 | M1 |
-| 查询服务（Web + API） | 筛选列表 + 情报详情（含事件状态与核实历史），页面与 JSON API 同源 | FastAPI：服务端模板 + REST（ADR-006） | M1（Sprint 5a 已交付：FastAPI 同源 + Jinja2 列表/详情 + Bearer token 鉴权 + 游标分页；事件状态字段占位「待事件模型上线后自动激活」；排序简版 admiralty ASC + fetched_at DESC，完整 score 待事件+时效 Sprint。Sprint 5b 增 process_status 同源筛选（needs_manual 复核队列）与反馈闭环入口：详情页反馈表单 + 聚合视图 + JSONL 导出） |
+| 查询服务（Web + API） | 筛选列表 + 情报详情（含事件状态与核实历史），页面与 JSON API 同源 | FastAPI：服务端模板 + REST（ADR-006） | M1（已交付，见 Backlog S1.1.1 / S1.1.2 / S1.1.4 / S3.1.3） |
 | RAG 问答服务 | 混合检索问答，答案强制带引用 | `ask(query) → answer + citations[]` | M2（混合检索，ADR-005） |
 | 报告服务 | 周/月报生成 | 模板由领域包提供 | M2 |
 | 推送服务 | 即时/定期推送 | 渠道可配置 | M2 |
@@ -279,8 +281,8 @@ erDiagram
 - **MinIO** 存原文快照与附件，`intel_item.snapshot_id` 关联；
 - 事件（`event`）与情报（`intel_item`）一对多：交叉印证的载体，核实状态挂事件层、来源各挂各的；
 - `verification_log` 同时是未来信源画像的数据底座（需求文档 §4.1）；
-- `inbox` 与 `dead_letter` 为流水线可靠性表（§8）；
-- `domain_pack` 表仅存加载快照与校验结果，事实源是 repo 内 YAML（§6.3）。
+- `inbox` 与 `dead_letter` 为流水线可靠性表（§8，规划中——现以 `intel_item.process_status`/`process_error` 行级状态承载同等语义）；
+- `domain_pack` 表仅存加载快照与校验结果，事实源是 repo 内 YAML（§6.3，规划中——当前加载即校验，无落库快照）。
 
 ## 8. 可靠性与可观测
 

@@ -1,11 +1,16 @@
 """采集层（架构 §4 COLLECT）。
 
-模块职责（后续 Sprint 实现，本 Sprint 仅占位）：
-- 信源适配器：按类型抓取（RSS/网页/API/变更监控），插件化；fetch(source)→RawItem[]
-- 调度器：按信源频率触发，失败重试与告警（APScheduler）
-- 去重器：URL 指纹 + 内容相似度；dedup(RawItem)→bool
-- 相关性粗筛：关键词 + 小模型二分类；classify(RawItem)→keep/drop
-- 快照采集：原文存档（HTML/PDF/截图）存 MinIO，返回快照 ID
+已交付（Sprint 2/3）：
+- 信源适配器（adapters/）：按源特化列表/详情解析（type=html 的通用基类
+  HtmlAdapter + 未特化源的 NotImplementedError 占位）；fetch → RawItem
+- HTTP 客户端（httpclient）：重试/节流/编码；robots 合规（robots）
+- 原文快照（snapshot）：HTML 存 MinIO，返回快照 ID
+- 采集编排（run）：enabled 门控 + source 表同步 + 幂等落库（ADR-007）
+- 试抓取（probe）：robots→列表→详情→快照 报告（S3.2.1 AC1）
+
+待交付（后续 Sprint）：
+- 调度器：按信源频率触发，失败重试与告警（APScheduler，ADR-004）
+- 去重器：内容相似度（URL 指纹已由 content_sha1 唯一约束覆盖）
 
 Sprint 0 设计输入（spike 遗留 Minor 沉淀为此层契约）：
 - HTML 实体未解码 → 适配器层须对抓取文本做实体解码（&amp; &#xx; 等）

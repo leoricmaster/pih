@@ -149,8 +149,3 @@ DOMAIN_PACK_SCHEMA: dict = {
         },
     },
 }
-
-
-def get_schema() -> dict:
-    """返回领域包 JSON Schema（Draft 2020-12）。"""
-    return DOMAIN_PACK_SCHEMA

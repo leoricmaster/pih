@@ -107,9 +107,9 @@ class ProcessRunner:
                 # 事件聚类（Sprint 6 S4.2.2）：extracted 写库成功后挂事件。
                 # 失败不阻塞——warning 入 stats.details，可由 cluster --backfill 补。
                 try:
-                    event_id = self._events.cluster(rec.id)
-                    if event_id is not None:
-                        stats.details.append(f"[{rec.id}] ⋄ 挂入事件 #{event_id}")
+                    outcome = self._events.cluster(rec.id)
+                    if outcome is not None:
+                        stats.details.append(f"[{rec.id}] ⋄ 挂入事件 #{outcome.event_id}")
                 except Exception as exc:  # noqa: BLE001 聚类失败不阻塞主流程
                     stats.details.append(f"[{rec.id}] ⚠ 事件聚类失败：{exc}")
             elif result.status == STATUS_FILTERED_OUT:
