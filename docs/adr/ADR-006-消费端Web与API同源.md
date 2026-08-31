@@ -48,4 +48,4 @@
 常量时间比较），Web 内网默认开放。部署：docker-compose `web` service（独立容器，仅依赖 PG）
 + 本地 `uv run uvicorn pih.consume.web:app`。事件核实状态字段占位「待事件模型上线后自动激活」，
 event 表上线后查询服务自动填实。排序简版 `admiralty ASC + fetched_at DESC`，完整 score
-待事件+时效 Sprint。详见 `docs/superpowers/specs/2026-08-27-sprint5a-consume-design.md`。
+待事件+时效 Sprint。

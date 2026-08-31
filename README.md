@@ -15,7 +15,6 @@
 | `domain_packs/` | 领域包 YAML 事实源（架构 §6.3） |
 | `tests/` | unit / contract / integration 三层 |
 | `docker-compose.yml` | 本地环境：PG+pgvector / MinIO / app（架构 §3） |
-| `spikes/` | Sprint 0 探索性代码，一次性学习品，不演进为工程代码 |
 | `docs/` | 需求/架构/Backlog/ADR |
 
 ### 包分层（`src/pih/`）
@@ -29,7 +28,6 @@
 | `process/` | 处理层（LangGraph） | ✅ Sprint 4 已交付（LLM 客户端+粗筛→抽取→校验三节点图+ProcessRunner+process CLI；领域包 v0.2.0 枚举单一事实源） |
 | `store/` | 存储层 | ✅ Sprint 3 已交付（PG 落库 + alembic 迁移 + IntelRepository + query CLI；source/intel_item 两表） |
 | `consume/` | 消费层 | ✅ Sprint 5a 已交付（FastAPI Web + JSON API 同源 + Jinja2 列表/详情 + Bearer token 鉴权；ADR-006）；Sprint 5b 增 process_status 筛选 + 反馈闭环（表单/聚合视图/JSONL 导出） |
-| `core/` | 五元模型命名空间 | 占位，后续 Sprint |
 
 ## 工程化启动
 

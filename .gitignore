@@ -8,8 +8,7 @@ build/
 dist/
 .eggs/
 
-# venv（spike 独立 venv 与工程 venv 均不进版本库）
-spikes/.venv/
+# venv
 .venv/
 
 # 测试缓存

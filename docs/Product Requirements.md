@@ -210,7 +210,7 @@
 
 **竞品主体（初始）**：三一重工、徐工机械、中联重科、柳工、山东临工、卡特彼勒、小松、日立建机、沃尔沃建筑设备、现代/迪万伦；方案商：拓疆者、网易伏羲、伯镭科技、Teleo、Built Robotics；机控系统：Trimble、Topcon、Leica。
 
-**初始信源（≤10，SPK-1 实测锁定，详见 `spikes/spk1-source-probe/spk1-report.md`）**：
+**初始信源（≤10，SPK-1 实测锁定）**：
 
 1. CCMA 协会（cncma.org，列表页 HTML 解析，HTTP-only）
 2. 三一集团新闻页（sanygroup.com，列表页 HTML 解析，SSR）
