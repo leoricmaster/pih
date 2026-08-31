@@ -1,16 +1,14 @@
-"""契约测试：alembic 迁移链可正反向干净跑通（Sprint 3 T1/T2 + Sprint 4 T3）。
+"""契约测试：alembic 迁移可正反向干净跑通（单基线 0001 全量 schema）。
 
 需 docker compose up（postgres）。@pytest.mark.integration。
 - upgrade head → current 指向最新版本
 - downgrade base → current 为空（base）
 - 重复 upgrade head 幂等（不报错）
-- AC6：intel_item.content_sha1 有 UNIQUE；source_id 有 FK；event_id 有 FK → event（Sprint 6 起）
-- AC7：downgrade base 后两张表均消失
-- Sprint 4 AC7：0002 加列齐全，process_status 默认 pending，GIN 索引在；
-  downgrade 0001 后新列全部消失
-- Sprint 5b：0003 feedback 表列/FK 级联/索引；downgrade 0002 后表消失
-- Sprint 6：0004 event + verification_log 两表 + intel_item.event_id FK ON DELETE SET NULL；
-  downgrade 0003 后两表消失
+- AC6：intel_item.content_sha1 有 UNIQUE；source_id 有 FK；event_id 有 FK → event
+- AC7：downgrade base 后全部表消失
+- intel_item 结构化/治理列齐全，process_status 默认 pending，三索引在
+- feedback 表列/FK 级联/索引
+- event + verification_log 两表 + intel_item.event_id FK ON DELETE SET NULL
 """
 from __future__ import annotations
 
@@ -113,11 +111,12 @@ def test_ac6_intel_item_constraints():
 
 
 def test_ac7_downgrade_base_drops_tables():
-    """AC7：downgrade base 后 source 与 intel_item 表均消失。"""
+    """AC7：downgrade base 后全部 5 表消失（迁移整体可逆）。"""
     _run(["downgrade", "base"])
     rows = _q(
         "SELECT table_name FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name IN ('source', 'intel_item')"
+        "WHERE table_schema = 'public' AND table_name IN "
+        "('source', 'intel_item', 'event', 'verification_log', 'feedback')"
     )
     assert rows == [], f"downgrade 后仍存在表：{rows}"
 
@@ -155,7 +154,7 @@ def test_sprint4_process_indexes_exist():
 
 
 def test_sprint4_existing_rows_get_pending_default():
-    """存量行（0001 时代入库）upgrade 0002 后自动 pending，可被 pih process 处理。"""
+    """存量行入库即 pending 默认值（process_status 默认 pending）。"""
     with psycopg.connect(PG_DSN) as conn, conn.cursor() as cur:
         cur.execute(
             "INSERT INTO source (id, name, domain_id, url, list_url, level, reliability, enabled) "
@@ -169,17 +168,6 @@ def test_sprint4_existing_rows_get_pending_default():
         )
     rows = _q("SELECT process_status FROM intel_item WHERE content_sha1 = 'sha-old-1'")
     assert rows == [("pending",)]
-
-
-def test_sprint4_downgrade_0001_drops_process_columns():
-    """downgrade 到 0001：新列全部消失（迁移可逆，逐级不依赖表删除）。"""
-    _run(["downgrade", "0001"])
-    rows = _q(
-        "SELECT column_name FROM information_schema.columns "
-        "WHERE table_name = 'intel_item'"
-    )
-    cols = {r[0] for r in rows}
-    assert not (cols & set(PROCESS_COLUMNS)), f"downgrade 后仍存在列：{cols & set(PROCESS_COLUMNS)}"
 
 
 FEEDBACK_COLUMNS = [
@@ -237,18 +225,6 @@ def test_sprint5b_feedback_cascade_actually_deletes():
         cur.execute("DELETE FROM intel_item WHERE id = %s", (intel_id,))
     rows = _q("SELECT COUNT(*) FROM feedback")
     assert rows == [(0,)]
-
-
-def test_sprint5b_downgrade_0002_drops_feedback():
-    """downgrade 到 0002：feedback 表消失。"""
-    _run(["downgrade", "0002"])
-    rows = _q(
-        "SELECT table_name FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'feedback'"
-    )
-    assert rows == []
-    cur = _run(["current"])
-    assert cur.returncode == 0
 
 
 EVENT_COLUMNS = [
@@ -334,28 +310,4 @@ def test_sprint6_event_fk_set_null_on_delete():
         cur.execute("DELETE FROM event WHERE id = %s", (event_id,))
     rows = _q("SELECT event_id FROM intel_item WHERE content_sha1 = 's1'")
     assert rows == [(None,)], f"删事件后 intel_item.event_id 应为 NULL：{rows}"
-
-
-def test_sprint6_downgrade_0003_drops_event_tables():
-    """downgrade 到 0003：event 与 verification_log 表消失，intel_item.event_id 回到无 FK 占位。"""
-    _run(["downgrade", "0003"])
-    rows = _q(
-        "SELECT table_name FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name IN ('event', 'verification_log')"
-    )
-    assert rows == [], f"downgrade 后仍存在表：{rows}"
-    # event_id 字段仍在（0001 创建时就是占位列），但 FK 已撤销
-    cols = _q(
-        "SELECT column_name FROM information_schema.columns "
-        "WHERE table_name = 'intel_item' AND column_name = 'event_id'"
-    )
-    assert cols, "event_id 占位列应仍在"
-    fks = _q(
-        "SELECT conname FROM pg_constraint "
-        "WHERE conrelid = 'intel_item'::regclass AND contype = 'f' "
-        "AND conname LIKE '%event_id%'"
-    )
-    assert not fks, f"FK 应已撤销：{fks}"
-    cur = _run(["current"])
-    assert cur.returncode == 0
 

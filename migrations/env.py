@@ -1,4 +1,4 @@
-"""Alembic 迁移环境（Sprint 3 store 层）。
+"""Alembic 迁移环境（store 层）。
 
 DSN 解析优先级（高 → 低）：
   1. 命令行 -x sqlalchemy.url=...
