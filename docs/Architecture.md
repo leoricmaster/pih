@@ -42,7 +42,7 @@ flowchart LR
     HUB -->|"周报 / 即时推送"| PUSH["推送渠道<br/>企业微信 / 邮件"]
 ```
 
-外部依赖三类：信源、LLM API、推送渠道。消费方为消费者角色，承担者为人（Web）或 Agent（只读 API，ADR-006）。文件与人工录入、Agent 贡献者回写为后续方向，M1 仅预留接口（§4）。无其他系统耦合，可独立部署演进。
+外部依赖三类：信源、LLM API、推送渠道。消费方为消费者角色，承担者为人（Web）或 Agent（只读 API，ADR-006）。文件与人工录入、Agent 贡献者回写为后续方向，仅预留接口（§4）。无其他系统耦合，可独立部署演进。
 
 ## 3. 容器视图
 
@@ -78,7 +78,7 @@ flowchart TB
 
 > **落地现状**：docker-compose 实际运行为 postgres / minio / app（CLI 运维容器）/ web（uvicorn）四服务；changedetection.io 未部署（上图属目标态）。
 >
-> **实测**：`pgvector/pgvector:pg16` 镜像 `CREATE EXTENSION vector` 验证通过；中文分词扩展（zhparser/pg_jieba）不含于该镜像，推迟到 M1 全文检索阶段单独验证镜像选型（本次仅验 pgvector 本体可用，与 §7"M1 规模"无矛盾）。MinIO bucket 可建、app 容器可 `import pih` 并端到端加载领域包。
+> **实测**：`pgvector/pgvector:pg16` 镜像 `CREATE EXTENSION vector` 验证通过；中文分词扩展（zhparser/pg_jieba）不含于该镜像，推迟到全文检索阶段单独验证镜像选型（本次仅验 pgvector 本体可用，与 §7 规模无矛盾）。MinIO bucket 可建、app 容器可 `import pih` 并端到端加载领域包。
 
 
 ## 4. 逻辑架构
@@ -88,8 +88,8 @@ flowchart TB
     subgraph CONSUME["消费层"]
         direction LR
         QS["查询服务<br/>只读 Web + JSON API"]
-        RS["报告服务（M2）"]
-        PS["推送服务（M2）"]
+        RS["报告服务"]
+        PS["推送服务"]
     end
     subgraph STORE["存储层"]
         direction LR
@@ -130,28 +130,26 @@ flowchart TB
 
 ### 模块职责与关键接口
 
-里程碑标注为设计预期；Backlog 不承载分期，规划时按此校准。
-
-| 模块 | 职责 | 关键接口/产出 | 里程碑 |
-|---|---|---|---|
-| 信源适配器 | 按类型抓取（RSS/网页/API/变更监控），插件化 | `fetch(source) → RawItem[]` | M1 |
-| 调度器 | 按信源频率触发，失败重试与告警 | APScheduler + 进程内任务队列 | M1 |
-| 去重器 | URL 指纹 + 内容相似度 | `dedup(RawItem) → bool` | M1 |
-| 相关性粗筛 | 关键词 + 小模型二分类 | `classify(RawItem) → keep/drop` | M1（已交付，见 Backlog S4.1.2） |
-| 快照采集 | 原文存档（HTML/PDF/截图） | 存 MinIO，返回快照 ID | M1 |
-| 核实引擎 | 来源分级、Admiralty 评级、事实/推断分离 | `verify(item) → IntelItem(预核实)` | M1（预评级简版已交付，见 Backlog S4.2.2 AC1） |
-| 事件聚类器 | 同事件多源聚类，驱动交叉印证 | `cluster(item) → event_id` | M1（已交付，见 Backlog S4.2.2 AC2/AC3） |
-| 结构化抽取器 | 按 schema 抽取主体/事件/参数/标签 | `extract(item, pack) → IntelItem` | M1（已交付，见 Backlog S4.2.1 / S4.2.3） |
-| 时效管理器 | 有效期计算、过期降权、复核提醒 | 定时任务 | M1 |
-| 情报库 | 情报主表 + 核实流转日志 | CRUD + 状态机 | M1（已交付，见 Backlog S4.5 / S4.2.1 / S4.2.2） |
-| 竞品资产库 | 竞品档案、功能/参数矩阵 | 表结构 M1，自动维护为后续方向 | M1 |
-| 查询服务（Web + API） | 筛选列表 + 情报详情（含事件状态与核实历史），页面与 JSON API 同源 | FastAPI：服务端模板 + REST（ADR-006） | M1（已交付，见 Backlog S1.1.1 / S1.1.2 / S1.1.4 / S3.1.3） |
-| RAG 问答服务 | 混合检索问答，答案强制带引用 | `ask(query) → answer + citations[]` | M2（混合检索，ADR-005） |
-| 报告服务 | 周/月报生成 | 模板由领域包提供 | M2 |
-| 推送服务 | 即时/定期推送 | 渠道可配置 | M2 |
-| 领域包 | YAML + schema 校验 + Git 版本化 | 加载器、校验器 | M1 |
-| 核实操作 | 人工确认/证伪（终态跃迁），写日志 | CLI（M1），Web 化为后续方向 | M1 |
-| 人工录入网关 | 文本/文件/语音统一入口（与自动采集同一流水线，仅入口不同；Agent 贡献者回写复用此入口，见 ADR-006） | `ingest(manual) → RawItem` | 后续方向（M1 仅定义接口） |
+| 模块 | 职责 | 关键接口/产出 |
+|---|---|---|
+| 信源适配器 | 按类型抓取（RSS/网页/API/变更监控），插件化 | `fetch(source) → RawItem[]` |
+| 调度器 | 按信源频率触发，失败重试与告警 | APScheduler + 进程内任务队列 |
+| 去重器 | URL 指纹 + 内容相似度 | `dedup(RawItem) → bool` |
+| 相关性粗筛 | 关键词 + 小模型二分类 | `classify(RawItem) → keep/drop` |
+| 快照采集 | 原文存档（HTML/PDF/截图） | 存 MinIO，返回快照 ID |
+| 核实引擎 | 来源分级、Admiralty 评级、事实/推断分离 | `verify(item) → IntelItem(预核实)` |
+| 事件聚类器 | 同事件多源聚类，驱动交叉印证 | `cluster(item) → event_id` |
+| 结构化抽取器 | 按 schema 抽取主体/事件/参数/标签 | `extract(item, pack) → IntelItem` |
+| 时效管理器 | 有效期计算、过期降权、复核提醒 | 定时任务 |
+| 情报库 | 情报主表 + 核实流转日志 | CRUD + 状态机 |
+| 竞品资产库 | 竞品档案、功能/参数矩阵 | 表结构先行，自动维护为后续方向 |
+| 查询服务（Web + API） | 筛选列表 + 情报详情（含事件状态与核实历史），页面与 JSON API 同源 | FastAPI：服务端模板 + REST（ADR-006） |
+| RAG 问答服务 | 混合检索问答，答案强制带引用 | `ask(query) → answer + citations[]`（ADR-005） |
+| 报告服务 | 周/月报生成 | 模板由领域包提供 |
+| 推送服务 | 即时/定期推送 | 渠道可配置 |
+| 领域包 | YAML + schema 校验 + Git 版本化 | 加载器、校验器 |
+| 核实操作 | 人工确认/证伪（终态跃迁），写日志 | CLI，Web 化为后续方向 |
+| 人工录入网关 | 文本/文件/语音统一入口（与自动采集同一流水线，仅入口不同；Agent 贡献者回写复用此入口，见 ADR-006） | `ingest(manual) → RawItem`（仅定义接口） |
 
 ## 5. 核心数据流
 
@@ -188,15 +186,15 @@ sequenceDiagram
 
 主链一条：调度器按信源频率触发采集，原始内容先落盘 inbox、原文快照存档 MinIO，经去重与粗筛后进入 LangGraph 处理链（结构化抽取 → 预评级 → 事件聚类）写入情报库，终态核实（确认/证伪）由人工操作完成并写 verification_log。
 
-> SPK-3 验证范围说明：端到端验证覆盖主链的**粗筛 → 结构化抽取 → schema 校验**三段子集；去重、预评级、事件聚类、终态人工核实四段留待 M1 实施期。三段子集端到端成功率 92%（23/25），ADR-004 维持。
+> 端到端验证范围说明：验证覆盖主链的**粗筛 → 结构化抽取 → schema 校验**三段子集；去重、预评级、事件聚类、终态人工核实四段留待实施期。三段子集端到端成功率 92%（23/25），ADR-004 维持。
 
 （后续迭代）重大事件即时推送 + 汇入周报
 
 ### 5.2 检索流程
 
-M1：筛选条件（主体/事件类型/时间/标签/置信度）→ SQL 结构化过滤 → 按 score 排序（§6.2）→ 列表/详情。出口两类：Web 页面与 JSON API，同源（ADR-006）。
+**结构化检索**：筛选条件（主体/事件类型/时间/标签/置信度）→ SQL 结构化过滤 → 按 score 排序（§6.2）→ 列表/详情。出口两类：Web 页面与 JSON API，同源（ADR-006）。
 
-M2：自然语言提问 → 意图解析（问答/筛选/对比）→ 混合召回（BM25 ∪ 向量，ADR-005）+ 结构化过滤 → 按 score 重排 → LLM 生成答案（强制引用：情报 ID + 来源 + 置信度）。
+**问答检索**：自然语言提问 → 意图解析（问答/筛选/对比）→ 混合召回（BM25 ∪ 向量，ADR-005）+ 结构化过滤 → 按 score 重排 → LLM 生成答案（强制引用：情报 ID + 来源 + 置信度）。
 
 ### 5.3 快照与可回溯
 
@@ -251,7 +249,7 @@ stateDiagram-v2
 - `map(admiralty)`：来源可靠性 A–F → {A:1.0, B:0.8, C:0.6, D:0.4, E:0.2, F:0}；信息可信度 1–6 → {1:1.0, 2:0.8, 3:0.6, 4:0.4, 5:0.2, 6:0}；两者取小（短板决定）后线性组合；
 - `decay`：分段函数——有效期前 1/3 不衰减，中段线性衰减至 0.5，过期后 0.3 并叠加"已过期"标记；
 - `W_c`：事件状态权重——多源确认 1.0 / 单源确认 0.8 / 待核实 0.5 / 已证伪 0（默认不出现在结果中）；
-- 初始权重如上，作为领域包可调参数（`ranking:` 节），M1 运行期观察调优。
+- 初始权重如上，作为领域包可调参数（`ranking:` 节），运行期观察调优。
 
 > **排序**：W_c 上线（事件状态机落地），排序切到 `W_c × map(admiralty) DESC, fetched_at DESC, id DESC`——W_c 由 event.status 查领域包 ranking.event_state_weights（confirmed=1.0/single_source=0.8/pending=0.5/refuted=0.0/expired=0.3），map(admiralty) = min(reliability_weight, credibility_weight)（短板决定，CASE WHEN 注入 SQL 不上 PG 函数）。decay 仍依赖 expires_at（时效管理器才有），当前兜底 1.0。未挂事件条目 W_c=0 排末尾。CLI 与未注入 ranking 的调用方仍走简版 `admiralty ASC + fetched_at DESC, id DESC`（QueryService 默认从领域包读 ranking 注入，Web/API 同源）。
 
@@ -275,7 +273,7 @@ erDiagram
 
 - **PostgreSQL** 为单一事实源：`intel_item`、`entity`、`source`、`event`、`verification_log`、`domain_pack`、`competitor_profile`、`feature_matrix`、`param_matrix`、`feedback`；
 - **落地状态**：`source` + `intel_item` 两表（含 `content_sha1` UNIQUE 幂等约束与 `source_id` FK，ADR-007）；`intel_item` 11 结构化列（主体/事件类型/事实/推断/标签 JSONB+GIN/量化参数/Admiralty/处理状态机/处理元数据，迁移 0002），标签 containment 筛选可用；`feedback` 表（消费页人类反馈，`intel_id` FK ON DELETE CASCADE，feedback_type 四类 + fact_index 事实项级标注，迁移 0003）——错误样本积累驱动 process 层 prompt/粗筛迭代；`event` + `verification_log` 两表 + `intel_item.event_id` FK ON DELETE SET NULL（迁移 0004）——事件聚类与核实状态机落地，自动跃迁 pending→single_source + 人工终态 confirm/refute；`entity`/`competitor_profile`/`feature_matrix`/`param_matrix` 待远期阶段；
-- **pgvector** 承载情报摘要向量 + **PG 中文全文检索**（zhparser 或 pg_jieba）承担 BM25 侧——混合检索在单库内闭环（M1 规模 < 10 万条，无需独立向量库）；
+- **pgvector** 承载情报摘要向量 + **PG 中文全文检索**（zhparser 或 pg_jieba）承担 BM25 侧——混合检索在单库内闭环（初期规模 < 10 万条，无需独立向量库）；
 - **MinIO** 存原文快照与附件，`intel_item.snapshot_id` 关联；
 - 事件（`event`）与情报（`intel_item`）一对多：交叉印证的载体，核实状态挂事件层、来源各挂各的；
 - `verification_log` 同时是未来信源画像的数据底座（需求文档 §4.1）；
@@ -330,9 +328,9 @@ flowchart LR
 
 **成本公式**：月成本 ≈ Σ_任务(信源数 × 日抓取量 × 粗筛通过率 × 平均 token × 单价)。以 10 信源、日均 80 条、通过率 30% 估算，月成本约 200–400 元（自有服务折算算力）；上线后以实际用量校准，周报含成本项。
 
-> **SPK-2 实测**（MiniMax-M3 推理模型，25 样本 3 轮）：结构化抽取每条平均 **2997 prompt + 1729 completion tokens**，平均耗时 20s（推理链开销）；API 调用成功率 ≥96%，零 429/5xx。推理模型 content 含思维链前缀，需 JSON 容错提取（`extract_json` 三级提取）。
+> **抽取实测**（MiniMax-M3 推理模型，25 样本 3 轮）：结构化抽取每条平均 **2997 prompt + 1729 completion tokens**，平均耗时 20s（推理链开销）；API 调用成功率 ≥96%，零 429/5xx。推理模型 content 含思维链前缀，需 JSON 容错提取（`extract_json` 三级提取）。
 
-> **SPK-3 实测**（LangGraph 1.2.11 三节点图端到端，25 样本）：端到端成功率 92%（23/25 产出完整 schema）；粗筛（MiniMax-M2.7 小模型）中位 7.8s、抽取（M3 大模型）中位 10.4s、端到端中位 19.7s；粗筛 kept 92%（2 条假阴性，锂矿/期货口径偏窄）；validate 重问率 22%（5/23 条均最终成功）。摩擦点：粗筛小模型仍为推理档，"省时间"预期不成立，生产期粗筛宜换非推理小模型。
+> **流水线端到端实测**（LangGraph 1.2.11 三节点图，25 样本）：端到端成功率 92%（23/25 产出完整 schema）；粗筛（MiniMax-M2.7 小模型）中位 7.8s、抽取（M3 大模型）中位 10.4s、端到端中位 19.7s；粗筛 kept 92%（2 条假阴性，锂矿/期货口径偏窄）；validate 重问率 22%（5/23 条均最终成功）。摩擦点：粗筛小模型仍为推理档，"省时间"预期不成立，生产期粗筛宜换非推理小模型。
 
 分级与端点可配置的同时，否决两个极端：全旗舰模型（粗筛无需强模型，成本数倍）与全小模型（抽取准确率不达标）。
 
