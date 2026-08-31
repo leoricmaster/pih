@@ -6,7 +6,7 @@ Sprint 6：注入领域包 ranking 节用于排序权重（W_c × map(admiralty)
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 

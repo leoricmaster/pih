@@ -2,7 +2,7 @@
 
 DSN 解析优先级（高 → 低）：
   1. 命令行 -x sqlalchemy.url=...
-  2. 环境变量 PG_DSN（python-dotenv 从 cwd .env 加载）
+  2. 环境变量 PG_DSN（pih.envs.load_env 分层加载：env > .env > .env.defaults）
   3. alembic.ini [alembic] sqlalchemy.url（占位，不应被命中）
 
 仅用 alembic 跑 DDL，不用 ORM/autogenerate——target_metadata 保持 None，
@@ -14,10 +14,11 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
-from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
-load_dotenv()
+from pih.envs import load_env
+
+load_env()
 
 config = context.config
 

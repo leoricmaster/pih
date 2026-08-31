@@ -23,7 +23,6 @@ from pih.store.event_repository import (
     STATUS_PENDING,
     STATUS_REFUTED,
     STATUS_SINGLE_SOURCE,
-    AttachOutcome,
     EventRecord,
     EventRepository,
     VerificationLogRecord,

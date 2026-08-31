@@ -9,23 +9,27 @@
 """
 from __future__ import annotations
 
+import os
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import psycopg
 import pytest
-from dotenv import load_dotenv
 
 from pih.cli import main
+from pih.envs import load_env
 
-load_dotenv()
+load_env()
 
 pytestmark = pytest.mark.integration
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ALEMBIC = ["uv", "run", "alembic"]
-PG_DSN = "postgresql://pih:pih@localhost:5432/pih"
+# 尊重 .env/.env.defaults 覆盖（load_env 先行）；剥 +psycopg driver 前缀（psycopg.connect 需裸 DSN）
+PG_DSN = os.environ.get(
+    "PG_DSN", "postgresql://pih:pih@localhost:5432/pih"
+).replace("+psycopg", "")
 
 
 @pytest.fixture(autouse=True)

@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -20,12 +21,18 @@ import psycopg
 import pytest
 
 from pih.cli import main
+from pih.envs import load_env
 
 pytestmark = pytest.mark.integration
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ALEMBIC = ["uv", "run", "alembic"]
-PG_DSN = "postgresql://pih:pih@localhost:5432/pih"
+# 尊重 .env/.env.defaults 覆盖（load_env 先行）；剥 +psycopg driver 前缀（psycopg.connect 需裸 DSN）
+# 分层 env 先行：.env/.env.defaults 的覆盖在此生效（模块级取值在其后）
+load_env()
+PG_DSN = os.environ.get(
+    "PG_DSN", "postgresql://pih:pih@localhost:5432/pih"
+).replace("+psycopg", "")
 
 
 @pytest.fixture(autouse=True)

@@ -13,7 +13,6 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
-from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +23,7 @@ from pih.consume.metrics import log_query
 from pih.consume.pack_loader import load_pack, load_pack_vocab, pack_ranking
 from pih.consume.query_service import IntelFilters, QueryService
 from pih.consume.snapshot_url import make_snapshot_client, presigned_snapshot_url
+from pih.envs import load_env
 from pih.process.event import STATUS_LABELS, STATUS_ORDER, EventService
 from pih.store.db import close_pool, get_pool
 from pih.store.event_repository import EventRepository
@@ -38,7 +38,7 @@ templates.env.filters["split_facts"] = lambda s: (
     [f.strip(" ；;。") for f in s.split("；") if f.strip(" ；;。")] if s else []
 )
 
-load_dotenv()
+load_env()
 
 
 def _load_pack_vocab() -> tuple[list[str], list[str]]:

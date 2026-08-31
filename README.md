@@ -33,15 +33,22 @@
 
 ## 工程化启动
 
+环境配置分两层（env 漂移治理，2026-08-31）：
+
+- **`.env.defaults`（入库）**：非秘密默认值，clone 即得，开箱可跑；
+- **`.env`（gitignore）**：只写秘密与本机覆盖（`PIH_API_TOKEN`、`PIH_LLM_*`），不建也行；
+- 加载优先级：真实环境变量 > `.env` > `.env.defaults`（`pih.envs.load_env`）；
+- `pytest` 启动时自动对账：代码引用但两层 env 均缺的键直接 fail，
+  `.env` 里无人引用的死键（改名遗留）打警告。
+
 ```bash
 # 依赖（需 uv；安装见 https://docs.astral.sh/uv/）
 uv sync --extra dev
 
-# 单元 + 契约测试（无需容器）
+# 单元 + 契约测试（无需容器，无需 .env）
 uv run pytest tests/unit tests/contract -v
 
 # 集成测试（需 docker compose up）
-cp .env.example .env          # 首次
 docker compose up -d
 uv run pytest tests/integration -v
 
@@ -74,7 +81,7 @@ uv run pih query --id=42                      # 单条详情（含 Admiralty 与
 （content_sha1 唯一约束保障重复抓取不产生重复行，ADR-007）。
 
 `process` 需在 `.env` 配置 `PIH_LLM_*` 四变量（OpenAI 兼容端点 + 大小模型名，
-见 `.env.example`）；输出逐条明细 + 汇总行（`处理 N 条 → 抽取成功 X / 粗筛丢弃
+模板见入库的 `.env.defaults` 注释区）；输出逐条明细 + 汇总行（`处理 N 条 → 抽取成功 X / 粗筛丢弃
 Y / 待人工 Z / 失败 W`）+ token 用量。抽取成功条目带 Admiralty 码（来源可靠性
 ×信息可信度，如 B2），判无关条目行级标记 `filtered_out` 保留可审计，校验失败
 降级 `needs_manual` 不丢弃（架构 §8）。

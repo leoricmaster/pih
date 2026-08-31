@@ -22,7 +22,6 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from dotenv import load_dotenv
 from minio import Minio
 
 import pih.collect.adapters  # noqa: F401  触发内置适配器注册
@@ -33,6 +32,7 @@ from pih.collect.run import SourceDisabledError, collect_source
 from pih.collect.snapshot import BUCKET, SnapshotStore
 from pih.domainpacks.errors import LoadError
 from pih.domainpacks.loader import DEFAULT_PACK_DIR, load
+from pih.envs import load_env
 from pih.process.event import STATUS_LABELS, EventService
 from pih.process.llm import LLMConfigError
 from pih.process.run import ProcessRunner
@@ -552,7 +552,7 @@ def _print_record_detail(rec) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    load_dotenv()
+    load_env()
     args = _build_parser().parse_args(argv)
     try:
         if args.command == "probe-source":
