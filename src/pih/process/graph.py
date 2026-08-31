@@ -1,6 +1,6 @@
-"""LangGraph 抽取图：粗筛 → 抽取 → 校验（SPK-3 graph.py 工程化，Sprint 4 规格 §3.4）。
+"""LangGraph 抽取图：粗筛 → 抽取 → 校验（SPK-3 工程化，规格 §3.4）。
 
-图结构不变（SPK-3 已验证），工程化修正三条 spike 遗留契约：
+图结构不变（SPK-3 已验证），工程化修正三条契约：
 1. 重试计数分列——api_retries（chat_json 内部 API 级重试累计）与
    validate_rounds（schema 补问轮次）分开记录，不再混计；
 2. text 在场——初始 state 由 Runner 构造（intel_id + text 必填），

@@ -1,18 +1,6 @@
 # 情报中心 — 产品 Backlog（需求树）
 
 - 版本：V1.7（配合《Product Requirements.md》V1.0、《Architecture.md》V0.11）
-- 日期：2026-08-28
-- 变更简史（详细交付口径见各卡内备注与 git log）：
-  | 版本 | Sprint | 要点 |
-  |---|---|---|
-  | V1.7 | 6 | 事件聚类上线（S4.2.2 AC2/AC3）：event/verification_log 两表 + 在线聚类 + `pih verify`/`pih cluster`；消费层事件字段/筛选/排序激活 |
-  | V1.6 | 5b | 质量闭环：S4.2.3 后验质量门 + S3.1.3 消费页反馈动作（feedback 表/聚合视图/JSONL 导出） |
-  | V1.5 | 5a 规划 | 新增 S3.1.3 / S4.2.3 两卡（粗筛误放与抽取误读的批次性问题治理） |
-  | V1.4 | 5a | 消费层 Web/API 同源出口上线（ADR-006）：S1.1.1 / S1.1.2 / S1.1.4 |
-  | V1.3 | 4 | process 层上线：S4.1.2 粗筛 + S4.2.1 结构化抽取（LangGraph 三节点图） |
-  | V1.2 | 3 | S4.5 落库与基础检索（PG + alembic + query CLI） |
-  | V1.1 | 2 补 | S3.2.1 probe-source/collect CLI + enabled 门控 |
-  | V1.0 | 2 | S3.2.1 拆分缩范围；SPK-1/2/3 交付 |
 - **本文档定位**：需求的事实源与导读——开发前是具体的需求说明，开发后凭状态位反映实现现状
 
 **编写约定**：

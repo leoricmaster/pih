@@ -1,6 +1,6 @@
-"""OpenAI 兼容 LLM 客户端（process 层，SPK-2/3 spike `_lib/llm.py` 工程化）。
+"""OpenAI 兼容 LLM 客户端（process 层，SPK-2/3 工程化）。
 
-与 spike 版的三处工程化差异（Sprint 4 规格 §3.3）：
+三处工程化差异（规格 §3.3）：
 1. http_client 显式 trust_env=False——openai SDK 默认继承环境代理变量，
    shell 常驻 SOCKS 代理会劫持 LLM 流量（与 collect 层 HttpClient 同口径）；
 2. 配置缺失抛 LLMConfigError（调用方快速失败），区别于运行时 LLMError；

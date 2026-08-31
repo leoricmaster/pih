@@ -1,4 +1,4 @@
-"""抽取输入文本准备：raw_html → 剥标签纯文本（Sprint 4 规格 §3.2/D2）。
+"""抽取输入文本准备：raw_html → 剥标签纯文本（规格 §3.2/D2）。
 
 intel_item.raw_html 是解码后正文 HTML（含标签），直接送 LLM 浪费 token
 且干扰抽取。三步正则清洗（golden/make_dataset.py strip_html 的工程化迁移，
@@ -7,7 +7,7 @@ SPK-1/2 已按此口径清洗样本）：
 2. 去其余标签（保留标签间文本）；
 3. 压连续空白为单空格。
 
-不引入 DOM 解析器：清洗口径须与 spike 金答案样本一致，改口径等于换评估基准。
+不引入 DOM 解析器：清洗口径与金答案样本对齐，改口径等于换评估基准。
 """
 from __future__ import annotations
 

@@ -4,7 +4,7 @@
 - Nuxt SSR（data-server-rendered，__NUXT__ JSON blob）
 - 详情链接 /news/<id>.html，列表 /news，分页 ?page=N&size=6
 - 标题 <title> 可能含 stray U+FEFF（须 strip）
-- 排除 /product/ 等非新闻链接（spike 误抓产品页的教训）
+- 排除 /product/ 等非新闻链接
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from ..base import register_for_source
 from ..html_adapter import HtmlAdapter
 
 DETAIL_RE = re.compile(r"/news/\d+\.html")
-# 排除非新闻路径（spike 误抓 /product/ 的教训）
+# 排除非新闻路径
 EXCLUDE_RE = re.compile(r"/(product|about|list|special|search|col)/")
 
 
