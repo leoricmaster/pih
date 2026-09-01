@@ -1,4 +1,4 @@
-"""source_sync 单元测试——mock pool 验 SQL 与参数（Sprint 3 T3）。
+"""source_sync 单元测试——mock pool 验 SQL 与参数。
 
 不依赖真实 DB；用 MagicMock 包装 cursor，捕获 execute 调用。
 """

@@ -1,4 +1,4 @@
-"""三一集团适配器（sanygroup.com，L1，SPK-1 §4 主选）。
+"""三一集团适配器（sanygroup.com，L1，主选信源）。
 
 契约（subagent 实测）：
 - Nuxt SSR（data-server-rendered，__NUXT__ JSON blob）

@@ -1,4 +1,4 @@
-"""集成测试：CLI 端到端真跑（运营者视角验收 S3.2.1 AC1）。
+"""集成测试：CLI 端到端真跑（运营者视角验收 S1.1.1 AC2）。
 
 需 `docker compose up`（MinIO + postgres）+ 外网访问。@pytest.mark.integration。
 - probe-source ccma：真实试抓取，退出码 0，报告含快照 ID
@@ -22,7 +22,7 @@ ALEMBIC = ["uv", "run", "alembic"]
 
 @pytest.fixture(autouse=True)
 def _clean_db():
-    """Sprint 3 起 collect 默认落库，需前置建表。每个测试重置干净库。"""
+    """collect 默认落库，需前置建表。每个测试重置干净库。"""
     subprocess.run(ALEMBIC + ["downgrade", "base"], cwd=REPO_ROOT, check=True, capture_output=True)
     subprocess.run(ALEMBIC + ["upgrade", "head"], cwd=REPO_ROOT, check=True, capture_output=True)
     yield

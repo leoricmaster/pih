@@ -1,6 +1,6 @@
-"""robots.txt 合规判定（架构 §4 采集层 / SPK-1 §3 robots 契约）。
+"""robots.txt 合规判定（架构 §4 采集层 / 实测 robots 契约）。
 
-robots.txt 判定逻辑，两点修正（设计 D5）：
+robots.txt 判定逻辑，两点修正：
 1. 软 200 站点（如 CCMA）robots.txt 返回 200 但 Content-Type 为 HTML——
    `urllib.robotparser` 会把 HTML 模板当空规则集（全允许），无法区分「无 robots」
    与「软 200 HTML」。本模块加 content-type 嗅探：非 text/plain 的 200 robots

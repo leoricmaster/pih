@@ -1,6 +1,6 @@
-"""EventService：事件聚类与核实状态机的业务层（Sprint 6 S4.2.2）。
+"""EventService：事件聚类与核实状态机的业务层（Backlog S1.3.1）。
 
-聚类规则（架构 §6.1 / Backlog S4.2.2 AC2-AC3，详见 plan D1/D5）：
+聚类规则（架构 §6.1 / Backlog S1.3.1 AC2-AC3）：
 1. 主体归一化（领域包 competitors.aliases → display_name）
 2. event_type 精确匹配
 3. fetched_at 时间窗 ±7 天

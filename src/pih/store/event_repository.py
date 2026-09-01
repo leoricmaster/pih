@@ -1,4 +1,4 @@
-"""EventRepository：事件聚类与核实状态机的 SQL 层（Sprint 6）。
+"""EventRepository：事件聚类与核实状态机的 SQL 层（Backlog S1.3.1）。
 
 接口：
   find_matching_event(...)   ±7 天窗查询命中已有事件
@@ -26,7 +26,7 @@ from psycopg_pool import ConnectionPool
 
 from pih.store.repository import STATUS_EXTRACTED
 
-# 状态枚举（与领域包 ranking.event_state_weights key 对齐，详见 §3.3b event.py）
+# 状态枚举（与领域包 ranking.event_state_weights key 对齐，详见 event.py）
 STATUS_PENDING = "pending"
 STATUS_SINGLE_SOURCE = "single_source"
 STATUS_CONFIRMED = "confirmed"
@@ -36,7 +36,7 @@ STATUS_EXPIRED = "expired"
 # 自动跃迁：第二独立信源命中时 pending → single_source
 AUTO_ADVANCE_REASON = "第二独立信源命中"
 
-# 时间窗 ±7 天（架构 §6.1 / S4.2.2 AC2）
+# 时间窗 ±7 天（架构 §6.1 / S1.3.1 AC2）
 TIME_WINDOW = timedelta(days=7)
 
 
@@ -90,7 +90,7 @@ class EventRepository:
     ) -> int | None:
         """查找主体+事件类型相同、时间窗 ±7 天内的最近事件。
 
-        匹配规则（D1）：subject/event_type 精确匹配（subject 已归一化），
+        匹配规则（架构 §6.1）：subject/event_type 精确匹配（subject 已归一化），
         fetched_at 与 event.last_seen_at 差值绝对值 ≤ 7 天。
         多条命中取 last_seen_at 最近的一个。
         """

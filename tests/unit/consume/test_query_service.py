@@ -1,4 +1,4 @@
-"""QueryService 单测（Sprint 5a，ADR-006 同源）。
+"""QueryService 单测（ADR-006 同源）。
 
 验：filters → repo.list_by_filter 参数透传 + next_before 游标拼装 + get 委托。
 不连 DB——repo 用 MagicMock。

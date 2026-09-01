@@ -6,7 +6,7 @@
 设计原则：
 - 只约束必选字段 + enum；自由文本（prompt/template）只校验非空。
 - 缺必选字段拒绝加载并指出位置（ADR-001 后果节）。
-- 不过早固化——第二领域接入（SPK-4）再迭代。
+- 不过早固化——第二领域接入后再迭代。
 """
 from __future__ import annotations
 
@@ -16,9 +16,9 @@ RELIABILITY_VALUES = ["A", "B", "C", "D", "E", "F"]
 CREDIBILITY_VALUES = ["1", "2", "3", "4", "5", "6"]
 # 信源类型（架构 §4 信源适配器：RSS/网页/API/变更监控）
 SOURCE_TYPES = ["rss", "html", "api", "change_monitor"]
-# 信源层级（架构 §6.2 / SPK-1 §4）：L1 官方/主机厂、L2 权威/垂直媒体、L3 聚合、L4 弱信号
+# 信源层级（架构 §6.2 / PRD 附件 A）：L1 官方/主机厂、L2 权威/垂直媒体、L3 聚合、L4 弱信号
 SOURCE_LEVELS = ["L1", "L2", "L3", "L4"]
-# 抓取频率（调度器 Sprint 消费，本 Sprint 仅落盘）
+# 抓取频率（调度器 Backlog S1.5.1 消费，当前仅落盘）
 FETCH_FREQUENCIES = ["hourly", "daily", "weekly"]
 
 DOMAIN_PACK_SCHEMA: dict = {
@@ -74,7 +74,7 @@ DOMAIN_PACK_SCHEMA: dict = {
                     "enabled": {
                         "type": "boolean",
                         "description": "试抓取（pih probe-source）通过后由运营者人工置 true；"
-                        "采集门控（collect）仅运行 enabled 源（S3.2.1 AC1「成功才允许启用」）",
+                        "采集门控（collect）仅运行 enabled 源（S1.1.1 AC2「成功才允许启用」）",
                     },
                 },
             },
@@ -121,7 +121,7 @@ DOMAIN_PACK_SCHEMA: dict = {
         },
         "report_template": {
             "type": "string", "minLength": 1,
-            "description": "报告模板，本 Sprint 占位字符串",
+            "description": "报告模板，当前为占位字符串",
         },
         "extraction_prompt": {
             "type": "string", "minLength": 1,

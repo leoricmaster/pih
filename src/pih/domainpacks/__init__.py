@@ -3,5 +3,5 @@
 领域包 = { 信源清单, 监控关键词, 竞品主体清单, 标签树, 报告模板, 抽取提示词 } + ranking 节，
 以 repo 内 YAML 维护，带 schema 校验（缺必选字段拒绝加载并指出位置），Git 版本化评审。
 
-本模块是 Sprint 1 的主交付：加载器（loader）+ 校验器（validator）+ schema 定义。
+本模块含：加载器（loader）+ 校验器（validator）+ schema 定义。
 """

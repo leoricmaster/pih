@@ -1,4 +1,4 @@
-"""事件聚类单元测试（Sprint 6 §3.6a）。
+"""事件聚类单元测试（S1.3.1）。
 
 纯函数测试——不连 DB：
 - normalize_subject 别名映射（领域包 competitors.aliases → display_name）
@@ -91,7 +91,7 @@ class TestStatusLabels:
             assert STATUS_LABELS[s]
 
     def test_labels_match_design(self):
-        """中文展示与设计规格一致。"""
+        """中文展示与架构 §6.1 状态机一致。"""
         assert STATUS_LABELS[STATUS_PENDING] == "待核实"
         assert STATUS_LABELS[STATUS_SINGLE_SOURCE] == "单源确认"
         assert STATUS_LABELS[STATUS_CONFIRMED] == "多源确认"

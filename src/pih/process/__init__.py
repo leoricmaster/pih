@@ -4,7 +4,7 @@
 - llm.py        OpenAI 兼容客户端（trust_env=False / tier 路由 / 线性退避重试）
 - textprep.py   raw_html → 剥标签纯文本 + 截断
 - extraction.py 抽取模型 + validate_pred（7 键 / 枚举 / 标签树 / 可信度校验）
-- graph.py      三节点图：粗筛→抽取→校验（SPK-3 工程化，领域包注入）
+- graph.py      三节点图：粗筛→抽取→校验（领域包注入）
 - run.py        ProcessRunner：pending 批处理 + Admiralty 拼装 + 统计
 
 三条契约已落实：

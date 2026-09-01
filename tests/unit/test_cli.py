@@ -82,7 +82,7 @@ class TestQueryUsageErrors:
         assert "筛选条件" in capsys.readouterr().err
 
     def test_structured_filters_accepted_without_source_id(self, capsys, monkeypatch):
-        """Sprint 4：--event-type 等结构化条件可独立使用（不再强制 --source-id）。
+        """--event-type 等结构化条件可独立使用（不再强制 --source-id）。
 
         只验参数解析层——list_by_filter 之前的校验不再拒绝；
         mock pool + repository 返回空列表，验退出码 0。

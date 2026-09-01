@@ -1,4 +1,4 @@
-"""消费层领域包加载辅助（Sprint 6 抽出避免 web/api 循环 import）。
+"""消费层领域包加载辅助（抽出以避免 web/api 循环 import）。
 
 web.py 与 api.py 共用 _load_pack / _pack_ranking / _load_pack_vocab，
 保证 Web 与 JSON API 出口同源（ADR-006）：ranking 注入一致 → 排序同序。

@@ -1,4 +1,4 @@
-"""人工核实 CLI 端到端测试（Sprint 6 §3.6b，S3.1.1 子集）。
+"""人工核实 CLI 端到端测试（S1.3.2）。
 
 需 docker compose up（postgres）。验：
   - pih verify list 输出 ready_for_manual 队列

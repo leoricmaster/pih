@@ -1,8 +1,8 @@
-"""HTML 正文解码链（架构 §4 采集层 / SPK-1 §3.1.2 解码契约）。
+"""HTML 正文解码链（架构 §4 采集层 / 实测解码契约）。
 
 HTTP 正文解码三级链路，修两处 Minor：
 1. meta charset 扫描窗口 2048→4096（深埋 meta 不再漏）；
-2. 增加 HTML 实体解码（&amp; &#xx; 等，SPK-1 Minor「HTML 实体未解码」）。
+2. 增加 HTML 实体解码（&amp; &#xx; 等，实测 Minor「HTML 实体未解码」）。
 
 链路：HTTP 头 charset → HTML meta charset → utf-8/gbk 严格试探 → utf-8/replace。
 关键修正：cehome 非 GBK，是 HTTP 头缺 charset 导致默认 ISO-8859-1
@@ -73,7 +73,7 @@ def decode_body(raw_bytes: bytes, content_type: str = "") -> tuple[str, str]:
 def decode_entities(text: str) -> str:
     """解码 HTML 实体（&amp; &#xx; &nbsp; 等）。
 
-    SPK-1 Minor「HTML 实体未解码」落地。
+    实测 Minor「HTML 实体未解码」落地。
     """
     return html.unescape(text)
 

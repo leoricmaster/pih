@@ -30,7 +30,7 @@ class TestDecodeBody:
     def test_cehome_scenario_lands_utf8_not_mojibake(self):
         """AC3 核心用例：cehome HTTP 头无 charset → 解码链落到 utf-8，标题可读。
 
-        复现 SPK-1 发现：httpx/requests 无 charset 头默认 ISO-8859-1 → mojibake。
+        复现实测发现：httpx/requests 无 charset 头默认 ISO-8859-1 → mojibake。
         本链路应正确落到 utf-8。
         """
         title = "三一挖掘机新品发布"
@@ -44,7 +44,7 @@ class TestDecodeBody:
         assert "三一" in text
 
     def test_deep_meta_within_4096_window(self):
-        """meta charset 在 2048 之后、4096 之前应被捕获（spike 2048 窗口的修复）。"""
+        """meta charset 在 2048 之后、4096 之前应被捕获（旧 2048 窗口的修复）。"""
         padding = b"x" * 3000  # 超过旧 2048 窗口
         raw = padding + b'<meta charset="utf-8"/>' + "测试".encode()
         text, enc = decode_body(raw, "")

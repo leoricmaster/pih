@@ -9,7 +9,7 @@
 session 级 autouse fixture 对账三方键集——代码实际引用的 env 键、
 .env.defaults、.env。代码引用但两层 env 均未定义 → 直接 fail（新机
 clone 后缺配置的静默故障变成显式失败）；.env 独有且代码从不引用 →
-warn（死键，多为改名遗留，如 Sprint 1 时代的 LLM_*）。
+warn（死键，多为改名遗留，如早期的 LLM_*）。
 """
 import os
 import re

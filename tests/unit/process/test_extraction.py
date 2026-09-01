@@ -1,4 +1,4 @@
-"""extraction 单元测试：PackVocab 构造 + validate_pred 全分支（S4.2.1 AC1）。"""
+"""extraction 单元测试：PackVocab 构造 + validate_pred 全分支（S1.2.1 AC1）。"""
 from __future__ import annotations
 
 import pytest
@@ -127,7 +127,7 @@ class TestValidatePredFailures:
 
 
 class TestIsPlaceholderSubject:
-    """后验质量门谓词（S4.2.3）：strip + lower 后比对占位集。"""
+    """后验质量门谓词（S1.2.1 AC3）：strip + lower 后比对占位集。"""
 
     @pytest.mark.parametrize("subject", ["未知", " 未知 ", "无", "不详", "Unknown", "UNKNOWN", ""])
     def test_placeholder_hits(self, subject):

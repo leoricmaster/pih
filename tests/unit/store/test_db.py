@@ -1,4 +1,4 @@
-"""db.py 单元测试——DSN 处理逻辑（Sprint 3 T3）。
+"""db.py 单元测试——DSN 处理逻辑。
 
 不建真实连接池（避免依赖 DB），只验 _ensure_psycopg_driver 与缺 DSN 抛错。
 """

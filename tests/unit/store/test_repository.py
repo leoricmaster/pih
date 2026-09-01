@@ -1,4 +1,4 @@
-"""IntelRepository 单元测试——mock pool 验 SQL/分支（Sprint 3 T4 + Sprint 4 T3）。
+"""IntelRepository 单元测试——mock pool 验 SQL/分支。
 
 mock 策略：cursor.fetchone / fetchall 控制返回；验 execute SQL 与参数。
 不依赖真实 DB（集成测试在 test_end_to_end / test_process_e2e）。
@@ -313,7 +313,7 @@ class TestListByFilter:
         assert params[3] == 5
 
     def test_admiralty_since_until_before_build_clauses(self):
-        """Sprint 5a 新增参数：admiralty 精确 / since-until fetched_at 闭区间 / before 游标。"""
+        """后增参数：admiralty 精确 / since-until fetched_at 闭区间 / before 游标。"""
         from datetime import datetime
 
         m = _MockConn()
@@ -345,9 +345,9 @@ class TestListByFilter:
         assert params[5] == 10
 
     def test_orders_admiralty_then_fetched(self):
-        """Sprint 5a 排序简版（ranking=None 回退）：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC。
+        """排序简版回退（ranking=None）：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC。
 
-        Sprint 6 起 SQL 列名加 i. 前缀（LEFT JOIN event 防歧义）。
+        事件维度引入后 SQL 列名加 i. 前缀（LEFT JOIN event 防歧义）。
         """
         m = _MockConn()
         m.cursor_obj.fetchall.return_value = []

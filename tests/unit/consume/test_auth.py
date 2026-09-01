@@ -1,4 +1,4 @@
-"""verify_api_token 单测（Sprint 5a，ADR-006）。
+"""verify_api_token 单测（ADR-006）。
 
 三分支：env 缺失 503 / header 错误 401 / 正确通过。hmac.compare_digest 被调用。
 """

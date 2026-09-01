@@ -1,4 +1,4 @@
-# 坏夹具：缺 event_types 节（Sprint 4 必填）
+# 坏夹具：缺 event_types 节（必填）
 meta:
   domain_id: fixture_bad
   display_name: 夹具坏包

@@ -1,4 +1,4 @@
-"""原文快照 presigned URL 生成（Sprint 5a 补丁）。
+"""原文快照 presigned URL 生成。
 
 MinIO 快照对象路径 snapshots/{source_id}/{content_sha1}.html（collect/snapshot.py）。
 消费层详情页用 presigned URL 让用户直接下载原文 HTML，无需通过应用层转发。
@@ -8,7 +8,7 @@ presigned URL 直接可达。
 
 docker compose 部署：web 容器用 MINIO_ENDPOINT=minio:9000 连通，但 presigned
 URL 的 host 也是 minio:9000——容器外浏览器不可达。生产部署需配 MinIO 反向代理
-或 host 网络；本 Sprint docker compose 场景降级展示快照 ID 文本（不阻塞验收）。
+或 host 网络；docker compose 场景降级展示快照 ID 文本（不阻塞验收）。
 
 MinIO 不可达或 presigned 生成失败时返回 None——详情页降级展示快照 ID 文本。
 """
@@ -43,7 +43,7 @@ def presigned_snapshot_url(client: Minio, source_id: str, content_sha1: str,
 
     URL host = MINIO_ENDPOINT（client 的 endpoint）。
     本地开发（localhost:9000）浏览器直接可达；
-    docker compose（minio:9000）浏览器不可达，需配反向代理——本 Sprint 降级展示 ID。
+    docker compose（minio:9000）浏览器不可达，需配反向代理——该场景降级展示 ID。
     """
     key = f"snapshots/{source_id}/{content_sha1}.html"
     try:

@@ -1,4 +1,4 @@
-"""API 鉴权依赖（Sprint 5a，ADR-006）。
+"""API 鉴权依赖（ADR-006）。
 
 静态 Bearer token——env PIH_API_TOKEN 缺失 → 503；
 Authorization: Bearer <t> 不匹配 → 401。Web 路由不挂此依赖。

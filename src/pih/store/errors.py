@@ -1,4 +1,4 @@
-"""store 层异常（Sprint 3）。"""
+"""store 层异常。"""
 from __future__ import annotations
 
 

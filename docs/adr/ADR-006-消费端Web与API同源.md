@@ -31,7 +31,7 @@
 ## 理由
 
 1. 北极星指标（检索次数）按 Web/API 分别计数，同源使口径天然一致；
-2. S1.1.x / S1.2.x 全部 AC 可交付；
+2. 消费侧故事（Backlog S1.2.x）的全部 AC 可交付；
 3. 1 人运维约束下不新增任何组件。
 
 ## 后果
@@ -46,6 +46,6 @@
 共用过滤/排序/引用拼装；同条件返回同 id 集合同序（集成测试 `test_api_e2e.py::TestAC4SameSource`
 断言）。鉴权：API 端点 `Authorization: Bearer <PIH_API_TOKEN>`（`hmac.compare_digest`
 常量时间比较），Web 内网默认开放。部署：docker-compose `web` service（独立容器，仅依赖 PG）
-+ 本地 `uv run uvicorn pih.consume.web:app`。事件核实状态字段占位「待事件模型上线后自动激活」，
-event 表上线后查询服务自动填实。排序简版 `admiralty ASC + fetched_at DESC`，完整 score
-待事件与时效模块。
++ 本地 `uv run uvicorn pih.consume.web:app`。事件核实状态已随 event 表上线实查激活（列表
+/详情 JOIN event 填实，含跃迁历史时间线）。排序已切换 `W_c(event.status) × map(admiralty)`
+（权重由领域包 ranking 节注入，CASE WHEN 拼 SQL）；decay 仍留时效管理（未分解的未来需求）。

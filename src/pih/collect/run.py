@@ -1,10 +1,10 @@
-"""采集编排与 enabled 门控（S3.2.1 AC1「成功才允许启用」/ S4.1.1 雏形入口）。
+"""采集编排与 enabled 门控（S1.1.1 AC2「成功才允许启用」/ S1.1.2 采集入库入口）。
 
-collect_source 是调度器（后续 Sprint）将消费的正式采集入口：
+collect_source 是调度器（Backlog S1.5.1，待实现）将消费的正式采集入口：
 仅运行 enabled: true 的信源；未启用 → SourceDisabledError（附启用流程指引）。
 probe（probe.py）不受门控约束——它是启用前的验证手段。
 
-Sprint 3：可选 repository 参数——传入则落库，不传则只产出 RawItem（Sprint 2 行为）。
+可选 repository 参数——传入则落库，不传则只产出 RawItem（仅 stdout 摘要，不落库）。
 """
 from __future__ import annotations
 

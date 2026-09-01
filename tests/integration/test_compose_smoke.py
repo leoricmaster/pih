@@ -5,7 +5,7 @@
 conftest 已自动给 integration/ 下测试加 @pytest.mark.integration 标记。
 
 验证：PG 可连 + pgvector 扩展可建、MinIO 可连 + bucket 可建、app 容器可 import pih。
-这些探测通过 docker compose exec 走，不引入 psycopg 等 DB 依赖（store 层后续 Sprint 再上）。
+这些探测通过 docker compose exec 走，不引入 psycopg 等 DB 依赖（store 层已另行落地直连测试）。
 """
 from __future__ import annotations
 

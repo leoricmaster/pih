@@ -1,7 +1,7 @@
-"""消费层端到端集成测试（Sprint 5a，ADR-006 同源）。
+"""消费层端到端集成测试（ADR-006 同源出口）。
 
-覆盖 S1.1.1 AC1/AC2 + S1.1.2 AC1 + S1.1.4 AC1/AC2/AC3 共 6 条。
-AC3「已过期标识」不交付（expires_at 未上线）。
+覆盖 S1.2.2 AC1/AC2 + S1.2.1 AC1 + ADR-006 同源/字段/鉴权共 6 条。
+「已过期标识」不交付（expires_at 未上线）。
 
 需 docker compose up postgres。@pytest.mark.integration 自动打标。
 """
@@ -38,7 +38,7 @@ def _auth(token: str) -> dict:
 
 
 class TestAC1ListFilters:
-    """S1.1.1 AC1：多条件组合筛选 + 列表列展示 + 事件核实状态占位。"""
+    """S1.2.2 AC1：多条件组合筛选 + 列表列展示 + 事件核实状态。"""
 
     def test_filter_subject_event_since_and_columns(self, api_token):
         _seed(60)
@@ -53,7 +53,7 @@ class TestAC1ListFilters:
             # 列表表头列齐全
             for col in ("标题", "主体", "事件类型", "置信度", "采集时间", "所属事件核实状态"):
                 assert col in html
-            # Sprint 6 事件占位激活：未挂事件行显示 —，挂事件显示中文标签；
+            # 事件核实状态：未挂事件行显示 —，挂事件显示中文标签；
             # seed 数据未挂事件，应见 —
             assert "—" in html
             # 筛选结果只含三一+新品发布（factory 循环：60 条里 12 条三一，其中 ~2 条新品发布）
@@ -62,7 +62,7 @@ class TestAC1ListFilters:
 
 
 class TestAC2EmptyResult:
-    """S1.1.1 AC2：空结果提示 + 不渲染下一页。"""
+    """S1.2.2 AC2：空结果提示 + 不渲染下一页。"""
 
     def test_empty_shows_hint_and_no_next_page(self, api_token):
         _seed(60)
@@ -75,7 +75,7 @@ class TestAC2EmptyResult:
 
 
 class TestAC3DetailPage:
-    """S1.1.2 AC1：详情页 schema 全字段 + 事实/推断分区 + 双入口 + 事件占位。"""
+    """S1.2.1 AC1：详情页 schema 全字段 + 事实/推断分区 + 双入口 + 事件区。"""
 
     def test_detail_shows_all_sections(self, api_token):
         ids = _seed(60)
@@ -94,7 +94,7 @@ class TestAC3DetailPage:
             # 原文 URL + 快照入口（MinIO 起着→presigned URL；否则降级 ID 文本）
             assert f"http://sany_news.example/item-{0}" in html
             assert "原文快照" in html
-            # Sprint 6 事件占位激活：seed 数据未挂事件，详情页显示「未挂事件」提示
+            # seed 数据未挂事件，详情页显示「未挂事件」提示
             assert "未挂事件" in html
 
     def test_detail_404_for_missing(self, api_token):
@@ -104,7 +104,7 @@ class TestAC3DetailPage:
 
 
 class TestAC4SameSource:
-    """S1.1.4 AC1：Web 与 API 同参数返回同 id 集合与排序。"""
+    """ADR-006 同源：Web 与 API 同参数返回同 id 集合与排序。"""
 
     def test_web_and_api_return_same_ids(self, api_token):
         _seed(60)
@@ -124,8 +124,8 @@ class TestAC4SameSource:
             assert web_ids == api_ids, f"Web 与 API id 序列不一致：{web_ids} vs {api_ids}"
 
 
-class TestSprint5bProcessStatusFilter:
-    """Sprint 5b：process_status 筛选（needs_manual 复核队列可达）+ Web/API 同源。"""
+class TestProcessStatusFilter:
+    """process_status 筛选（S1.2.1 AC3 needs_manual 复核队列可达）+ Web/API 同源。"""
 
     def test_status_filter_same_source_web_and_api(self, api_token):
         ids = _seed(20)
@@ -159,7 +159,7 @@ class TestSprint5bProcessStatusFilter:
 
 
 class TestAC5ApiResponseFields:
-    """S1.1.4 AC2：组合查询响应字段齐全。"""
+    """ADR-006 字段：组合查询响应字段齐全。"""
 
     def test_list_response_fields(self, api_token):
         _seed(60)
@@ -179,7 +179,7 @@ class TestAC5ApiResponseFields:
             assert "url" in item["references"]
             assert "snapshot_id" in item["references"]
             assert "snapshot_url" in item["references"]
-            # Sprint 6 事件占位激活：seed 数据未挂事件，API 返回 None + "未挂事件"
+            # seed 数据未挂事件，API 返回 None + "未挂事件"
             assert item["event_verification_status"] is None
             assert item["event_verification_note"] == "未挂事件"
 
@@ -205,7 +205,7 @@ class TestAC5ApiResponseFields:
 
 
 class TestAC6Auth:
-    """S1.1.4 AC3：鉴权——缺失/错误 token → 401；env 未配 → 503。"""
+    """ADR-006 鉴权：缺失/错误 token → 401；env 未配 → 503。"""
 
     def test_missing_header_returns_401(self, api_token):
         with TestClient(app) as client:

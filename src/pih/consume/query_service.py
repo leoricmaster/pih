@@ -1,8 +1,8 @@
-"""QueryService：消费层同源查询服务（Sprint 5a，ADR-006 + Sprint 6 事件）。
+"""QueryService：消费层同源查询服务（ADR-006，含事件维度）。
 
 Web 页面与 JSON API 出口共用此服务——同条件调用必返同集合同序。
 内部委托 IntelRepository.list_by_filter / get，统一 IntelFilters 入参。
-Sprint 6：注入领域包 ranking 节用于排序权重（W_c × map(admiralty)）。
+注入领域包 ranking 节用于排序权重（W_c × map(admiralty)）。
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class IntelFilters:
     admiralty: str | None = None
     source_id: str | None = None
     process_status: str | None = None
-    event_status: str | None = None  # Sprint 6：按事件核实状态筛选
+    event_status: str | None = None  # 按事件核实状态筛选
     since: datetime | None = None
     until: datetime | None = None
     before: datetime | None = None
@@ -70,7 +70,7 @@ class QueryService:
         """按 filters 检索情报列表，返回 items + next_before 游标。
 
         next_before 仅在结果数等于 limit 时给出（即可能还有下一页）；
-        小于 limit 时不提供，避免渲染无意义「下一页」链接（S1.1.1 AC2）。
+        小于 limit 时不提供，避免渲染无意义「下一页」链接（S1.2.2 AC2）。
         """
         records = self._repo.list_by_filter(
             subject=filters.subject,

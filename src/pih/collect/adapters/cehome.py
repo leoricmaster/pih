@@ -1,9 +1,9 @@
-"""铁甲网适配器（cehome.com，L2，SPK-1 §4 主选）。
+"""铁甲网适配器（cehome.com，L2，主选信源）。
 
 契约（subagent 实测）：
 - SSR XHTML，robots allow: / 全站允许
 - 详情链接 /news/<YYYYMMDD>/<id>.shtml，列表 /news/hangye/，路径分页 /<N>/
-- 编码 utf-8（非 GBK——SPK-1 报告措辞错误；真实缺陷是 HTTP 头缺 charset，
+- 编码 utf-8（非 GBK——实测修正：真实缺陷是 HTTP 头缺 charset，
   解码链 header→meta→trial 正确落到 utf-8，本适配器不为 cehome 硬编码编码）
 """
 from __future__ import annotations

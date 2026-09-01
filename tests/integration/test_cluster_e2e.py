@@ -1,4 +1,4 @@
-"""事件聚类端到端集成测试（Sprint 6 §3.6b，S4.2.2 AC1-AC5）。
+"""事件聚类端到端集成测试（S1.3.1 AC1-AC5）。
 
 需 docker compose up（postgres + minio）+ 真实领域包。
 脚本化 chat 注入确定性抽取输出，验证：

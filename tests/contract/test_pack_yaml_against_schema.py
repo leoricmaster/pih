@@ -44,12 +44,12 @@ def test_construction_machinery_pack_loads_strict():
     """第一领域包严格加载不抛（load() 即严格模式）。"""
     pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
     assert pack["meta"]["domain_id"] == "construction_machinery"
-    assert len(pack["sources"]) == 9  # SPK-1 锁定 9 源
+    assert len(pack["sources"]) == 9  # 实测锁定 9 源
     assert len(pack["competitors"]) >= 1
 
 
-def test_construction_machinery_sources_match_spk1_locked():
-    """SPK-1 锁定的 9 源 id 齐全（回归保护：防误删信源）。"""
+def test_construction_machinery_sources_match_locked_list():
+    """实测锁定的 9 源 id 齐全（回归保护：防误删信源）。"""
     pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
     ids = {s["id"] for s in pack["sources"]}
     expected = {"ccma", "sany", "xcmg", "cehome", "d1cm", "khl", "qianlima", "cnipa_patent", "lmjx"}
@@ -57,9 +57,9 @@ def test_construction_machinery_sources_match_spk1_locked():
 
 
 def test_every_source_has_level_and_list_url():
-    """Backlog S3.2.1 AC3：信源缺必填字段（层级）拒绝。契约层保证每源有 level + list_url。
+    """Backlog S1.1.1 AC1：信源缺必填字段（层级）拒绝。契约层保证每源有 level + list_url。
 
-    Sprint 2 扩 schema 后，level/list_url 为必选；此测试防止回退。
+    schema 扩必选后 level/list_url 为必填；此测试防止回退。
     """
     pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
     for s in pack["sources"]:
@@ -78,9 +78,9 @@ def test_three_target_sources_have_fetch_frequency():
 
 
 def test_event_type_enum_has_11_categories():
-    """事件类型枚举 11 类（SPK-2 golden EVENTS 迁移至 event_types 节，Sprint 4）。
+    """事件类型枚举 11 类（金答案样本 EVENTS 迁移至 event_types 节）。
 
-    枚举单一事实源从 spike golden/make_dataset.py 移入领域包配置；
+    枚举单一事实源从金答案脚本移入领域包配置；
     「其他」为兜底类（粗筛漏网/领域边缘内容归此，不丢弃）。
     """
     pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
@@ -93,13 +93,13 @@ def test_event_type_enum_has_11_categories():
 
 
 def test_tag_tree_no_longer_carries_event_types():
-    """Sprint 4 修正：tag_tree 不再含「事件类型」子树（曾与 event_types 重复且口径过时 8 类）。"""
+    """修正项：tag_tree 不再含「事件类型」子树（曾与 event_types 重复且口径过时 8 类）。"""
     pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
     assert "事件类型" not in pack["tag_tree"]
 
 
 def test_extraction_prompt_has_all_placeholders():
-    """D5：extraction_prompt 含三个占位符 token（加载即校验，此处契约级回归）。"""
+    """extraction_prompt 含三个占位符 token（加载即校验，此处契约级回归）。"""
     pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
     prompt = pack["extraction_prompt"]
     for token in ("<事件类型>", "<标签树>", "<主体清单>"):
@@ -107,6 +107,6 @@ def test_extraction_prompt_has_all_placeholders():
 
 
 def test_prompt_mentions_credibility_rating():
-    """S4.2.2 AC1：提示词含信息可信度评级（Admiralty 1–6）输出键。"""
+    """S1.3.1 AC1：提示词含信息可信度评级（Admiralty 1–6）输出键。"""
     pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
     assert "信息可信度" in pack["extraction_prompt"]

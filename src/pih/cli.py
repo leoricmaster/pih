@@ -1,12 +1,12 @@
-"""PIH 运营者 CLI（S3.2.1 用户闭环 + Sprint 3 store 落库查询 + Sprint 4 process 批处理 + Sprint 6 事件聚类）。
+"""PIH 运营者 CLI（S1.1.1 信源闭环 + store 落库查询 + process 批处理 + 事件聚类）。
 
 命令：
   pih probe-source <id> | --all   试抓取验证（robots→列表→详情→快照），产出成败报告
   pih collect <id>                正式采集（enabled 门控）+ 默认落库（--no-ingest 回退）
   pih process [--source-id=<id>]  批处理 pending 条目：粗筛→抽取→校验，写回结构化字段 + 事件聚类
   pih query [筛选条件]            查询库中情报（--id 详情 / --source-id/--subject/
-                                  --event-type/--tag 结构化筛选，Sprint 4）
-  pih verify list                 列出已具备升级条件的事件（人工核实队列，Sprint 6 S3.1.1 子集）
+                                  --event-type/--tag 结构化筛选）
+  pih verify list                 列出已具备升级条件的事件（人工核实队列，S1.3.2）
   pih verify confirm <event_id>   跃迁 single_source → confirmed（人工终态）
   pih verify refute <event_id> --reason="..."  跃迁 → refuted（人工终态，必填理由）
   pih cluster --backfill          对存量 extracted 但未挂事件的条目跑聚类回填
@@ -55,7 +55,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     pp = sub.add_parser(
         "probe-source",
-        help="试抓取验证：robots → 列表页 → 详情 → 快照，产出成败报告（S3.2.1 AC1）",
+        help="试抓取验证：robots → 列表页 → 详情 → 快照，产出成败报告（S1.1.1 AC2）",
     )
     pp.add_argument("source_id", nargs="?", default=None, help="信源 id（与 --all 二选一）")
     pp.add_argument("--all", action="store_true", help="对领域包全部信源逐一试抓取")
@@ -79,19 +79,19 @@ def _build_parser() -> argparse.ArgumentParser:
     cp.add_argument(
         "--no-ingest",
         action="store_true",
-        help="不落库，仅 stdout 摘要（Sprint 2 行为）",
+        help="不落库，仅 stdout 摘要",
     )
     cp.add_argument("--proxy-env", action="store_true", help="继承环境代理变量（默认不继承）")
     cp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
 
     qp = sub.add_parser(
         "query",
-        help="查询情报库（Sprint 4：结构化筛选；--id 单条详情）",
+        help="查询情报库（结构化筛选；--id 单条详情）",
     )
     qp.add_argument("--source-id", default=None, help="按信源过滤")
-    qp.add_argument("--subject", default=None, help="按主体过滤（精确匹配，Sprint 4）")
-    qp.add_argument("--event-type", default=None, help="按事件类型过滤（精确匹配，Sprint 4）")
-    qp.add_argument("--tag", default=None, help="按标签过滤（JSONB containment，Sprint 4）")
+    qp.add_argument("--subject", default=None, help="按主体过滤（精确匹配）")
+    qp.add_argument("--event-type", default=None, help="按事件类型过滤（精确匹配）")
+    qp.add_argument("--tag", default=None, help="按标签过滤（JSONB containment）")
     qp.add_argument("--limit", type=int, default=10, help="返回条数上限（默认 10）")
     qp.add_argument(
         "--before",
@@ -103,16 +103,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
     prp = sub.add_parser(
         "process",
-        help="批处理 pending 条目：粗筛→抽取→校验（LangGraph），写回结构化字段与状态（Sprint 4）",
+        help="批处理 pending 条目：粗筛→抽取→校验（LangGraph），写回结构化字段与状态",
     )
     prp.add_argument("--source-id", default=None, help="仅处理该信源的 pending 条目")
     prp.add_argument("--limit", type=int, default=20, help="单次处理条数上限（默认 20）")
     prp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
 
-    # ---- Sprint 6 事件聚类 ----
+    # ---- 事件聚类（S1.3.1/S1.3.2）----
     vp = sub.add_parser(
         "verify",
-        help="人工核实队列（Sprint 6 S3.1.1 子集）：列出已具备升级条件的事件，确认/证伪终态跃迁",
+        help="人工核实队列（S1.3.2）：列出已具备升级条件的事件，确认/证伪终态跃迁",
     )
     vsub = vp.add_subparsers(dest="verify_action", required=True)
     vsub.add_parser("list", help="列出已具备升级条件的事件（ready_for_manual=TRUE）")
@@ -126,7 +126,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     clp = sub.add_parser(
         "cluster",
-        help="事件聚类（Sprint 6 S4.2.2）：在线已在 process 内触发，本命令用于历史回填",
+        help="事件聚类（S1.3.1）：在线已在 process 内触发，本命令用于历史回填",
     )
     clp.add_argument(
         "--backfill", action="store_true",
@@ -400,7 +400,7 @@ def _cmd_process(args: argparse.Namespace) -> int:
 
 
 def _cmd_verify(args: argparse.Namespace) -> int:
-    """人工核实队列入口（Sprint 6 S3.1.1 子集）。"""
+    """人工核实队列入口（S1.3.2）。"""
     try:
         pool = get_pool()
     except RuntimeError as exc:
@@ -428,7 +428,8 @@ def _cmd_verify(args: argparse.Namespace) -> int:
             ok = svc.confirm(args.event_id, operator=args.operator)
             if not ok:
                 print(
-                    f"✗ 事件 #{args.event_id} 不存在或不在 single_source 状态（仅单源确认可人工确认）",
+                    f"✗ 事件 #{args.event_id} 不存在或不在 single_source 状态"
+                    "（仅单源确认可人工确认）",
                     file=sys.stderr,
                 )
                 return EXIT_FAILED
@@ -456,7 +457,7 @@ def _cmd_verify(args: argparse.Namespace) -> int:
 
 
 def _cmd_cluster(args: argparse.Namespace) -> int:
-    """事件聚类回填入口（Sprint 6 S4.2.2）。"""
+    """事件聚类回填入口（S1.3.1）。"""
     if not args.backfill:
         print("仅支持 --backfill（在线聚类已在 process 内自动触发）", file=sys.stderr)
         return EXIT_USAGE
@@ -519,7 +520,7 @@ def _print_record_detail(rec) -> None:
     print(f"内容指纹  : {rec.content_sha1}")
     print(f"入库时间  : {rec.created_at:%Y-%m-%d %H:%M:%S}")
     print(f"事件 ID   : {rec.event_id or '（未关联事件）'}")
-    # ---- Sprint 4 结构化字段（未处理条目仅显示状态）----
+    # ---- 结构化字段（未处理条目仅显示状态）----
     print(f"处理状态  : {rec.process_status or 'pending'}"
           + (f"（{rec.process_error}）" if rec.process_error else ""))
     if rec.subject is not None:

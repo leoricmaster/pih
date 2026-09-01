@@ -1,6 +1,6 @@
-"""Jinja2 模板契约测试（Sprint 5a + Sprint 6 事件占位激活）。
+"""Jinja2 模板契约测试（消费层模板 + 事件区渲染）。
 
-验：渲染不抛未定义变量 / 事件区占位激活后实查渲染 / autoescape 生效。
+验：渲染不抛未定义变量 / 事件区实查渲染 / autoescape 生效。
 用 pih.consume.web.templates.env 直接 render（不走 FastAPI）。
 """
 from __future__ import annotations
@@ -65,7 +65,7 @@ def _render(template_name: str, context: dict) -> str:
 
 
 def _list_ctx(**extra) -> dict:
-    """list.html 渲染所需最小 context（Sprint 6 起 status_labels/status_options 必填）。"""
+    """list.html 渲染所需最小 context（事件状态下拉引入后 status_labels/status_options 必填）。"""
     return {
         "items": [],
         "filters": IntelFilters(),
@@ -77,7 +77,7 @@ def _list_ctx(**extra) -> dict:
 
 
 def _detail_ctx(**extra) -> dict:
-    """detail.html 渲染所需最小 context（Sprint 6 起 event_with_log 必填）。"""
+    """detail.html 渲染所需最小 context（事件区引入后 event_with_log 必填）。"""
     return {
         "rec": _make_record(),
         "snapshot_url": None,
@@ -115,7 +115,7 @@ class TestListRender:
         assert 'href="/?before=2026-08-27T14%3A30%3A00"' in html
 
     def test_event_status_column_renders_label_or_dash(self):
-        """Sprint 6：事件状态列占位激活——挂事件显示中文标签，未挂显示 —。"""
+        """事件状态列——挂事件显示中文标签，未挂显示 —。"""
         rec_with_event = _make_record(id=1, event_status="single_source")
         rec_no_event = _make_record(id=2, event_status=None)
         html = _render("list.html", _list_ctx(items=[rec_with_event, rec_no_event]))
@@ -124,7 +124,7 @@ class TestListRender:
         assert "—" in html
 
     def test_event_status_filter_dropdown_present(self):
-        """Sprint 6：筛选 form 含事件状态下拉（pending/single_source/confirmed/refuted/expired）。"""
+        """筛选 form 含事件状态下拉（pending/single_source/confirmed/refuted/expired）。"""
         html = _render("list.html", _list_ctx())
         assert 'name="event_status"' in html
         for label in ("待核实", "单源确认", "多源确认", "已证伪", "已过期"):
@@ -166,7 +166,7 @@ class TestDetailRender:
         assert "HTML，1小时有效" not in html
 
     def test_renders_feedback_section(self):
-        """Sprint 5b S3.1.3：反馈区四表单 + datalist 主体清单注入。"""
+        """S1.4.1：反馈区四表单 + datalist 主体清单注入。"""
         html = _render("detail.html", _detail_ctx())
         assert 'id="feedback"' in html
         for label in ("主体错了", "事件类型错", "事实不准", "不该入库"):
@@ -195,12 +195,12 @@ class TestDetailRender:
         assert rec.snapshot_id in html
 
     def test_event_section_no_event_shows_hint(self):
-        """Sprint 6：未挂事件时显示降级提示（占位激活后空态文案）。"""
+        """未挂事件时显示降级提示（空态文案）。"""
         html = _render("detail.html", _detail_ctx())
         assert "未挂事件" in html
 
     def test_event_section_with_event_renders_status_and_timeline(self):
-        """Sprint 6：挂事件时渲染状态徽章 + 跃迁历史时间线。"""
+        """挂事件时渲染状态徽章 + 跃迁历史时间线。"""
         from dataclasses import replace
 
         from pih.store.event_repository import EventRecord, VerificationLogRecord

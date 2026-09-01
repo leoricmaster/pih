@@ -1,4 +1,4 @@
-"""信源试抓取（Backlog S3.2.1 AC1——信源注册与试抓取的运营者入口）。
+"""信源试抓取（Backlog S1.1.1 AC2——信源注册与试抓取的运营者入口）。
 
 probe 面向「未启用」信源：robots → 列表页 → 前 N 条详情 → 快照存档，
 产出结构化 ProbeReport 供 CLI 呈现。与 collect（run.py）的区别：

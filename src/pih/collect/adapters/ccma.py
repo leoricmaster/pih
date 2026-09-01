@@ -1,4 +1,4 @@
-"""CCMA 协会适配器（cncma.org，L2，SPK-1 §4 主选）。
+"""CCMA 协会适配器（cncma.org，L2，主选信源）。
 
 契约（subagent 实测）：
 - scheme http only（https 25s 超时）

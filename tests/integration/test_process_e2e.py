@@ -1,7 +1,7 @@
-"""Process 端到端集成测试（Sprint 4 T7，AC1–AC6）。
+"""Process 端到端集成测试（S1.1.2 采集入库 + S1.2.1 结构化抽取）。
 
 需 docker compose up（postgres + minio）+ 外网。真实 LLM 段（AC1/AC5/AC6）
-另需 PIH_LLM_* env，任一缺失该类 skip（规格 §5 密闭性口径）；
+另需 PIH_LLM_* env，任一缺失该类 skip（密闭性口径）；
 脚本化 chat 段（AC2/AC3/AC4）不依赖 LLM 凭据，注入确定性失败路径。
 
 验收路径：
@@ -14,9 +14,9 @@
   AC5  query --event-type=<实际抽取值> 召回 extracted 条目
   AC6  二次 process → 处理 0 条（pending 幂等）
   AC7  主体占位值「未知」（脚本化 chat）→ needs_manual + 结构化字段保留
-      （Sprint 5b S4.2.3 后验质量门）
+      （S1.2.1 AC3 后验质量门）
 
-断言结构不断言具体文本（LLM 输出不稳定，规格 §5）。
+断言结构不断言具体文本（LLM 输出不稳定）。
 """
 from __future__ import annotations
 
@@ -149,7 +149,7 @@ class TestAC4GrayItemPolicy:
 
 
 class TestAC7PostHocQualityGate:
-    """Sprint 5b S4.2.3 AC1：主体占位值 → needs_manual 且结构化字段保留。"""
+    """S1.2.1 AC3：主体占位值 → needs_manual 且结构化字段保留。"""
 
     def test_placeholder_subject_needs_manual_with_fields_kept(self, capsys):
         _collect_fresh(1)

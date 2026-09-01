@@ -1,4 +1,4 @@
-"""ProcessRunner 单元测试：mock repository + fake chat（Sprint 4 T6）。
+"""ProcessRunner 单元测试：mock repository + fake chat。
 
 覆盖：三状态映射、Admiralty 拼装、token 聚合、写库失败容错、统计行格式。
 """
@@ -160,7 +160,7 @@ class TestRunnerStatusMapping:
 
 
 class TestPostHocQualityGate:
-    """S4.2.3：主体占位值 → needs_manual 且结构化字段保留。"""
+    """S1.2.1 AC3：主体占位值 → needs_manual 且结构化字段保留。"""
 
     def test_placeholder_subject_gates_to_needs_manual_with_fields_kept(self):
         repo, written = _repo([_rec(reliability="B")])

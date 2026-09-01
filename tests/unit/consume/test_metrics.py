@@ -1,4 +1,4 @@
-"""metrics.log_query 单测（Sprint 5a）。
+"""metrics.log_query 单测。
 
 验 JSON 一行 + 字段齐全 + 空 filters 合法。
 """

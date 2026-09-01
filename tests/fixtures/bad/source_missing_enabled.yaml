@@ -1,4 +1,4 @@
-# sources[0] 缺必选字段 enabled（S3.2.1 门控字段，位置应指向 sources[0].enabled）
+# sources[0] 缺必选字段 enabled（S1.1.1 门控字段，位置应指向 sources[0].enabled）
 meta:
   domain_id: fixture_bad
   display_name: 夹具坏包

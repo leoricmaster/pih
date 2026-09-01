@@ -1,6 +1,6 @@
-"""LangGraph 抽取图：粗筛 → 抽取 → 校验（SPK-3 工程化，规格 §3.4）。
+"""LangGraph 抽取图：粗筛 → 抽取 → 校验（架构 §4 处理层）。
 
-图结构不变（SPK-3 已验证），工程化修正三条契约：
+图结构经验证不变，工程化修正三条契约：
 1. 重试计数分列——api_retries（chat_json 内部 API 级重试累计）与
    validate_rounds（schema 补问轮次）分开记录，不再混计；
 2. text 在场——初始 state 由 Runner 构造（intel_id + text 必填），
@@ -59,7 +59,7 @@ class ItemState(TypedDict, total=False):
 
 
 def render_prompt(pack: dict) -> str:
-    """领域包 extraction_prompt 占位符注入（D5）。
+    """领域包 extraction_prompt 占位符注入。
 
     <事件类型>←event_types；<标签树>←tag_tree 叶子；<主体清单>←competitors
     （规范名 + 别名）。token 缺失在领域包加载时已被校验器拒绝。

@@ -1,7 +1,7 @@
-"""graph 单元测试：注入 fake chat 覆盖全分支（Sprint 4 T5）。
+"""graph 单元测试：注入 fake chat 覆盖全分支（S1.2.1）。
 
 覆盖：粗筛三分支（keep/drop/API 失败按保留）、抽取失败、
-validate 首过/补问/耗尽、api_retries 与 validate_rounds 分列（spike 遗留契约）、
+validate 首过/补问/耗尽、api_retries 与 validate_rounds 分列（既有契约）、
 text 在场契约、占位符注入。
 """
 from __future__ import annotations
@@ -92,7 +92,7 @@ class TestHappyPath:
         assert fake.calls[1][0] == "large"
 
     def test_text_survives_all_nodes(self):
-        """spike 遗留契约：text 字段全程在场（节点不得删除）。"""
+        """既有契约：text 字段全程在场（节点不得删除）。"""
         fake = FakeChat([
             ({"relevant": True}, _usage()),
             (_ok_pred(), _usage()),
@@ -179,7 +179,7 @@ class TestValidate:
 
 class TestRetryCounting:
     def test_api_retries_and_rounds_separated(self):
-        """spike 遗留契约：API 级重试（api_retries）与补问轮次（validate_rounds）分列。
+        """既有契约：API 级重试（api_retries）与补问轮次（validate_rounds）分列。
 
         场景：extract 带 2 次 API 内部重试成功但输出不合格，
         validate 补问 1 轮（0 API 重试）通过。

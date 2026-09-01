@@ -1,13 +1,13 @@
-"""IntelRepository：情报条目落库与基础检索（Sprint 3 T4 + Sprint 4 T3）。
+"""IntelRepository：情报条目落库与基础检索。
 
 接口：
   save(item)          单条入库，幂等冲突 → SKIPPED
   save_batch(items)   批量入库（逐条 save，单条失败不阻塞）
   list_by_source(...)  按信源列出最近入库
   get(id)             单条详情
-  list_pending(...)   待处理条目（Sprint 4：pih process 批处理入口）
-  write_process_result(...)  写回抽取结果与处理状态（Sprint 4）
-  list_by_filter(...)  结构化筛选（Sprint 4：S1.1.1 CLI 子集）
+  list_pending(...)   待处理条目（pih process 批处理入口）
+  write_process_result(...)  写回抽取结果与处理状态
+  list_by_filter(...)  结构化筛选（S1.2.2，CLI/Web/API 共用）
 
 不引入 ORM；SQL 原生，模型用 dataclass。
 """
@@ -46,7 +46,7 @@ _COLUMNS = """
     admiralty_code, process_status, process_error, process_meta, processed_at
 """
 
-# Sprint 6 LEFT JOIN event 后需 i. 前缀防 id 字段歧义；带回 event_status
+# LEFT JOIN event 后需 i. 前缀防 id 字段歧义；带回 event_status
 _COLUMNS_WITH_EVENT = ", ".join(
     f"i.{c.strip()}" for c in _COLUMNS.split(",") if c.strip()
 ) + ", e.status AS event_status"
@@ -71,7 +71,7 @@ class SaveOutcome:
 
 @dataclass(frozen=True)
 class ProcessResult:
-    """process 层单条处理结果（write_process_result 的写回载荷，Sprint 4）。
+    """process 层单条处理结果（write_process_result 的写回载荷）。
 
     status=extracted 时结构化字段全填；filtered_out/needs_manual 时
     结构化字段留 None，error 记录原因（条目保留不丢弃）。
@@ -93,10 +93,10 @@ class ProcessResult:
 class IntelRecord:
     """从 DB 读出的情报条目。
 
-    基础字段同 RawItem + id/created_at；Sprint 4 结构化字段与治理字段
+    基础字段同 RawItem + id/created_at；结构化字段与治理字段
     带默认值（迁移 0002 之前的语义/旧行均为空）。source_reliability 非表列，
     仅 list_pending 的 JOIN source 填充（Admiralty 拼装用）。
-    Sprint 6 增 event_status 字段（LEFT JOIN event 填充，未挂事件为 None）。
+    另有 event_status 字段（LEFT JOIN event 填充，未挂事件为 None）。
     """
 
     id: int
@@ -125,11 +125,11 @@ class IntelRecord:
     process_meta: dict | None = None
     processed_at: datetime | None = None
     source_reliability: str | None = None
-    event_status: str | None = None  # Sprint 6: LEFT JOIN event 填充，未挂事件为 None
+    event_status: str | None = None  # LEFT JOIN event 填充，未挂事件为 None
 
 
 class IntelRepository:
-    """情报库基础检索（最小切片，规格 D5）。"""
+    """情报库基础检索（最小切片）。"""
 
     def __init__(self, pool: ConnectionPool) -> None:
         self._pool = pool
@@ -226,7 +226,7 @@ class IntelRepository:
     ) -> list[IntelRecord]:
         """取待处理条目（process_status='pending'），先老后新（fetched_at ASC）。
 
-        JOIN source 带回 reliability（Admiralty 拼装输入，Sprint 4 规格 §3.6）。
+        JOIN source 带回 reliability（Admiralty 拼装输入，架构 §6.2）。
         """
         if source_id is None:
             sql = f"""
@@ -305,22 +305,23 @@ class IntelRepository:
         limit: int = 50,
         ranking: dict | None = None,
     ) -> list[IntelRecord]:
-        """结构化筛选（S1.1.1，Sprint 4 CLI 子集 + Sprint 5a Web/API 同源扩展 + Sprint 6 事件）。
+        """结构化筛选（Backlog S1.2.2，CLI 与 Web/API 同源共用，含事件状态维度）。
 
         subject/event_type/admiralty/process_status/event_status 精确匹配；tag 用 JSONB
         containment（tags @> [tag]）；since/until 走 fetched_at 闭区间；
         before 为游标（fetched_at < before，分页用）。
 
-        排序（Sprint 6 切换）：
-        - ranking=None（默认回退简版）：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC
-          （Sprint 5a 简版，CLI 与未注入 ranking 的调用方用）
+        排序：
+        - ranking=None（默认回退简版回退）：admiralty_code ASC NULLS LAST, fetched_at DESC, id DESC
+          （简版回退，CLI 与未注入 ranking 的调用方用）
         - ranking 给定：score = W_c(event.status) × map(admiralty) DESC, fetched_at DESC, id DESC
-          （架构 §6.2；decay 留时效 Sprint，本 Sprint 兜底 1.0）
-          ranking 形如 {event_state_weights: {...}, reliability_weights: {...}, credibility_weights: {...}}
+          （架构 §6.2；decay 留时效管理（未来需求，未分解），当前兜底 1.0）
+          ranking 形如 {event_state_weights: {...}, reliability_weights: {...},
+          credibility_weights: {...}}
           从领域包 pack.ranking 读取，由 QueryService 注入（store 层不依赖领域包）。
 
-        process_status 筛选（Sprint 5b）：needs_manual 人工复核队列的可达路径。
-        event_status 筛选（Sprint 6）：按事件核实状态筛选（LEFT JOIN event）。
+        process_status 筛选：needs_manual 人工复核队列的可达路径（S1.2.1 AC3）。
+        event_status 筛选：按事件核实状态筛选（LEFT JOIN event）。
         """
         clauses: list[str] = []
         params: list = []
@@ -382,7 +383,7 @@ def _build_ranked_order_sql(ranking: dict) -> str:
     """从领域包 ranking 节拼 CASE WHEN 权重列到 ORDER BY（架构 §6.2 简化版）。
 
     score = W_c(event.status) × min(rel_weight(admiralty[0]), cred_weight(admiralty[1]))
-    decay 留时效 Sprint，本 Sprint 兜底 1.0；未挂事件（event.status NULL）W_c=0 排末尾。
+    decay 留时效管理（未分解的未来需求），当前兜底 1.0；未挂事件（event.status NULL）W_c=0 排末尾。
 
     SQL 不上 PG 函数——Python 侧读领域包后用 CASE WHEN 注入数值，避免迁移加函数。
     """

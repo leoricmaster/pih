@@ -3,7 +3,7 @@
 统一：声明式 UA、超时、指数退避重试×3（网络错误/5xx 重试，4xx 不重试）、
 按源节流（每请求前 sleep，默认 2s，Crawl-Delay 站点可覆盖）。
 
-节流覆盖 robots 检查请求——SPK-1 §3.2.1 遗留 Minor「robots 交错间隔未纳节流」的修复：
+节流覆盖 robots 检查请求——实测遗留 Minor「robots 交错间隔未纳节流」的修复：
 调用方对 robots 检查与内容抓取统一走本客户端的节流。
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ import httpx
 
 from .robots import UA
 
-DEFAULT_GAP = 2.0  # 默认请求间隔秒（SPK-1：三源均 2s）
+DEFAULT_GAP = 2.0  # 默认请求间隔秒（实测三源均 2s）
 DEFAULT_TIMEOUT = 15.0
 MAX_RETRIES = 3  # 架构 §8：适配器重试 ×3
 

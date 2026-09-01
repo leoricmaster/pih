@@ -47,7 +47,7 @@ class TestValidatorPaths:
         assert "sources[0].reliability" in _paths(result.issues)
 
     def test_source_missing_enabled_points_at_field(self):
-        # sources[0] 缺 enabled（S3.2.1 门控字段）→ path 应为 sources[0].enabled
+        # sources[0] 缺 enabled（S1.1.1 门控字段）→ path 应为 sources[0].enabled
         pack, _ = _load(FIXTURES / "bad" / "source_missing_enabled.yaml")
         result = validate(pack)
         assert not result.ok
@@ -61,14 +61,14 @@ class TestValidatorPaths:
         assert "keywords" in _paths(result.issues)
 
     def test_missing_event_types_points_at_field(self):
-        # Sprint 4：缺 event_types 节 → path='event_types'
+        # 缺 event_types 节 → path='event_types'
         pack, _ = _load(FIXTURES / "bad" / "missing_event_types.yaml")
         result = validate(pack)
         assert not result.ok
         assert "event_types" in _paths(result.issues)
 
     def test_prompt_missing_placeholder_rejected(self):
-        """D5 语义检查：extraction_prompt 缺占位符 token → 拒绝并指出缺哪些。"""
+        """语义检查：extraction_prompt 缺占位符 token → 拒绝并指出缺哪些。"""
         pack, _ = _load(FIXTURES / "bad" / "prompt_missing_placeholder.yaml")
         result = validate(pack)
         assert not result.ok

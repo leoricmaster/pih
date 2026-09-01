@@ -1,6 +1,6 @@
-"""消费层事件字段集成测试（Sprint 6 §3.6b）。
+"""消费层事件字段集成测试（S1.3.1 AC4）。
 
-验占位激活后：
+验事件字段上线后：
   - API /api/intel/list 响应含 event_verification_status 实值（挂事件→英文 key）
   - 详情页渲染含事件状态中文 + 跃迁历史列表
   - list_by_filter 加 event_status 筛选生效

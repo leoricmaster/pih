@@ -1,4 +1,4 @@
-"""端到端集成测试：collect → 落库 → query（Sprint 3 T6，AC1–AC5）。
+"""端到端集成测试：collect → 落库 → query（S1.1.2，AC1–AC5）。
 
 需 docker compose up（postgres + minio）+ 外网。@pytest.mark.integration。
 
@@ -67,7 +67,7 @@ def test_ac3_query_lists_intel(capsys):
     assert code == 0
     assert "查询：source_id=ccma" in out
     assert "共" in out
-    # 列表行格式（Sprint 4 起）：[id] 时间 [process_status/event_type/admiralty] 标题
+    # 列表行格式：[id] 时间 [process_status/event_type/admiralty] 标题
     lines = [line for line in out.splitlines() if line.startswith("  [")]
     assert len(lines) >= 1
     # 时间格式 YYYY-MM-DD HH:MM 在行中

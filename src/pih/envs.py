@@ -1,6 +1,6 @@
 """分层环境加载（env 漂移治理，2026-08-31）。
 
-背景：.env 从 Sprint 1 模板复制后从未随 .env.example 演进，跨 5 个 Sprint
+背景：.env 早期从模板复制后从未随 .env.example 演进，跨多轮迭代
 漂移 3 代（PG_DSN 缺失 / LLM_* 改名无人读 / PIH_API_TOKEN 缺失），且多机
 切换放大漂移面。治理：拆两层——
 

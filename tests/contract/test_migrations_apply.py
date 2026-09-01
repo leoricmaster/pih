@@ -78,7 +78,7 @@ def test_upgrade_is_idempotent():
 
 
 def test_ac6_intel_item_constraints():
-    """AC6：UNIQUE content_sha1 + FK source_id + FK event_id → event（Sprint 6 起）。"""
+    """AC6：UNIQUE content_sha1 + FK source_id + FK event_id → event。"""
     # UNIQUE 约束存在
     rows = _q(
         "SELECT conname FROM pg_constraint "
@@ -93,7 +93,7 @@ def test_ac6_intel_item_constraints():
     )
     assert any(r[0] == "intel_item_source_id_fkey" and r[1] == "source" for r in rows), rows
 
-    # event_id 字段存在 + FK → event（Sprint 6 加约束）
+    # event_id 字段存在 + FK → event
     cols = _q(
         "SELECT column_name FROM information_schema.columns "
         "WHERE table_name = 'intel_item' AND column_name = 'event_id'"
@@ -128,8 +128,8 @@ PROCESS_COLUMNS = [
 ]
 
 
-def test_sprint4_ac7_process_columns_exist():
-    """0002：结构化与治理列齐全，process_status 非空默认 pending。"""
+def test_process_columns_exist():
+    """结构化与治理列齐全，process_status 非空默认 pending。"""
     rows = _q(
         "SELECT column_name, column_default, is_nullable FROM information_schema.columns "
         "WHERE table_name = 'intel_item'"
@@ -141,8 +141,8 @@ def test_sprint4_ac7_process_columns_exist():
     assert cols["process_status"][1] == "NO"
 
 
-def test_sprint4_process_indexes_exist():
-    """0002：process_status / event_type B-tree + tags GIN 三索引。"""
+def test_process_indexes_exist():
+    """process_status / event_type B-tree + tags GIN 三索引。"""
     rows = _q(
         "SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'intel_item'"
     )
@@ -153,7 +153,7 @@ def test_sprint4_process_indexes_exist():
     assert "using gin" in defs["idx_intel_item_tags"].lower()
 
 
-def test_sprint4_existing_rows_get_pending_default():
+def test_existing_rows_get_pending_default():
     """存量行入库即 pending 默认值（process_status 默认 pending）。"""
     with psycopg.connect(PG_DSN) as conn, conn.cursor() as cur:
         cur.execute(
@@ -176,8 +176,8 @@ FEEDBACK_COLUMNS = [
 ]
 
 
-def test_sprint5b_feedback_table_columns_exist():
-    """0003：feedback 列齐全，user_id 非空默认 operator。"""
+def test_feedback_table_columns_exist():
+    """feedback 列齐全，user_id 非空默认 operator。"""
     rows = _q(
         "SELECT column_name, column_default, is_nullable FROM information_schema.columns "
         "WHERE table_name = 'feedback'"
@@ -190,8 +190,8 @@ def test_sprint5b_feedback_table_columns_exist():
     assert cols["feedback_type"][1] == "NO"
 
 
-def test_sprint5b_feedback_fk_cascades_and_indexes():
-    """0003：FK → intel_item ON DELETE CASCADE；intel_id/type 两索引在。"""
+def test_feedback_fk_cascades_and_indexes():
+    """FK → intel_item ON DELETE CASCADE；intel_id/type 两索引在。"""
     rows = _q(
         "SELECT confrelid::regclass::text, confdeltype FROM pg_constraint "
         "WHERE conrelid = 'feedback'::regclass AND contype = 'f'"
@@ -204,7 +204,7 @@ def test_sprint5b_feedback_fk_cascades_and_indexes():
     assert "idx_feedback_type" in names
 
 
-def test_sprint5b_feedback_cascade_actually_deletes():
+def test_feedback_cascade_actually_deletes():
     """级联真实生效：删情报行，其反馈随之消失。"""
     with psycopg.connect(PG_DSN) as conn, conn.cursor() as cur:
         cur.execute(
@@ -237,8 +237,8 @@ VLOG_COLUMNS = [
 ]
 
 
-def test_sprint6_event_table_columns_exist():
-    """0004：event 列齐全，status 非空默认 pending，source_count 默认 0（attach 时累加）。"""
+def test_event_table_columns_exist():
+    """event 列齐全，status 非空默认 pending，source_count 默认 0（attach 时累加）。"""
     rows = _q(
         "SELECT column_name, column_default, is_nullable FROM information_schema.columns "
         "WHERE table_name = 'event'"
@@ -253,8 +253,8 @@ def test_sprint6_event_table_columns_exist():
     assert cols["ready_for_manual"][1] == "NO"
 
 
-def test_sprint6_event_indexes_exist():
-    """0004：event 表三索引——status / (subject,event_type) / ready 部分索引。"""
+def test_event_indexes_exist():
+    """event 表三索引——status / (subject,event_type) / ready 部分索引。"""
     rows = _q("SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'event'")
     defs = {r[0]: r[1] for r in rows}
     assert "idx_event_status" in defs
@@ -263,8 +263,8 @@ def test_sprint6_event_indexes_exist():
     assert "where ready_for_manual" in defs["idx_event_ready"].lower()
 
 
-def test_sprint6_verification_log_table_and_fk():
-    """0004：verification_log 列齐全 + FK → event ON DELETE CASCADE + 索引。"""
+def test_verification_log_table_and_fk():
+    """verification_log 列齐全 + FK → event ON DELETE CASCADE + 索引。"""
     rows = _q(
         "SELECT column_name FROM information_schema.columns "
         "WHERE table_name = 'verification_log'"
@@ -283,13 +283,13 @@ def test_sprint6_verification_log_table_and_fk():
     assert "idx_vlog_event" in {r[0] for r in idx}
 
 
-def test_sprint6_intel_item_event_id_index():
-    """0004：intel_item.event_id 索引在（按 event 反查情报）。"""
+def test_intel_item_event_id_index():
+    """intel_item.event_id 索引在（按 event 反查情报）。"""
     idx = _q("SELECT indexname FROM pg_indexes WHERE tablename = 'intel_item'")
     assert "idx_intel_item_event_id" in {r[0] for r in idx}
 
 
-def test_sprint6_event_fk_set_null_on_delete():
+def test_event_fk_set_null_on_delete():
     """ON DELETE SET NULL 真实生效：删 event 行，挂在其下的 intel_item.event_id 变 NULL。"""
     with psycopg.connect(PG_DSN) as conn, conn.cursor() as cur:
         cur.execute(

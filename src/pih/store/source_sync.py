@@ -1,4 +1,4 @@
-"""领域包 sources → source 表 upsert（Sprint 3 T3）。
+"""领域包 sources → source 表 upsert。
 
 事实源是 repo 内 YAML；source 表是镜像，用于查询联结与 FK 约束。
 collect / query 启动时自动 sync，用户无感知；不删除表里多余行

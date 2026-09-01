@@ -1,8 +1,8 @@
-"""FastAPI 应用——Web 出口 + JSON API 同源（Sprint 5a ADR-006 + Sprint 5b 反馈闭环 + Sprint 6 事件）。
+"""FastAPI 应用——Web 出口 + JSON API 同源（ADR-006 + 反馈闭环 S1.4.1/S1.4.2 + 事件 S1.3.1）。
 
 lifespan 起 PG pool；Jinja2 渲染列表/详情；include api router；
 反馈三路由（POST /feedback 写入、GET /feedback 聚合视图、/feedback/export JSONL）。
-Sprint 6：列表/详情页事件核实状态占位激活（JOIN event 实查）+ 排序切 W_c×map(admiralty)。
+列表/详情页事件核实状态已随 event 表上线实查激活（JOIN event）+ 排序 W_c×map(admiralty)。
 本地启动：uv run uvicorn pih.consume.web:app --reload --port 8000
 """
 from __future__ import annotations
@@ -85,7 +85,8 @@ def _svc(request: Request) -> QueryService:
 
 
 def _event_svc(request: Request) -> EventService:
-    """详情页事件区实查用——EventService 持有 pack 做主体归一化（详情页只读，归一化已落 event.subject 不再调用）。"""
+    """详情页事件区实查用——EventService 持有 pack 做主体归一化
+    （详情页只读，归一化已落 event.subject 不再调用）。"""
     pool = request.app.state.pool
     return EventService(
         EventRepository(pool),
@@ -154,7 +155,8 @@ def list_page(
 def detail_page(
     intel_id: int, request: Request, fb: bool = Query(False)
 ) -> HTMLResponse:
-    """详情页——schema 全字段 + 事实/推断分区 + 快照 presigned 入口 + 反馈区 + 事件状态与跃迁历史。"""
+    """详情页——schema 全字段 + 事实/推断分区 + 快照 presigned 入口
+    + 反馈区 + 事件状态与跃迁历史。"""
     rec = _svc(request).get(intel_id)
     if rec is None:
         raise HTTPException(status_code=404, detail=f"intel_item {intel_id} not found")
@@ -165,7 +167,7 @@ def detail_page(
     if client is not None:
         snapshot_url = presigned_snapshot_url(client, rec.source_id, rec.content_sha1)
     pack_subjects, pack_event_types = _load_pack_vocab()
-    # Sprint 6：事件状态与跃迁历史实查（占位激活）
+    # 事件状态与跃迁历史实查（已随 event 表上线激活）
     event_with_log = _event_svc(request).get_event_with_log(rec.event_id)
     return templates.TemplateResponse(
         request,
@@ -202,9 +204,9 @@ def submit_feedback(
     note: str | None = Form(None),
     user_id: str = Form("operator"),
 ) -> RedirectResponse:
-    """消费页反馈写入（S3.1.3）——303 回详情页，?fb=1 显示已记录。
+    """消费页反馈写入（S1.4.1）——303 回详情页，?fb=1 显示已记录。
 
-    无鉴权：与 Web 页面同信任域（Sprint 5a「内网默认开放」口径）；
+    无鉴权：与 Web 页面同信任域（ADR-006「内网默认开放」口径）；
     feedback_type 合法性在此校验（store 层信任调用方）。
     """
     if feedback_type not in FEEDBACK_TYPES:
@@ -230,7 +232,7 @@ def submit_feedback(
 
 @app.get("/feedback", response_class=HTMLResponse)
 def feedback_page(request: Request) -> HTMLResponse:
-    """反馈聚合视图（S3.1.3 AC4）——按信源×类型计数 + 明细 + 导出入口。"""
+    """反馈聚合视图（S1.4.2）——按信源×类型计数 + 明细 + 导出入口。"""
     repo = FeedbackRepository(request.app.state.pool)
     return templates.TemplateResponse(
         request,
@@ -246,7 +248,7 @@ def feedback_page(request: Request) -> HTMLResponse:
 
 @app.get("/feedback/export")
 def feedback_export(request: Request) -> Response:
-    """反馈明细 JSONL 导出——process 层 prompt 迭代的 few-shot 素材（AC4）。"""
+    """反馈明细 JSONL 导出——process 层 prompt 迭代的 few-shot 素材（S1.4.2 AC2）。"""
     rows = FeedbackRepository(request.app.state.pool).list_recent(1000)
     lines = []
     for r in rows:
