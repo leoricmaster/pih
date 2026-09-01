@@ -51,6 +51,7 @@
   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .field{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:4px;padding:4px 8px;background:#fff;font-size:12px}
   .field .x{color:var(--muted)}
+  .inp{border:1px solid var(--line);border-radius:4px;padding:3px 6px;font-family:inherit;font-size:12px;background:#fff}
   .btn{border:1px solid var(--line);border-radius:4px;padding:5px 11px;background:#fff;cursor:pointer;font-family:inherit;font-size:12px}
   .btn:hover{background:var(--fill2)}
   .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -117,25 +118,26 @@
     <div class="brand"><b>情报中心 PIH</b><small>原型 · wireframe 级</small></div>
     <div class="navgroup" data-group="consume">
       <label>消费区</label>
-      <a class="navlink" data-go="lib">情报库</a>
+      <a class="navlink" data-go="lib">情报</a>
       <a class="navlink" data-go="hypo">假设</a>
     </div>
     <div class="navgroup" data-group="ops">
-      <label>生产 / 治理区</label>
-      <a class="navlink" data-go="intake">录入</a>
+      <label>运营</label>
       <a class="navlink" data-go="source">信源</a>
-      <a class="navlink" data-go="feedback">反馈聚合</a>
+      <a class="navlink" data-go="intake">录入</a>
+      <a class="navlink" data-go="feedback">反馈</a>
+      <a class="navlink" data-go="config">配置</a>
     </div>
     <div class="navgroup">
       <label>观察面</label>
-      <a class="navlink" data-go="dash">Dashboard</a>
+      <a class="navlink" data-go="dash">仪表盘</a>
     </div>
     <div style="padding:14px 16px;margin-top:10px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);line-height:1.7">
       点击可走的流：<br>
       A 日常监控 · B 录入<br>
       C 检索 · D 假设求证<br>
       E 信源 · F 核实 · G 反馈<br>
-      <span style="color:#94a3b8">F 已并入情报库「待处理」</span>
+      <span style="color:#94a3b8">F 已并入情报「待处理」</span>
     </div>
   </nav>
 
@@ -143,7 +145,7 @@
   <div>
     <div class="topbar">
       <span class="back" id="backBtn">‹ 返回来源</span>
-      <span class="crumb" id="crumb">情报库 / 列表</span>
+      <span class="crumb" id="crumb">情报 / 列表</span>
       <span class="spacer"></span>
       <div class="acct">
         <div class="bell" id="bell">🔔<span class="dot">2</span></div>
@@ -160,15 +162,15 @@
     </div>
     <div class="main" id="main">
 
-    <!-- ============ 情报库·列表（含 待处理 视图） ============ -->
-    <section class="page on" id="lib" data-title="情报库 / 列表">
-      <div class="note">▶ 流 C 按需检索 · 北极星落点。「全部」= 检索消费；「待处理」= 核实队列（流 F），同一列表骨架、不同默认筛选与排序。</div>
+    <!-- ============ 情报·列表（含 待处理 视图） ============ -->
+    <section class="page on" id="lib" data-title="情报 / 列表">
+      <div class="note">▶ 流 C 按需检索 · 北极星落点。「检索」= 按需消费（组合筛选）；「待处理」= 核实队列（流 F），同一列表骨架、不同默认筛选与排序。</div>
       <div class="tabs">
-        <div class="tab active" data-tab="all">全部</div>
+        <div class="tab active" data-tab="all">检索</div>
         <div class="tab" data-tab="todo">待处理 <span class="badge">3</span></div>
       </div>
 
-      <!-- 全部 视图 -->
+      <!-- 检索 视图 -->
       <div class="view on" id="v-all">
         <div class="wf">
           <div class="lbl">组合筛选</div>
@@ -220,8 +222,8 @@
       </div>
     </section>
 
-    <!-- ============ 情报库·详情（聚合面） ============ -->
-    <section class="page" id="detail" data-title="情报库 / 详情">
+    <!-- ============ 情报·详情（聚合面） ============ -->
+    <section class="page" id="detail" data-title="情报 / 详情">
       <div class="note">▶ 聚合面：三条入口（列表 / 待处理队列 / 假设证据链）汇入此页。随 Feature 加深：原文入口 → 结构化分区 → 事件历史 → 反馈区。</div>
       <h2 style="margin:0 0 4px" id="detailTitle">三一重工发布 SY215C 遥控版挖掘机</h2>
       <div class="mini" style="margin-bottom:14px">来源：慧聪工程机械（A 级）· 采集 09-01 08:12 · <span class="adm">A1</span> · 事件状态 <span class="tag ok">多源确认</span></div>
@@ -314,7 +316,7 @@
         <div class="ph" style="background:#fff;border:1px solid var(--line);border-radius:4px;padding:10px;min-height:70px">粘贴纪要正文……</div>
       </div>
       <div class="row" style="margin-top:14px"><button class="btn primary">提交入库</button><span class="mini">来源类型=人工 · 可靠性默认 A/B · 仍需事实核查</span></div>
-      <div class="legend">提交后条目出现在情报库列表，走 结构化→聚类→核实 同一链路。</div>
+      <div class="legend">提交后条目出现在情报列表，走 结构化→聚类→核实 同一链路。</div>
     </section>
 
     <!-- ============ 信源 ============ -->
@@ -340,8 +342,8 @@
       </div>
     </section>
 
-    <!-- ============ 反馈聚合 ============ -->
-    <section class="page" id="feedback" data-title="反馈聚合">
+    <!-- ============ 反馈 ============ -->
+    <section class="page" id="feedback" data-title="反馈">
       <div class="note">▶ 流 G 反馈迭代。高频高亮 → 导出 JSONL few-shot → 驱动 prompt / 粗筛迭代。</div>
       <div class="wf" style="padding:0">
         <table class="wf-table">
@@ -358,8 +360,57 @@
       <div class="legend">"不该入库"与粗筛漏放（列表处理状态筛选）互补，构成漏报审计。</div>
     </section>
 
-    <!-- ============ Dashboard ============ -->
-    <section class="page" id="dash" data-title="Dashboard / 观察面">
+    <!-- ============ 配置（分层：运行态可改 / 结构配置 repo / 秘密 .env） ============ -->
+    <section class="page" id="config" data-title="配置">
+      <div class="note">▶ 三层配置：① 运行态旋钮——高频低风险，Web 可改，落运行配置库（新增事实源，与 repo 并存）；② 结构配置——低频需评审，只读可视化，编辑回仓内 YAML+Git 留痕；③ 秘密——永不在 Web，止于 .env（gitignored）。</div>
+
+      <!-- ① 运行态旋钮（Web 可改） -->
+      <div class="wf">
+        <div class="lbl">① 运行态旋钮 · Web 可改 → 落运行配置库</div>
+        <div class="grid2">
+          <div>
+            <div class="seg"><span class="k">降权天数</span><input class="inp" type="number" value="7" style="width:64px"> <span class="mini">待核实超期自动降权</span></div>
+            <div class="seg"><span class="k">粗筛阈值</span><input class="inp" type="number" step="0.05" value="0.60" style="width:64px"> <span class="mini">相关性下限，低于不入库</span></div>
+            <div class="seg"><span class="k">聚类阈值</span><input class="inp" type="number" step="0.05" value="0.75" style="width:64px"> <span class="mini">主体+时间窗相似度</span></div>
+          </div>
+          <div>
+            <div class="seg"><span class="k">失败告警</span><input class="inp" type="number" value="3" style="width:64px"> 次 <span class="mini">单源连续失败触发站内信</span></div>
+            <div class="seg"><span class="k">频控下限</span><input class="inp" type="number" value="60" style="width:64px"> s <span class="mini">全局最小抓取间隔</span></div>
+            <div class="seg"><span class="k">通知渠道</span><label style="font-size:12px;margin-left:4px"><input type="checkbox" checked> 站内信</label> <label style="font-size:12px"><input type="checkbox"> 企微</label> <label style="font-size:12px"><input type="checkbox"> 邮件</label></div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px"><button class="btn primary">保存</button><span class="mini">→ 写入运行配置库，即时生效；结构默认值仍由领域包兜底</span></div>
+        <div class="legend">数值为示意（降权天数=7 来自现行规则；粗筛/聚类阈值尚未落盘，运行库就位后标定）。引入运行配置库即新增一个事实源：repo 管"是什么"，运行库管"当前调到多少"，需明确后者覆盖前者的优先级。</div>
+      </div>
+
+      <!-- ② 结构配置（只读，repo 编辑） -->
+      <div class="wf">
+        <div class="lbl">② 结构配置 · 只读可视化 · 编辑回 repo（YAML+Git 留痕）</div>
+        <div class="seg"><span class="k">领域包</span>construction_machinery v0.2.0 <span class="mini">→ domain_packs/*.yaml</span></div>
+        <div class="seg"><span class="k">信源清单</span>9 源（3 启用 / 6 停用）<span class="mini">· reliability / level / 频率 / enabled</span></div>
+        <div class="seg"><span class="k">事件类型</span>11 类 <span class="mini">· 新品发布 / 中标落地 / 专利公开 …</span></div>
+        <div class="seg"><span class="k">标签树</span>4 组 <span class="mini">· 技术特征 / 应用场景 / 产品类 / 市场类</span></div>
+        <div class="seg"><span class="k">竞品主体</span>5 家 + 别名 <span class="mini">· 三一 / 徐工 / 柳工 / 中联 / 龙工</span></div>
+        <div class="seg"><span class="k">关键词</span>10 个 <span class="mini">· 挖机 / 无人化 / 电动化 …</span></div>
+        <div class="seg"><span class="k">抽取 prompt</span>v3 工程化版 <span class="mini">· 占位符注入 event_types/tag_tree/competitors</span></div>
+        <div class="seg"><span class="k">排序权重</span>ranking 节 <span class="mini">· reliability / credibility / event_state</span></div>
+        <div class="row" style="margin-top:10px"><button class="btn">在仓内 YAML 编辑 ↗</button><span class="mini">→ schema 校验 + Git 评审；启动时加载，缺必选字段拒绝加载</span></div>
+        <div class="legend">定义"系统是什么"，出错代价高且低频——留 repo 换版本留痕与评审，不在 Web 改。</div>
+      </div>
+
+      <!-- ③ 秘密与环境（.env，不显示值） -->
+      <div class="wf">
+        <div class="lbl">③ 秘密与环境 · 永不在 Web · 止于 .env（gitignored）</div>
+        <div class="seg"><span class="k">LLM Key</span><span class="tag muted">••••••••</span> <span class="mini">PIH_LLM_API_KEY</span></div>
+        <div class="seg"><span class="k">API Token</span><span class="tag muted">••••••••</span> <span class="mini">PIH_API_TOKEN（留空=API 503）</span></div>
+        <div class="seg"><span class="k">LLM 端点</span><span class="tag muted">••••••</span> <span class="mini">PIH_LLM_BASE_URL · large/small 路由</span></div>
+        <div class="seg"><span class="k">PG / MinIO</span><span class="mini">DSN / endpoint / port — .env.defaults 入库 + .env 本机覆盖</span></div>
+        <div class="legend">秘密不进 Web 也不进运行库；轮换在 .env。分层加载：真实环境变量 &gt; .env &gt; .env.defaults。</div>
+      </div>
+    </section>
+
+    <!-- ============ 仪表盘 ============ -->
+    <section class="page" id="dash" data-title="仪表盘 / 观察面">
       <div class="note">▶ 观察面：北极星指标与系统健康常驻可见。指标随采集能力渐进填充——已能算的亮起，依赖埋点的标灰，不提前造空壳数据。</div>
       <div class="kgrid">
         <div class="kcard dim">
@@ -438,8 +489,8 @@
 
 <script>
   const crumbs = {
-    lib:'情报库 / 列表', detail:'情报库 / 详情', hypo:'假设 / 列表', hypodetail:'假设 / 详情',
-    intake:'录入', source:'信源', feedback:'反馈聚合', dash:'Dashboard / 观察面', notif:'站内信 / 历史'
+    lib:'情报 / 列表', detail:'情报 / 详情', hypo:'假设 / 列表', hypodetail:'假设 / 详情',
+    intake:'录入', source:'信源', feedback:'反馈', config:'配置', dash:'仪表盘 / 观察面', notif:'站内信 / 历史'
   };
   let stack = [];
   function go(id, fromNav){
