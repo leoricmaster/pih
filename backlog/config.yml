@@ -1,0 +1,18 @@
+project_name: "产品情报中心 (PIH)"
+default_status: "To Do"
+statuses: ["To Do", "In Progress", "Done", "Archived"]
+labels: ["web", "cli", "cross-cutting"]
+types: ["epic", "feature", "story", "chore", "bug"]
+priorities: ["low", "medium", "high"]
+date_format: yyyy-mm-dd
+max_column_width: 20
+auto_open_browser: false
+default_port: 6420
+remote_operations: false
+auto_commit: false
+filesystem_only: true
+zero_padded_ids: 1
+bypass_git_hooks: false
+check_active_branches: false
+active_branch_days: 30
+task_prefix: "task"

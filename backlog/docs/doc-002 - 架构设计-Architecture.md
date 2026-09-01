@@ -1,7 +1,14 @@
+---
+id: doc-002
+title: 架构设计 (Architecture)
+type: specification
+created_date: '2026-09-01 08:38'
+updated_date: '2026-09-01 11:11'
+---
 # 产品情报中心（Product Intelligence Hub）架构设计
 
-- 版本：V0.12（ADR 拆分至 docs/adr/）
-- 配套：《Project Charter.md》V2.0、《Backlog.md》V3.0
+- 版本：V0.12（ADR 拆分至 backlog/decisions/）
+- 配套：doc-001 立项文档 V2.0、需求树 backlog/tasks（Backlog.md 工具）
 - 用途：指导 Backlog 梳理与模块设计；关键决策记录见 §10 索引
 
 ## 1. 概览
@@ -150,7 +157,7 @@ flowchart TB
 | 报告服务 | 周/月报生成 | 模板由领域包提供 |
 | 推送服务 | 站内通知 + 即时/定期推送 | 站内信为内建第一渠道（Web 未读 / 已读 / 历史），企业微信 / 邮件可配置扩展 |
 | 领域包 | YAML + schema 校验 + Git 版本化 | 加载器、校验器 |
-| 核实操作 | 人工确认/证伪（终态跃迁），写日志 | Web 核实页（Backlog S1.3.2 验收面），CLI 并存 |
+| 核实操作 | 人工确认/证伪（终态跃迁），写日志 | Web 核实页（Backlog TASK-2.02.02 验收面），CLI 并存 |
 | 人工录入网关 | 文本/文件/语音统一入口（与自动采集同一流水线，仅入口不同；Agent 贡献者回写复用此入口，见 ADR-006） | `ingest(manual) → RawItem`（仅定义接口） |
 
 ## 5. 核心数据流
@@ -273,7 +280,7 @@ erDiagram
     INTEL_ITEM ||--o{ FEEDBACK : "人类反馈"
 ```
 
-- **PostgreSQL** 为单一事实源：`intel_item`、`entity`、`source`、`event`、`verification_log`、`domain_pack`、`competitor_profile`、`feature_matrix`、`param_matrix`、`feedback`、`hypothesis`（假设一等实体：陈述 + 匹配键 + 状态机 + 人工终态；终态即**结论**——判断层知识资产，含依据、证据链与结论时间，可检索引用、可作新假设证据，不回写 `intel_item`（事实/判断两层分治）；假设与情报多对多挂证据，匹配键复用事件聚类；Backlog F1.6）；
+- **PostgreSQL** 为单一事实源：`intel_item`、`entity`、`source`、`event`、`verification_log`、`domain_pack`、`competitor_profile`、`feature_matrix`、`param_matrix`、`feedback`、`hypothesis`（假设一等实体：陈述 + 匹配键 + 状态机 + 人工终态；终态即**结论**——判断层知识资产，含依据、证据链与结论时间，可检索引用、可作新假设证据，不回写 `intel_item`（事实/判断两层分治）；假设与情报多对多挂证据，匹配键复用事件聚类；Backlog TASK-3）；
 - **落地状态**（单基线迁移 `0001_initial`，迁移链已 squash 为一基线）：`source` / `event` / `intel_item` / `verification_log` / `feedback` 五表同基线建毕。`intel_item` 含全部结构化与治理列——主体 / 事件类型 / 事实 / 推断 / 标签（JSONB+GIN，containment 筛选可用）/ 量化参数 / Admiralty / 处理状态机 / 处理元数据，`content_sha1` UNIQUE 幂等约束 + `source_id` FK（ADR-007），`event_id` FK ON DELETE SET NULL。`event` + `verification_log` 承载核实状态机：自动跃迁 pending→single_source + 人工终态 confirm/refute，全程写日志。`feedback` 表（`intel_id` FK ON DELETE CASCADE，feedback_type 四类 + fact_index 事实项级标注）——错误样本积累驱动 process 层 prompt / 粗筛迭代。`entity` / `competitor_profile` / `feature_matrix` / `param_matrix` 待后续方向（竞品资产）；
 - **pgvector** 承载情报摘要向量 + **PG 中文全文检索**（zhparser 或 pg_jieba）承担 BM25 侧——混合检索在单库内闭环（初期规模 < 10 万条，无需独立向量库）；
 - **MinIO** 存原文快照与附件，`intel_item.snapshot_id` 关联；

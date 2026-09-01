@@ -1,8 +1,15 @@
+---
+id: doc-001
+title: 产品情报中心立项文档 (Charter)
+type: specification
+created_date: '2026-09-01 08:38'
+updated_date: '2026-09-01 11:11'
+---
 # 产品情报中心（Product Intelligence Hub）立项文档
 
 - 版本：V2.0（由《Product Requirements.md》V1.1 精简重立为立项文档，功能口径移交 Backlog）
 - 状态：已评审基线（实施进度由代码与测试反映，口径变更走版本号）
-- 文档体系：本文档回答"为什么做与做什么"——需求细节见《Backlog.md》（需求树），技术方案见《Architecture.md》（含 ADR）
+- 文档体系：本文档回答"为什么做与做什么"——需求细节见需求树 backlog/tasks（Backlog.md 工具），技术方案见 doc-002 架构（ADR 见 decisions）
 
 ---
 
