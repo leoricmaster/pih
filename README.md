@@ -2,7 +2,7 @@
 
 > 一条"采集 → 核实 → 结构化 → 存储 → 消费"的情报流水线，核心域模型行业无关，行业知识以领域包（Domain Pack，repo 内 YAML 配置）注入。
 
-- 需求：`docs/Product Requirements.md`（V1.1）
+- 需求：`docs/Project Charter.md`（V2.0，立项文档）
 - 架构：`docs/Architecture.md`（V0.12）
 - Backlog：`docs/Backlog.md`（V3.0）
 - ADR：`docs/adr/`

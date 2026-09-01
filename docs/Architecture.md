@@ -1,7 +1,7 @@
 # 产品情报中心（Product Intelligence Hub）架构设计
 
 - 版本：V0.12（ADR 拆分至 docs/adr/）
-- 配套：《Product Requirements.md》V1.1、《Backlog.md》V3.0
+- 配套：《Project Charter.md》V2.0、《Backlog.md》V3.0
 - 用途：指导 Backlog 梳理与模块设计；关键决策记录见 §10 索引
 
 ## 1. 概览
@@ -79,6 +79,8 @@ flowchart TB
 > **落地现状**：docker-compose 实际运行为 postgres / minio / app（CLI 运维容器）/ web（uvicorn）四服务；changedetection.io 未部署（上图属目标态）。
 >
 > **实测**：`pgvector/pgvector:pg16` 镜像 `CREATE EXTENSION vector` 验证通过；中文分词扩展（zhparser/pg_jieba）不含于该镜像，推迟到全文检索阶段单独验证镜像选型（仅验 pgvector 本体可用，与 §7 规模无矛盾）。MinIO bucket 可建、app 容器可 `import pih` 并端到端加载领域包。
+
+> **信源摸底实测**（8 类信源摸底 + 25 样本实抓，2026-08）：实抓 5/5 可抓、零反爬触发；已知拦截集中于 3 类——路面机械网（百度 WAF，真人复核通过前不采集）、CNIPA 专利检索本体（瑞数反爬，改道官方数据产品）、千里马（频控，≥60s 间隔可控，法务确认前不启用）。领域包 `construction_machinery` 内 9 源即此清单落盘。LLM 抽取质量实测（MiniMax-M3 25 样本 3 轮）：枚举命中率 52–56%，字段级严格相等准确率仅 25–31%，瓶颈在自由文本字段（事实描述/推断）措辞改写即判错——生产评分应改语义相似度或子串包含，提示词需 few-shot 锚定金答案风格（评分细则见 §9 实测）。
 
 
 ## 4. 逻辑架构
@@ -271,12 +273,12 @@ erDiagram
     INTEL_ITEM ||--o{ FEEDBACK : "人类反馈"
 ```
 
-- **PostgreSQL** 为单一事实源：`intel_item`、`entity`、`source`、`event`、`verification_log`、`domain_pack`、`competitor_profile`、`feature_matrix`、`param_matrix`、`feedback`；
+- **PostgreSQL** 为单一事实源：`intel_item`、`entity`、`source`、`event`、`verification_log`、`domain_pack`、`competitor_profile`、`feature_matrix`、`param_matrix`、`feedback`、`hypothesis`（假设一等实体：陈述 + 匹配键 + 状态机 + 人工终态；终态即**结论**——判断层知识资产，含依据、证据链与结论时间，可检索引用、可作新假设证据，不回写 `intel_item`（事实/判断两层分治）；假设与情报多对多挂证据，匹配键复用事件聚类；Backlog F1.6）；
 - **落地状态**（单基线迁移 `0001_initial`，迁移链已 squash 为一基线）：`source` / `event` / `intel_item` / `verification_log` / `feedback` 五表同基线建毕。`intel_item` 含全部结构化与治理列——主体 / 事件类型 / 事实 / 推断 / 标签（JSONB+GIN，containment 筛选可用）/ 量化参数 / Admiralty / 处理状态机 / 处理元数据，`content_sha1` UNIQUE 幂等约束 + `source_id` FK（ADR-007），`event_id` FK ON DELETE SET NULL。`event` + `verification_log` 承载核实状态机：自动跃迁 pending→single_source + 人工终态 confirm/refute，全程写日志。`feedback` 表（`intel_id` FK ON DELETE CASCADE，feedback_type 四类 + fact_index 事实项级标注）——错误样本积累驱动 process 层 prompt / 粗筛迭代。`entity` / `competitor_profile` / `feature_matrix` / `param_matrix` 待后续方向（竞品资产）；
 - **pgvector** 承载情报摘要向量 + **PG 中文全文检索**（zhparser 或 pg_jieba）承担 BM25 侧——混合检索在单库内闭环（初期规模 < 10 万条，无需独立向量库）；
 - **MinIO** 存原文快照与附件，`intel_item.snapshot_id` 关联；
 - 事件（`event`）与情报（`intel_item`）一对多：交叉印证的载体，核实状态挂事件层、来源各挂各的；
-- `verification_log` 同时是未来信源画像的数据底座（需求文档 §4.1）；
+- `verification_log` 同时是未来信源画像的数据底座（Backlog 未来简表·信源画像页）；
 - `inbox` 与 `dead_letter` 为流水线可靠性表（§8，规划中——现以 `intel_item.process_status`/`process_error` 行级状态承载同等语义）；
 - `domain_pack` 表仅存加载快照与校验结果，事实源是 repo 内 YAML（§6.3，规划中——当前加载即校验，无落库快照）。
 
