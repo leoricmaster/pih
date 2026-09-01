@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIH 原型 · 信息架构</title>
+<style>
+  :root{
+    --ink:#1f2328; --muted:#6b7280; --line:#cbd5e1; --fill:#f8fafc; --fill2:#f1f5f9;
+    --accent:#0f766e; --warn:#b45309; --ok:#15803d; --dim:#e2e8f0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--ink);background:#fff}
+  /* layout */
+  .app{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+  .sidebar{background:var(--fill2);border-right:1px solid var(--line);padding:14px 0}
+  .brand{padding:0 16px 12px;border-bottom:1px solid var(--line);margin-bottom:8px}
+  .brand b{font-size:14px}
+  .brand small{color:var(--muted);display:block;margin-top:2px}
+  .navgroup{padding:8px 0}
+  .navgroup>label{display:block;padding:4px 16px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .navlink{display:block;padding:6px 16px;color:var(--ink);cursor:pointer;border-left:3px solid transparent;text-decoration:none}
+  .navlink:hover{background:#e2e8f0}
+  .navlink.active{border-left-color:var(--accent);background:#fff;font-weight:600}
+  .navlink .badge{float:right;background:var(--warn);color:#fff;border-radius:9px;padding:0 6px;font-size:10px;line-height:15px}
+  /* topbar */
+  .topbar{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--fill)}
+  .topbar .back{cursor:pointer;color:var(--accent)}
+  .topbar .crumb{color:var(--muted)}
+  .topbar .spacer{flex:1}
+  .acct{display:flex;align-items:center;gap:14px}
+  .acct .chip{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:2px 10px;background:#fff}
+  .bell{position:relative;cursor:pointer;font-size:17px;line-height:1}
+  .bell .dot{position:absolute;top:-3px;right:-5px;background:var(--warn);color:#fff;border-radius:99px;font-size:9px;padding:0 4px;line-height:13px;font-weight:600}
+  .notifdrop{position:absolute;top:42px;right:14px;width:340px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:50;display:none}
+  .notifdrop.open{display:block}
+  .notifdrop .h{padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:12px;display:flex;justify-content:space-between}
+  .notifdrop .n{padding:10px 14px;border-bottom:1px solid #eef2f7;cursor:pointer}
+  .notifdrop .n:hover{background:var(--fill)}
+  .notifdrop .n .ttl{font-size:12px;font-weight:600}
+  .notifdrop .n .mini{font-size:11px;color:var(--muted);margin-top:2px}
+  .notifdrop .all{display:block;padding:9px 14px;text-align:center;color:var(--accent);font-size:12px;cursor:pointer}
+  .main{padding:20px 24px}
+  .page{display:none}
+  .page.on{display:block}
+  /* wireframe primitives */
+  .wf{border:1px dashed var(--line);border-radius:6px;background:var(--fill);padding:12px}
+  .wf + .wf{margin-top:14px}
+  .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+  .ph{color:#94a3b8}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .field{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:4px;padding:4px 8px;background:#fff;font-size:12px}
+  .field .x{color:var(--muted)}
+  .btn{border:1px solid var(--line);border-radius:4px;padding:5px 11px;background:#fff;cursor:pointer;font-family:inherit;font-size:12px}
+  .btn:hover{background:var(--fill2)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.ghost{border-style:dashed}
+  .btn.warn{border-color:var(--warn);color:var(--warn)}
+  .tag{display:inline-block;border:1px solid var(--line);border-radius:3px;padding:1px 6px;font-size:11px;background:#fff}
+  .tag.ok{border-color:var(--ok);color:var(--ok)}
+  .tag.warn{border-color:var(--warn);color:var(--warn)}
+  .tag.muted{color:var(--muted)}
+  .adm{font-weight:600;border:1px solid var(--ink);padding:0 5px;border-radius:3px}
+  /* tabs */
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .tab{padding:8px 16px;cursor:pointer;border-bottom:3px solid transparent;font-size:13px;color:var(--muted)}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .tab .badge{margin-left:6px;background:var(--warn);color:#fff;border-radius:99px;font-size:10px;padding:0 6px}
+  .view{display:none}
+  .view.on{display:block}
+  /* list */
+  table.wf-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  table.wf-table th{text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--fill2)}
+  table.wf-table td{padding:8px 10px;border-bottom:1px solid #eef2f7;font-size:12px}
+  table.wf-table tr.item{cursor:pointer}
+  table.wf-table tr.item:hover{background:var(--fill)}
+  /* detail blocks */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .timeline{position:relative;padding-left:18px}
+  .timeline::before{content:"";position:absolute;left:5px;top:4px;bottom:4px;border-left:1px solid var(--line)}
+  .tl{position:relative;padding:0 0 14px}
+  .tl::before{content:"";position:absolute;left:-18px;top:3px;width:9px;height:9px;border-radius:50%;background:#fff;border:1px solid var(--line)}
+  .tl.sys::before{background:var(--muted)}
+  .tl.human::before{background:var(--accent)}
+  .tl .who{font-size:10px;color:var(--muted)}
+  .mini{font-size:11px;color:var(--muted)}
+  .seg{padding:8px 0;border-bottom:1px solid #eef2f7}
+  .seg:last-child{border-bottom:none}
+  .seg .k{color:var(--muted);font-size:11px;width:90px;display:inline-block}
+  .upload{border:2px dashed var(--line);border-radius:8px;padding:26px;text-align:center;color:var(--muted);cursor:pointer;background:var(--fill)}
+  .upload:hover{background:var(--fill2)}
+  .queue{display:flex;flex-direction:column;gap:8px}
+  .qcard{border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .qcard .ttl{font-weight:600}
+  .legend{font-size:11px;color:var(--muted);margin-top:6px}
+  .pill{border-radius:99px;padding:1px 9px;font-size:11px;border:1px solid var(--line)}
+  .pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .note{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;font-size:12px;color:#92400e;margin-bottom:14px}
+  /* dashboard */
+  .kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .kcard{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fff}
+  .kcard.dim{background:var(--fill);color:var(--muted)}
+  .kcard .klbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .kcard .kval{font-size:26px;font-weight:700;margin:6px 0 2px}
+  .kcard.dim .kval{color:#94a3b8}
+  .kcard .ksub{font-size:11px;color:var(--muted)}
+  .kcard .pending{font-size:10px;color:var(--warn);border:1px dashed var(--warn);border-radius:4px;padding:1px 6px;display:inline-block;margin-top:6px}
+  .barwrap{height:8px;background:var(--fill2);border-radius:99px;overflow:hidden;margin-top:8px}
+  .bar{height:100%;background:var(--accent);border-radius:99px}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="brand"><b>情报中心 PIH</b><small>原型 · wireframe 级</small></div>
+    <div class="navgroup" data-group="consume">
+      <label>消费区</label>
+      <a class="navlink" data-go="lib">情报库</a>
+      <a class="navlink" data-go="hypo">假设</a>
+    </div>
+    <div class="navgroup" data-group="ops">
+      <label>生产 / 治理区</label>
+      <a class="navlink" data-go="intake">录入</a>
+      <a class="navlink" data-go="source">信源</a>
+      <a class="navlink" data-go="feedback">反馈聚合</a>
+    </div>
+    <div class="navgroup">
+      <label>观察面</label>
+      <a class="navlink" data-go="dash">Dashboard</a>
+    </div>
+    <div style="padding:14px 16px;margin-top:10px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);line-height:1.7">
+      点击可走的流：<br>
+      A 日常监控 · B 录入<br>
+      C 检索 · D 假设求证<br>
+      E 信源 · F 核实 · G 反馈<br>
+      <span style="color:#94a3b8">F 已并入情报库「待处理」</span>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div>
+    <div class="topbar">
+      <span class="back" id="backBtn">‹ 返回来源</span>
+      <span class="crumb" id="crumb">情报库 / 列表</span>
+      <span class="spacer"></span>
+      <div class="acct">
+        <div class="bell" id="bell">🔔<span class="dot">2</span></div>
+        <span class="chip">运营者</span>
+      </div>
+      <!-- notification dropdown -->
+      <div class="notifdrop" id="notifdrop">
+        <div class="h"><span>通知</span><span class="mini">2 条未读</span></div>
+        <div class="n" data-go="hypodetail"><div class="ttl">📌 假设命中：三一 Q4 将发布遥控版</div><div class="mini">新证据 A1 · 09-01</div></div>
+        <div class="n" data-go="source"><div class="ttl">⚠ 信源异常：路面机械网连续失败</div><div class="mini">百度 WAF · 08-31</div></div>
+        <div class="n" data-go="lib"><div class="ttl">⏳ 核实积压：2 条超 7 天已降权</div><div class="mini">已读 · 08-30</div></div>
+        <a class="all" data-go="notif">查看全部历史 ›</a>
+      </div>
+    </div>
+    <div class="main" id="main">
+
+    <!-- ============ 情报库·列表（含 待处理 视图） ============ -->
+    <section class="page on" id="lib" data-title="情报库 / 列表">
+      <div class="note">▶ 流 C 按需检索 · 北极星落点。「全部」= 检索消费；「待处理」= 核实队列（流 F），同一列表骨架、不同默认筛选与排序。</div>
+      <div class="tabs">
+        <div class="tab active" data-tab="all">全部</div>
+        <div class="tab" data-tab="todo">待处理 <span class="badge">3</span></div>
+      </div>
+
+      <!-- 全部 视图 -->
+      <div class="view on" id="v-all">
+        <div class="wf">
+          <div class="lbl">组合筛选</div>
+          <div class="row">
+            <span class="field">主体 <span class="x">三一重工 ▾</span></span>
+            <span class="field">事件类型 <span class="x">新品发布 ▾</span></span>
+            <span class="field">时间 <span class="x">近 30 天 ▾</span></span>
+            <span class="field">标签 <span class="x">无人化 ▾</span></span>
+            <span class="field">置信度 <span class="x">≥ B ▾</span></span>
+            <button class="btn">筛选</button>
+            <button class="btn ghost">清空</button>
+            <span class="mini" style="margin-left:auto">今日新增 <b style="color:var(--accent)">12</b> · 共 86 条</span>
+          </div>
+        </div>
+        <div class="wf" style="padding:0">
+          <table class="wf-table">
+            <thead><tr><th>标题</th><th>主体</th><th>事件类型</th><th>Admiralty</th><th>事件状态</th><th>采集时间</th></tr></thead>
+            <tbody>
+              <tr class="item" data-go="detail" data-item="三一重工发布 SY215C 遥控版挖掘机"><td>三一重工发布 SY215C 遥控版挖掘机</td><td>三一重工</td><td>新品发布</td><td><span class="adm">A1</span></td><td><span class="tag ok">多源确认</span></td><td>09-01 08:12</td></tr>
+              <tr class="item" data-go="detail" data-item="徐工 XCR20 履带起重机中标某露天矿"><td>徐工 XCR20 履带起重机中标某露天矿</td><td>徐工</td><td>中标</td><td><span class="adm">B2</span></td><td><span class="tag">单源确认</span></td><td>08-31 14:30</td></tr>
+              <tr class="item" data-go="detail" data-item="中联重科申请无人化昼夜作业专利"><td>中联重科申请无人化昼夜作业专利</td><td>中联重科</td><td>专利</td><td><span class="adm">C3</span></td><td><span class="tag muted">待核实</span></td><td>08-30 10:05</td></tr>
+              <tr class="item" data-go="detail" data-item="临工集团 L968F 无人驾驶装载机下线"><td>临工集团 L968F 无人驾驶装载机下线</td><td>临工集团</td><td>新品发布</td><td><span class="adm">B3</span></td><td><span class="tag">单源确认</span></td><td>08-29 16:40</td></tr>
+              <tr class="item" data-go="detail" data-item="某源称三一将退出小型挖机市场（待核实）"><td style="color:var(--muted)">某源称三一将退出小型挖机市场</td><td>三一重工</td><td>战略动向</td><td><span class="adm">E4</span></td><td><span class="tag warn">待人工</span></td><td>08-28 09:20</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="legend">Admiralty：来源可靠性 A–F × 信息可信度 1–6（短板决定）。已证伪默认不出现。未挂事件条目排末尾。</div>
+      </div>
+
+      <!-- 待处理 视图（原核实队列） -->
+      <div class="view" id="v-todo">
+        <div class="mini" style="margin-bottom:12px">默认排序：置信度升序 + 采集时间升序（低置信、最老的优先）。终态（多源确认 / 已证伪）必须人工，自动跃迁全程写日志。</div>
+        <div class="wf"><div class="lbl">已具备升级条件（第二独立源命中）</div>
+          <div class="queue">
+            <div class="qcard"><div><div class="ttl">事件：徐工 XCR20 中标某矿</div><div class="mini">B2 · 2 源 · 采集 08-31</div></div><div class="row"><button class="btn" style="border-color:var(--ok);color:var(--ok)">确认</button><button class="btn warn">证伪</button></div></div>
+          </div>
+        </div>
+        <div class="wf"><div class="lbl">待人工（抽取失败 / 占位主体）</div>
+          <div class="queue">
+            <div class="qcard"><div><div class="ttl">某源称三一将退出小型挖机市场</div><div class="mini">E4 · 主体占位 · 待人工复核</div></div><div class="row"><button class="btn" data-go="detail">跳详情</button><button class="btn ghost">降级</button></div></div>
+          </div>
+        </div>
+        <div class="wf"><div class="lbl">低置信度情报</div>
+          <div class="queue">
+            <div class="qcard"><div><div class="ttl">行业媒体援引内部消息</div><div class="mini">C3 · 单源 · 08-25</div></div><button class="btn" data-go="detail">查看</button></div>
+          </div>
+          <div class="legend" style="color:var(--warn)">⚠ 积压提醒：2 条待核实超 7 天，已降权</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 情报库·详情（聚合面） ============ -->
+    <section class="page" id="detail" data-title="情报库 / 详情">
+      <div class="note">▶ 聚合面：三条入口（列表 / 待处理队列 / 假设证据链）汇入此页。随 Feature 加深：原文入口 → 结构化分区 → 事件历史 → 反馈区。</div>
+      <h2 style="margin:0 0 4px" id="detailTitle">三一重工发布 SY215C 遥控版挖掘机</h2>
+      <div class="mini" style="margin-bottom:14px">来源：慧聪工程机械（A 级）· 采集 09-01 08:12 · <span class="adm">A1</span> · 事件状态 <span class="tag ok">多源确认</span></div>
+      <div class="grid2">
+        <div>
+          <div class="wf"><div class="lbl">原文入口（可回溯 · F1.1）</div>
+            <div class="row" style="margin-bottom:8px"><button class="btn primary">查看原文快照</button><button class="btn">原始链接 ↗</button></div>
+            <div class="ph" style="border:1px solid var(--line);border-radius:4px;padding:10px;background:#fff;font-size:12px;line-height:1.6">
+              近日，三一重工正式推出 SY215C 遥控版液压挖掘机，配备远程操控系统……<span class="ph">[快照正文]</span>
+            </div>
+          </div>
+          <div class="wf"><div class="lbl">结构化分区（F1.2）</div>
+            <div class="seg"><span class="k">主体</span>三一重工</div>
+            <div class="seg"><span class="k">事件类型</span>新品发布</div>
+            <div class="seg"><span class="k">事实</span>推出 SY215C 遥控版，配远程操控系统</div>
+            <div class="seg"><span class="k">推断</span>布局无人化作业 <span class="tag muted" style="margin-left:6px">依据：配遥控系统</span></div>
+            <div class="seg"><span class="k">标签</span><span class="tag">无人化</span> <span class="tag">遥控</span> <span class="tag">挖掘机</span></div>
+            <div class="seg"><span class="k">量化参数</span>机型 SY215C · 吨位 21.5t</div>
+            <div class="seg"><span class="k">Admiralty</span><span class="adm">A1</span> 来源可靠性 A × 可信度 1</div>
+          </div>
+        </div>
+        <div>
+          <div class="wf"><div class="lbl">事件核实历史（F1.3 · 时间线）</div>
+            <div class="timeline">
+              <div class="tl sys"><span class="who">system · 08-28</span><br>新事件创建，状态=待核实</div>
+              <div class="tl sys"><span class="who">system · 08-30</span><br>第二独立信源命中 → 单源确认（自动）</div>
+              <div class="tl human"><span class="who">运营者 · 09-01</span><br>确认 → 多源确认（终态人工）</div>
+            </div>
+            <button class="btn" style="margin-top:6px">查看完整跃迁日志</button>
+          </div>
+          <div class="wf"><div class="lbl">反馈动作（F1.4 · 人机闭环）</div>
+            <div class="row">
+              <button class="btn warn" data-go="feedback">主体错了</button>
+              <button class="btn warn" data-go="feedback">事件类型错</button>
+              <button class="btn warn" data-go="feedback">事实不准</button>
+              <button class="btn warn" data-go="feedback">不该入库</button>
+            </div>
+            <div class="legend">反馈写入 feedback 表 → 聚合驱动 prompt / 粗筛迭代</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 假设·列表 ============ -->
+    <section class="page" id="hypo" data-title="假设 / 列表">
+      <div class="note">▶ 流 D 假设求证 · 判断层。登记 → 系统持续匹配证据 → 命中提醒 → 人工结论。状态：待求证 / 已证实 / 已证伪 / 已失效。</div>
+      <div class="row" style="margin-bottom:14px"><button class="btn primary" data-go="hypodetail">+ 登记新假设</button></div>
+      <div class="wf"><div class="lbl">待求证（活跃）</div>
+        <div class="qcard" data-go="hypodetail" style="cursor:pointer"><div><div class="ttl">三一 Q4 将发布遥控版</div><div class="mini">证据 4 条 · 最近命中 09-01 · 窗口至 2026-12-31</div></div><span class="pill active">待求证</span></div>
+        <div class="qcard" data-go="hypodetail" style="cursor:pointer"><div><div class="ttl">露天煤矿挖机师傅难招募</div><div class="mini">证据 2 条 · 最近命中 08-29 · 窗口至 2026-10-15</div></div><span class="pill active">待求证</span></div>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="wf"><div class="lbl">已证实</div><div class="qcard"><div><div class="ttl">徐工加大无人装载机投入</div><div class="mini">证实 08-20 · 证据 6 条</div></div><span class="tag ok">已证实</span></div></div>
+        <div class="wf"><div class="lbl">已证伪 / 已失效</div><div class="qcard"><div><div class="ttl">临工将退出装载机海外市场</div><div class="mini">证伪 08-15 · 依据留痕</div></div><span class="tag muted">已证伪</span></div></div>
+      </div>
+    </section>
+
+    <!-- ============ 假设·详情 ============ -->
+    <section class="page" id="hypodetail" data-title="假设 / 详情">
+      <div class="note">▶ 流 D 终点：证据链 + 结论。结论是判断层资产，可检索引用、可作新假设证据，不回写情报表。超时未决自动失效。</div>
+      <h2 style="margin:0 0 4px">三一 Q4 将发布遥控版</h2>
+      <div class="mini" style="margin-bottom:14px">状态 <span class="pill active">待求证</span> · 窗口至 2026-12-31 · 证据 4 条</div>
+      <div class="wf"><div class="lbl">假设陈述（登记时 LLM 预填，人工确认）</div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:4px;padding:10px;font-size:12px">三一重工将于 Q4 发布遥控版挖掘机</div>
+        <div class="row" style="margin-top:8px"><span class="field">主体 三一重工</span><span class="field">事件类型 新品发布</span><span class="field">时间窗 Q4</span><span class="field">关键词 遥控/无人</span></div>
+      </div>
+      <div class="wf"><div class="lbl">证据链（命中自动挂 · 登记即回扫存量 · 点击跳详情）</div>
+        <div class="seg" data-go="detail" style="cursor:pointer"><span class="k">09-01 A1</span>三一重工发布 SY215C 遥控版挖掘机 <span class="mini">→</span></div>
+        <div class="seg" data-go="detail" style="cursor:pointer"><span class="k">08-30 B2</span>三一官网更新遥控产品页 <span class="mini">→</span></div>
+        <div class="seg" data-go="detail" style="cursor:pointer"><span class="k">08-25 C3</span>行业媒体援引内部消息 <span class="mini">→</span></div>
+        <div class="seg" data-go="detail" style="cursor:pointer"><span class="k">08-20 B3</span>三一招聘遥控系统工程师 <span class="mini">→</span></div>
+      </div>
+      <div class="wf"><div class="lbl">结论操作（人工终态 · 必填依据）</div>
+        <div class="row">
+          <button class="btn" style="border-color:var(--ok);color:var(--ok)">证实</button>
+          <button class="btn warn">证伪</button>
+          <span class="mini">· 超时未决自动转"已失效"，不删除可复盘</span>
+        </div>
+        <div class="legend">结论反哺：关键词进周报复盘节 → 驱动监控调整建议（提示人，不自动改配置）</div>
+      </div>
+    </section>
+
+    <!-- ============ 录入 ============ -->
+    <section class="page" id="intake" data-title="录入">
+      <div class="note">▶ 流 B 情报录入。文本/文件/录音统一入口，≤30s 结构化入库，走与互联网情报同一处理链（同质量闭环，无差异对待）。</div>
+      <div class="wf"><div class="lbl">丢入素材</div>
+        <div class="upload">📎 拖入 文本 / 图片 / 录音，或点击选择<br><span class="mini">参展见闻、访谈录音、会议纪要均可</span></div>
+      </div>
+      <div class="wf"><div class="lbl">或粘贴文本</div>
+        <div class="ph" style="background:#fff;border:1px solid var(--line);border-radius:4px;padding:10px;min-height:70px">粘贴纪要正文……</div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn primary">提交入库</button><span class="mini">来源类型=人工 · 可靠性默认 A/B · 仍需事实核查</span></div>
+      <div class="legend">提交后条目出现在情报库列表，走 结构化→聚类→核实 同一链路。</div>
+    </section>
+
+    <!-- ============ 信源 ============ -->
+    <section class="page" id="source" data-title="信源">
+      <div class="note">▶ 流 E 信源管理。配置编辑在仓内 YAML+Git（版本留痕）；Web 只承载可视、试抓、健康。</div>
+      <div class="wf" style="padding:0">
+        <table class="wf-table">
+          <thead><tr><th>名称</th><th>类型</th><th>层级</th><th>频率</th><th>健康</th><th>启用</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>慧聪工程机械</td><td>RSS</td><td>A</td><td>每日</td><td><span class="tag ok">正常</span></td><td><span class="tag ok">on</span></td><td><button class="btn">试抓</button></td></tr>
+            <tr><td>路面机械网</td><td>网页</td><td>B</td><td>每日</td><td><span class="tag warn">异常</span></td><td><span class="tag muted">off</span></td><td><button class="btn">试抓</button></td></tr>
+            <tr><td>RSSHub-企业新闻</td><td>RSS</td><td>B</td><td>每日</td><td><span class="tag ok">正常</span></td><td><span class="tag ok">on</span></td><td><button class="btn">试抓</button></td></tr>
+            <tr><td>千里马招标</td><td>网页</td><td>C</td><td>≥60s</td><td><span class="tag warn">频控</span></td><td><span class="tag muted">off</span></td><td><button class="btn">试抓</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="wf"><div class="lbl">试抓报告 · 路面机械网</div>
+        <div class="seg"><span class="k">robots</span><span class="tag warn">拦截（百度 WAF）</span></div>
+        <div class="seg"><span class="k">列表页</span><span class="tag warn">失败</span></div>
+        <div class="seg"><span class="k">详情</span><span class="tag muted">未达</span></div>
+        <div class="seg"><span class="k">快照</span><span class="tag muted">未达</span></div>
+        <div class="legend">试抓通过才 enabled=true（YAML 变更留痕）。连续 3 次失败 → 站内信告警（不影响他源）。</div>
+      </div>
+    </section>
+
+    <!-- ============ 反馈聚合 ============ -->
+    <section class="page" id="feedback" data-title="反馈聚合">
+      <div class="note">▶ 流 G 反馈迭代。高频高亮 → 导出 JSONL few-shot → 驱动 prompt / 粗筛迭代。</div>
+      <div class="wf" style="padding:0">
+        <table class="wf-table">
+          <thead><tr><th>信源</th><th>反馈类型</th><th>占比</th><th>建议</th></tr></thead>
+          <tbody>
+            <tr style="background:#fffbeb"><td>路面机械网</td><td>主体错了</td><td style="color:var(--warn);font-weight:600">34%</td><td>迭代该源抽取 prompt</td></tr>
+            <tr style="background:#fffbeb"><td>慧聪工程机械</td><td>事实不准</td><td style="color:var(--warn);font-weight:600">28%</td><td>few-shot 锚定金答案风格</td></tr>
+            <tr><td>RSSHub-企业新闻</td><td>不该入库</td><td>12%</td><td>收紧粗筛阈值</td></tr>
+            <tr><td>千里马招标</td><td>事件类型错</td><td>8%</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn primary">导出 JSONL few-shot</button><span class="mini">→ 喂入处理层 prompt 迭代</span></div>
+      <div class="legend">"不该入库"与粗筛漏放（列表处理状态筛选）互补，构成漏报审计。</div>
+    </section>
+
+    <!-- ============ Dashboard ============ -->
+    <section class="page" id="dash" data-title="Dashboard / 观察面">
+      <div class="note">▶ 观察面：北极星指标与系统健康常驻可见。指标随采集能力渐进填充——已能算的亮起，依赖埋点的标灰，不提前造空壳数据。</div>
+      <div class="kgrid">
+        <div class="kcard dim">
+          <div class="klbl">北极星 · 周均检索次数</div>
+          <div class="kval">—</div>
+          <div class="ksub">Web + API 合计</div>
+          <span class="pending">待检索埋点就位</span>
+        </div>
+        <div class="kcard">
+          <div class="klbl">入库情报</div>
+          <div class="kval">86</div>
+          <div class="ksub">门槛 60 · 已达 ✓</div>
+        </div>
+        <div class="kcard">
+          <div class="klbl">待处理积压</div>
+          <div class="kval">3</div>
+          <div class="ksub">2 条超 7 天已降权</div>
+        </div>
+      </div>
+      <div class="kgrid" style="margin-top:14px">
+        <div class="kcard">
+          <div class="klbl">采集成功率（近 7 天）</div>
+          <div class="kval">94%</div>
+          <div class="barwrap"><div class="bar" style="width:94%"></div></div>
+          <div class="ksub">失败集中于路面机械网（WAF）</div>
+        </div>
+        <div class="kcard">
+          <div class="klbl">粗筛通过率</div>
+          <div class="kval">92%</div>
+          <div class="barwrap"><div class="bar" style="width:92%"></div></div>
+          <div class="ksub">2 条假阴性（锂矿/期货口径偏窄）</div>
+        </div>
+        <div class="kcard">
+          <div class="klbl">无人值守连续运行</div>
+          <div class="kval">4 周</div>
+          <div class="ksub">中断 ≤1 次 · 门槛达成 ✓</div>
+        </div>
+      </div>
+      <div class="kgrid" style="margin-top:14px">
+        <div class="kcard">
+          <div class="klbl">活跃假设</div>
+          <div class="kval">2</div>
+          <div class="ksub">本周新增命中 3 条</div>
+        </div>
+        <div class="kcard dim">
+          <div class="klbl">快照可溯率</div>
+          <div class="kval">—</div>
+          <span class="pending">待抽样校验</span>
+        </div>
+        <div class="kcard">
+          <div class="klbl">反馈高频项</div>
+          <div class="kval">2</div>
+          <div class="ksub">主体错 34% · 事实不准 28%</div>
+        </div>
+      </div>
+      <div class="legend" style="margin-top:14px">数值为示意（Charter §7 验收门槛口径）。检索埋点（北极星）随 F1.2 列表落地；快照可溯率随采集量积累抽样校验。初期数据小，部分卡片留空是预期状态，不为凑满提前采集。</div>
+    </section>
+
+    <!-- ============ 站内信历史（轻量页 · 仅铃铛「查看全部」可达） ============ -->
+    <section class="page" id="notif" data-title="站内信 / 历史">
+      <div class="note">▶ 通知历史页：从主导航移除，仅经右上角铃铛「查看全部」可达。满足 S1.5.2 AC2 历史可查。</div>
+      <div class="wf"><div class="lbl">未读</div>
+        <div class="qcard" data-go="hypodetail" style="cursor:pointer"><div><div class="ttl">📌 假设命中：三一 Q4 将发布遥控版</div><div class="mini">新证据 A1 · 09-01</div></div><span class="tag warn">未读</span></div>
+        <div class="qcard" data-go="source" style="cursor:pointer"><div><div class="ttl">⚠ 信源异常：路面机械网连续失败</div><div class="mini">百度 WAF · 08-31</div></div><span class="tag warn">未读</span></div>
+      </div>
+      <div class="wf"><div class="lbl">历史</div>
+        <div class="qcard"><div><div class="ttl">⏳ 核实积压提醒（2 条超 7 天）</div><div class="mini">已读 · 08-30</div></div><span class="tag muted">已读</span></div>
+        <div class="qcard"><div><div class="ttl">📌 假设命中：露天煤矿挖机师傅难招募</div><div class="mini">已读 · 08-29</div></div><span class="tag muted">已读</span></div>
+      </div>
+      <div class="legend">企业微信 / 邮件为可配置扩展渠道（未来简表），当前内建第一渠道=站内信。</div>
+    </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const crumbs = {
+    lib:'情报库 / 列表', detail:'情报库 / 详情', hypo:'假设 / 列表', hypodetail:'假设 / 详情',
+    intake:'录入', source:'信源', feedback:'反馈聚合', dash:'Dashboard / 观察面', notif:'站内信 / 历史'
+  };
+  let stack = [];
+  function go(id, fromNav){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+    const pg = document.getElementById(id); if(!pg) return;
+    pg.classList.add('on');
+    document.querySelectorAll('.navlink').forEach(n=>n.classList.toggle('active', n.dataset.go===id));
+    document.getElementById('crumb').textContent = crumbs[id]||'';
+    if(!fromNav && stack[stack.length-1]!==id) stack.push(id);
+    if(fromNav) stack=[id];
+    document.getElementById('backBtn').style.visibility = stack.length>1 ? 'visible':'hidden';
+    document.getElementById('notifdrop').classList.remove('open');
+    window.scrollTo(0,0);
+  }
+  document.addEventListener('click',e=>{
+    const t=e.target.closest('[data-go]');
+    if(t){
+      if(t.dataset.item) document.getElementById('detailTitle').textContent=t.dataset.item;
+      if(t.closest('#notifdrop')){ document.getElementById('notifdrop').classList.remove('open'); }
+      go(t.dataset.go, false);
+      return;
+    }
+    // tab clicks
+    const tab=e.target.closest('.tab');
+    if(tab){
+      const pg=tab.closest('.page');
+      pg.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab));
+      pg.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+tab.dataset.tab));
+    }
+  });
+  document.querySelectorAll('.navlink').forEach(n=>n.addEventListener('click',()=>go(n.dataset.go,true)));
+  document.getElementById('backBtn').addEventListener('click',()=>{
+    if(stack.length>1){ stack.pop(); go(stack[stack.length-1], true); }
+  });
+  // bell dropdown
+  document.getElementById('bell').addEventListener('click',e=>{
+    e.stopPropagation();
+    document.getElementById('notifdrop').classList.toggle('open');
+  });
+  document.addEventListener('click',()=>document.getElementById('notifdrop').classList.remove('open'));
+  go('lib',true);
+</script>
+</body>
+</html>
