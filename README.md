@@ -2,9 +2,9 @@
 
 > 一条"采集 → 核实 → 结构化 → 存储 → 消费"的情报流水线，核心域模型行业无关，行业知识以领域包（Domain Pack，repo 内 YAML 配置）注入。
 
-- 需求：`docs/Product Requirements.md`（V1.0）
-- 架构：`docs/Architecture.md`（V0.11）
-- Backlog：`docs/Backlog.md`（V1.7）
+- 需求：`docs/Product Requirements.md`（V1.1）
+- 架构：`docs/Architecture.md`（V0.12）
+- Backlog：`docs/Backlog.md`（V3.0）
 - ADR：`docs/adr/`
 
 ## 仓库布局
@@ -26,7 +26,7 @@
 | `domainpacks/` | 横切·配置治理 | ✅ 加载器+校验器+schema |
 | `collect/` | 采集层 | ✅ 适配器+RawItem+快照+robots（CCMA/三一/cehome 三源）＋ probe/collect CLI 与 enabled 门控 |
 | `process/` | 处理层（LangGraph） | ✅ LLM 客户端+粗筛→抽取→校验三节点图+ProcessRunner+process CLI（领域包 v0.2.0 枚举单一事实源）；事件聚类（EventService） |
-| `store/` | 存储层 | ✅ PG 落库 + alembic 迁移 + IntelRepository + query CLI（source/intel_item 两表）；event/verification_log 两表（EventRepository） |
+| `store/` | 存储层 | ✅ PG 落库 + alembic 单基线迁移 + IntelRepository + query CLI（source/event/intel_item/verification_log/feedback 五表）；EventRepository + FeedbackRepository |
 | `consume/` | 消费层 | ✅ FastAPI Web + JSON API 同源 + Jinja2 列表/详情 + Bearer token 鉴权（ADR-006）；process_status 筛选 + 反馈闭环（表单/聚合视图/JSONL 导出）；事件核实状态字段与筛选 |
 
 ## 工程化启动
@@ -137,11 +137,11 @@ curl http://127.0.0.1:8000/api/healthz          # 健康检查（不鉴权）
 
 后验质量门 + 消费页人类反馈，拦住低质条目增量、积累错误样本驱动 prompt 迭代：
 
-- **后验质量门（S4.2.3）**：`pih process` 时主体抽成占位值（未知/无/不详/unknown）
+- **后验质量门（S1.2.1 AC3）**：`pih process` 时主体抽成占位值（未知/无/不详/unknown）
   → `process_status=needs_manual`（结构化字段保留供复核），不再混入 extracted；
 - **复核队列**：列表页/API 按 `?process_status=needs_manual` 筛出待复核条目
   （Web 下拉或 API 参数，同源）；
-- **反馈（S3.1.3）**：详情页反馈区四动作——主体错了（datalist 主体清单可选）、
+- **反馈（S1.4.1）**：详情页反馈区四动作——主体错了（datalist 主体清单可选）、
   事件类型错、事实不准（标注到第几条事实）、不该入库；提交即写 `feedback` 表；
 - **聚合视图**：`/feedback` 按信源×类型计数，主体错误率 >30% 高亮提示迭代；
   `/feedback/export` 导出 JSONL 作 prompt 迭代 few-shot 素材。

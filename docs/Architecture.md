@@ -1,7 +1,7 @@
 # 产品情报中心（Product Intelligence Hub）架构设计
 
-- 版本：V0.11（ADR 拆分至 docs/adr/）
-- 配套：《Product Requirements.md》V1.0、《Backlog.md》V1.7
+- 版本：V0.12（ADR 拆分至 docs/adr/）
+- 配套：《Product Requirements.md》V1.1、《Backlog.md》V3.0
 - 用途：指导 Backlog 梳理与模块设计；关键决策记录见 §10 索引
 
 ## 1. 概览
@@ -78,7 +78,7 @@ flowchart TB
 
 > **落地现状**：docker-compose 实际运行为 postgres / minio / app（CLI 运维容器）/ web（uvicorn）四服务；changedetection.io 未部署（上图属目标态）。
 >
-> **实测**：`pgvector/pgvector:pg16` 镜像 `CREATE EXTENSION vector` 验证通过；中文分词扩展（zhparser/pg_jieba）不含于该镜像，推迟到全文检索阶段单独验证镜像选型（本次仅验 pgvector 本体可用，与 §7 规模无矛盾）。MinIO bucket 可建、app 容器可 `import pih` 并端到端加载领域包。
+> **实测**：`pgvector/pgvector:pg16` 镜像 `CREATE EXTENSION vector` 验证通过；中文分词扩展（zhparser/pg_jieba）不含于该镜像，推迟到全文检索阶段单独验证镜像选型（仅验 pgvector 本体可用，与 §7 规模无矛盾）。MinIO bucket 可建、app 容器可 `import pih` 并端到端加载领域包。
 
 
 ## 4. 逻辑架构
@@ -146,9 +146,9 @@ flowchart TB
 | 查询服务（Web + API） | 筛选列表 + 情报详情（含事件状态与核实历史），页面与 JSON API 同源 | FastAPI：服务端模板 + REST（ADR-006） |
 | RAG 问答服务 | 混合检索问答，答案强制带引用 | `ask(query) → answer + citations[]`（ADR-005） |
 | 报告服务 | 周/月报生成 | 模板由领域包提供 |
-| 推送服务 | 即时/定期推送 | 渠道可配置 |
+| 推送服务 | 站内通知 + 即时/定期推送 | 站内信为内建第一渠道（Web 未读 / 已读 / 历史），企业微信 / 邮件可配置扩展 |
 | 领域包 | YAML + schema 校验 + Git 版本化 | 加载器、校验器 |
-| 核实操作 | 人工确认/证伪（终态跃迁），写日志 | CLI，Web 化为后续方向 |
+| 核实操作 | 人工确认/证伪（终态跃迁），写日志 | Web 核实页（Backlog S1.3.2 验收面），CLI 并存 |
 | 人工录入网关 | 文本/文件/语音统一入口（与自动采集同一流水线，仅入口不同；Agent 贡献者回写复用此入口，见 ADR-006） | `ingest(manual) → RawItem`（仅定义接口） |
 
 ## 5. 核心数据流
@@ -186,7 +186,7 @@ sequenceDiagram
 
 主链一条：调度器按信源频率触发采集，原始内容先落盘 inbox、原文快照存档 MinIO，经去重与粗筛后进入 LangGraph 处理链（结构化抽取 → 预评级 → 事件聚类）写入情报库，终态核实（确认/证伪）由人工操作完成并写 verification_log。
 
-> 端到端验证范围说明：验证覆盖主链的**粗筛 → 结构化抽取 → schema 校验**三段子集；去重、预评级、事件聚类、终态人工核实四段留待实施期。三段子集端到端成功率 92%（23/25），ADR-004 维持。
+> 端到端验证范围说明：25 样本端到端验证覆盖主链的**粗筛 → 结构化抽取 → schema 校验**三段子集，成功率 92%（23/25），ADR-004 维持。去重、预评级、事件聚类、终态人工核实已随后续落地（见 §7 落地状态）。
 
 （后续迭代）重大事件即时推送 + 汇入周报
 
@@ -272,7 +272,7 @@ erDiagram
 ```
 
 - **PostgreSQL** 为单一事实源：`intel_item`、`entity`、`source`、`event`、`verification_log`、`domain_pack`、`competitor_profile`、`feature_matrix`、`param_matrix`、`feedback`；
-- **落地状态**：`source` + `intel_item` 两表（含 `content_sha1` UNIQUE 幂等约束与 `source_id` FK，ADR-007）；`intel_item` 11 结构化列（主体/事件类型/事实/推断/标签 JSONB+GIN/量化参数/Admiralty/处理状态机/处理元数据，迁移 0002），标签 containment 筛选可用；`feedback` 表（消费页人类反馈，`intel_id` FK ON DELETE CASCADE，feedback_type 四类 + fact_index 事实项级标注，迁移 0003）——错误样本积累驱动 process 层 prompt/粗筛迭代；`event` + `verification_log` 两表 + `intel_item.event_id` FK ON DELETE SET NULL（迁移 0004）——事件聚类与核实状态机落地，自动跃迁 pending→single_source + 人工终态 confirm/refute；`entity`/`competitor_profile`/`feature_matrix`/`param_matrix` 待远期阶段；
+- **落地状态**（单基线迁移 `0001_initial`，迁移链已 squash 为一基线）：`source` / `event` / `intel_item` / `verification_log` / `feedback` 五表同基线建毕。`intel_item` 含全部结构化与治理列——主体 / 事件类型 / 事实 / 推断 / 标签（JSONB+GIN，containment 筛选可用）/ 量化参数 / Admiralty / 处理状态机 / 处理元数据，`content_sha1` UNIQUE 幂等约束 + `source_id` FK（ADR-007），`event_id` FK ON DELETE SET NULL。`event` + `verification_log` 承载核实状态机：自动跃迁 pending→single_source + 人工终态 confirm/refute，全程写日志。`feedback` 表（`intel_id` FK ON DELETE CASCADE，feedback_type 四类 + fact_index 事实项级标注）——错误样本积累驱动 process 层 prompt / 粗筛迭代。`entity` / `competitor_profile` / `feature_matrix` / `param_matrix` 待后续方向（竞品资产）；
 - **pgvector** 承载情报摘要向量 + **PG 中文全文检索**（zhparser 或 pg_jieba）承担 BM25 侧——混合检索在单库内闭环（初期规模 < 10 万条，无需独立向量库）；
 - **MinIO** 存原文快照与附件，`intel_item.snapshot_id` 关联；
 - 事件（`event`）与情报（`intel_item`）一对多：交叉印证的载体，核实状态挂事件层、来源各挂各的；
