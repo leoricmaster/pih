@@ -1,4 +1,4 @@
-"""graph 单元测试：注入 fake chat 覆盖全分支（S1.2.1）。
+"""graph 单元测试：注入 fake chat 覆盖全分支（TASK-1.02.01）。
 
 覆盖：粗筛三分支（keep/drop/API 失败按保留）、抽取失败、
 validate 首过/补问/耗尽、api_retries 与 validate_rounds 分列（既有契约）、

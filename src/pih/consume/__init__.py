@@ -4,7 +4,7 @@
 - 查询服务（Web + API）：QueryService 同源，Web 列表/详情 + JSON API（ADR-006）
 - 鉴权：API 端点 Bearer token，Web 内网开放
 - 北极星指标：结构化日志按 Web/API 分别计数
-- 反馈闭环：详情页四动作反馈 + 聚合视图 + JSONL 导出（S1.4.1/S1.4.2）
+- 反馈闭环：详情页四动作反馈 + 聚合视图 + JSONL 导出（TASK-4.03.01/TASK-4.03.02）
 
 后续迭代：
 - RAG 问答服务：混合检索问答，答案强制带引用

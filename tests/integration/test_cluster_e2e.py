@@ -1,12 +1,12 @@
-"""事件聚类端到端集成测试（S1.3.1 AC1-AC5）。
+"""事件聚类端到端集成测试（TASK-1.02.01 聚类建模）。
 
 需 docker compose up（postgres + minio）+ 真实领域包。
 脚本化 chat 注入确定性抽取输出，验证：
-  AC1  单条 extracted → event 表新建 pending + verification_log 首条
-  AC2  同主体+同事件类型+时间窗内、第二独立信源 → 跃迁 single_source + ready_for_manual
-  AC3  同主体+同源第二条 → source_count 不增，status 仍 pending
-  AC4  时间窗外（>7 天）→ 新建 event 不挂入旧的
-  AC5  不同 event_type → 不归并
+  1)  单条 extracted → event 表新建 pending + verification_log 首条
+  2)  同主体+同事件类型+时间窗内、第二独立信源 → 跃迁 single_source + ready_for_manual
+  3)  同主体+同源第二条 → source_count 不增，status 仍 pending
+  4)  时间窗外（>7 天）→ 新建 event 不挂入旧的
+  5)  不同 event_type → 不归并
 
 不依赖 LLM 凭据——脚本化 chat 输出 _ok_pred() 确定性通过 schema 校验。
 """

@@ -1,4 +1,4 @@
-"""结构化抽取模型与校验（Backlog S1.2.1 AC1）。
+"""结构化抽取模型与校验（Backlog TASK-1.02.01 AC1）。
 
 抽取输出 7 键（领域包提示词定义）：主体/事件类型/事实描述/推断与判断/
 标签/量化参数/信息可信度。validate_pred 校验：
@@ -7,7 +7,7 @@
 - 标签 ⊆ 领域包标签树叶子；
 - 信息可信度 ∈ 1–6 单字符（Admiralty，架构 §6.2）。
 
-校验失败 → validate 节点重问（≤3），仍失败降级 needs_manual 不丢弃（S1.2.1 AC2）。
+校验失败 → validate 节点重问（≤3），仍失败降级 needs_manual 不丢弃（TASK-1.02.01 AC2）。
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ ALL_KEYS = (
 
 CREDIBILITY_VALUES = ("1", "2", "3", "4", "5", "6")
 
-# 后验质量门（S1.2.1 AC3）：schema 校验拦不住的语义占位主体——命中即降 needs_manual。
+# 后验质量门（TASK-1.02.01 AC3）：schema 校验拦不住的语义占位主体——命中即降 needs_manual。
 # 实证样本是"未知"；集合保守，随反馈样本可扩充。
 PLACEHOLDER_SUBJECTS = frozenset({"", "未知", "无", "不详", "unknown"})
 

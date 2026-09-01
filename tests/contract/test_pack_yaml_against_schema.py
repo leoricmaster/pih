@@ -57,7 +57,7 @@ def test_construction_machinery_sources_match_locked_list():
 
 
 def test_every_source_has_level_and_list_url():
-    """Backlog S1.1.1 AC1：信源缺必填字段（层级）拒绝。契约层保证每源有 level + list_url。
+    """Backlog TASK-1.01.01 AC1：信源缺必填字段（层级）拒绝。契约层保证每源有 level + list_url。
 
     schema 扩必选后 level/list_url 为必填；此测试防止回退。
     """
@@ -107,6 +107,6 @@ def test_extraction_prompt_has_all_placeholders():
 
 
 def test_prompt_mentions_credibility_rating():
-    """S1.3.1 AC1：提示词含信息可信度评级（Admiralty 1–6）输出键。"""
+    """TASK-1.02.01 聚类建模：提示词含信息可信度评级（Admiralty 1–6）输出键。"""
     pack = load(DOMAIN_PACKS_DIR / "construction_machinery" / "pack.yaml")
     assert "信息可信度" in pack["extraction_prompt"]

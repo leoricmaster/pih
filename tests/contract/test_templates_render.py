@@ -166,7 +166,7 @@ class TestDetailRender:
         assert "HTML，1小时有效" not in html
 
     def test_renders_feedback_section(self):
-        """S1.4.1：反馈区四表单 + datalist 主体清单注入。"""
+        """TASK-4.03.01：反馈区四表单 + datalist 主体清单注入。"""
         html = _render("detail.html", _detail_ctx())
         assert 'id="feedback"' in html
         for label in ("主体错了", "事件类型错", "事实不准", "不该入库"):

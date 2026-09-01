@@ -47,7 +47,7 @@ class TestValidatorPaths:
         assert "sources[0].reliability" in _paths(result.issues)
 
     def test_source_missing_enabled_points_at_field(self):
-        # sources[0] 缺 enabled（S1.1.1 门控字段）→ path 应为 sources[0].enabled
+        # sources[0] 缺 enabled（TASK-1.01.01 门控字段）→ path 应为 sources[0].enabled
         pack, _ = _load(FIXTURES / "bad" / "source_missing_enabled.yaml")
         result = validate(pack)
         assert not result.ok

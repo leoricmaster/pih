@@ -1,4 +1,4 @@
-"""事件聚类单元测试（S1.3.1）。
+"""事件聚类单元测试（TASK-1.02.01）。
 
 纯函数测试——不连 DB：
 - normalize_subject 别名映射（领域包 competitors.aliases → display_name）

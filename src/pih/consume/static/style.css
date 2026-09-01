@@ -89,7 +89,7 @@ dl.kv dd { margin: 0; font-size: 0.9rem; word-break: break-all; }
 a.fb-link { color: var(--accent); text-decoration: none; font-size: 0.85rem; }
 a.fb-link:hover { text-decoration: underline; }
 
-/* 详情页反馈区（S1.4.1） */
+/* 详情页反馈区（TASK-4.03.01） */
 .feedback-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
 .fb-form { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.75rem; background: #fafafa; border: 1px solid var(--border); border-radius: 4px; }
 .fb-form .fb-title { font-size: 0.85rem; font-weight: 600; }
@@ -100,7 +100,7 @@ a.fb-link:hover { text-decoration: underline; }
 .fb-hint { margin: 0.75rem 0 0; color: var(--muted); font-size: 0.85rem; }
 .fb-hint a { color: var(--accent); }
 
-/* 反馈聚合视图（S1.4.2） */
+/* 反馈聚合视图（TASK-4.03.02） */
 .feedback-page { background: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 1.5rem; }
 .feedback-page .meta-line a { color: var(--accent); }
 .row-highlight td { background: #fef3c7; }

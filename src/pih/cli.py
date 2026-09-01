@@ -1,4 +1,4 @@
-"""PIH 运营者 CLI（S1.1.1 信源闭环 + store 落库查询 + process 批处理 + 事件聚类）。
+"""PIH 运营者 CLI（TASK-1.01.01 信源闭环 + store 落库查询 + process 批处理 + 事件聚类）。
 
 命令：
   pih probe-source <id> | --all   试抓取验证（robots→列表→详情→快照），产出成败报告
@@ -6,7 +6,7 @@
   pih process [--source-id=<id>]  批处理 pending 条目：粗筛→抽取→校验，写回结构化字段 + 事件聚类
   pih query [筛选条件]            查询库中情报（--id 详情 / --source-id/--subject/
                                   --event-type/--tag 结构化筛选）
-  pih verify list                 列出已具备升级条件的事件（人工核实队列，S1.3.2）
+  pih verify list                 列出已具备升级条件的事件（人工核实队列，TASK-2.02.02）
   pih verify confirm <event_id>   跃迁 single_source → confirmed（人工终态）
   pih verify refute <event_id> --reason="..."  跃迁 → refuted（人工终态，必填理由）
   pih cluster --backfill          对存量 extracted 但未挂事件的条目跑聚类回填
@@ -55,7 +55,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     pp = sub.add_parser(
         "probe-source",
-        help="试抓取验证：robots → 列表页 → 详情 → 快照，产出成败报告（S1.1.1 AC2）",
+        help="试抓取验证：robots → 列表页 → 详情 → 快照，产出成败报告（TASK-1.01.01 AC2）",
     )
     pp.add_argument("source_id", nargs="?", default=None, help="信源 id（与 --all 二选一）")
     pp.add_argument("--all", action="store_true", help="对领域包全部信源逐一试抓取")
@@ -109,10 +109,10 @@ def _build_parser() -> argparse.ArgumentParser:
     prp.add_argument("--limit", type=int, default=20, help="单次处理条数上限（默认 20）")
     prp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
 
-    # ---- 事件聚类（S1.3.1/S1.3.2）----
+    # ---- 事件聚类（TASK-1.02.01/TASK-2.02.02）----
     vp = sub.add_parser(
         "verify",
-        help="人工核实队列（S1.3.2）：列出已具备升级条件的事件，确认/证伪终态跃迁",
+        help="人工核实队列（TASK-2.02.02）：列出已具备升级条件的事件，确认/证伪终态跃迁",
     )
     vsub = vp.add_subparsers(dest="verify_action", required=True)
     vsub.add_parser("list", help="列出已具备升级条件的事件（ready_for_manual=TRUE）")
@@ -126,7 +126,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     clp = sub.add_parser(
         "cluster",
-        help="事件聚类（S1.3.1）：在线已在 process 内触发，本命令用于历史回填",
+        help="事件聚类：在线已在 process 内触发，本命令用于历史回填",
     )
     clp.add_argument(
         "--backfill", action="store_true",
@@ -400,7 +400,7 @@ def _cmd_process(args: argparse.Namespace) -> int:
 
 
 def _cmd_verify(args: argparse.Namespace) -> int:
-    """人工核实队列入口（S1.3.2）。"""
+    """人工核实队列入口（TASK-2.02.02）。"""
     try:
         pool = get_pool()
     except RuntimeError as exc:
@@ -457,7 +457,7 @@ def _cmd_verify(args: argparse.Namespace) -> int:
 
 
 def _cmd_cluster(args: argparse.Namespace) -> int:
-    """事件聚类回填入口（S1.3.1）。"""
+    """事件聚类回填入口（TASK-1.02.01）。"""
     if not args.backfill:
         print("仅支持 --backfill（在线聚类已在 process 内自动触发）", file=sys.stderr)
         return EXIT_USAGE

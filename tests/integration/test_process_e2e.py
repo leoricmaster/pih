@@ -1,4 +1,4 @@
-"""Process 端到端集成测试（S1.1.2 采集入库 + S1.2.1 结构化抽取）。
+"""Process 端到端集成测试（TASK-1.01.02 采集入库 + TASK-1.02.01 结构化抽取）。
 
 需 docker compose up（postgres + minio）+ 外网。真实 LLM 段（AC1/AC5/AC6）
 另需 PIH_LLM_* env，任一缺失该类 skip（密闭性口径）；
@@ -14,7 +14,7 @@
   AC5  query --event-type=<实际抽取值> 召回 extracted 条目
   AC6  二次 process → 处理 0 条（pending 幂等）
   AC7  主体占位值「未知」（脚本化 chat）→ needs_manual + 结构化字段保留
-      （S1.2.1 AC3 后验质量门）
+      （TASK-1.02.01 AC3 后验质量门）
 
 断言结构不断言具体文本（LLM 输出不稳定）。
 """
@@ -149,7 +149,7 @@ class TestAC4GrayItemPolicy:
 
 
 class TestAC7PostHocQualityGate:
-    """S1.2.1 AC3：主体占位值 → needs_manual 且结构化字段保留。"""
+    """TASK-1.02.01 AC3：主体占位值 → needs_manual 且结构化字段保留。"""
 
     def test_placeholder_subject_needs_manual_with_fields_kept(self, capsys):
         _collect_fresh(1)

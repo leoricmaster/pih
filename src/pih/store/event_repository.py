@@ -1,4 +1,4 @@
-"""EventRepository：事件聚类与核实状态机的 SQL 层（Backlog S1.3.1）。
+"""EventRepository：事件聚类与核实状态机的 SQL 层（Backlog TASK-1.02.01）。
 
 接口：
   find_matching_event(...)   ±7 天窗查询命中已有事件
@@ -36,7 +36,7 @@ STATUS_EXPIRED = "expired"
 # 自动跃迁：第二独立信源命中时 pending → single_source
 AUTO_ADVANCE_REASON = "第二独立信源命中"
 
-# 时间窗 ±7 天（架构 §6.1 / S1.3.1 AC2）
+# 时间窗 ±7 天（架构 §6.1 / TASK-1.02.01 AC5）
 TIME_WINDOW = timedelta(days=7)
 
 

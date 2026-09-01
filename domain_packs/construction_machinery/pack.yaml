@@ -14,8 +14,8 @@ meta:
 # reliability（Admiralty 来源可靠性 A–F）：
 #   B = 实抓验证可信；C = 纸面充分未实抓；D = 条件源（反爬/法务前置）；E = 待复核
 # level（架构 §6.2）：L1 官方/主机厂、L2 权威/垂直媒体、L3 聚合、L4 弱信号
-# fetch_frequency：调度器（Backlog S1.5.1）消费；当前仅落盘
-# enabled 门控（S1.1.1 AC2「成功才允许启用」）：
+# fetch_frequency：调度器（Backlog TASK-4.01.01）消费；当前仅落盘
+# enabled 门控（TASK-1.01.01 AC2「成功才允许启用」）：
 #   新增信源 enabled: false → 运行 `pih probe-source <id>` 试抓取 → 通过后由
 #   运营者人工置 true（工具不改 YAML，人是最终环节）；collect 仅运行 enabled 源。
 #   ccma/sany/cehome 三源实抓 6/6 通过（2026-08-25）置 true；

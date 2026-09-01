@@ -1,6 +1,6 @@
-"""采集编排与 enabled 门控（S1.1.1 AC2「成功才允许启用」/ S1.1.2 采集入库入口）。
+"""采集编排与 enabled 门控（TASK-1.01.01 AC2「成功才允许启用」/ TASK-1.01.02 采集入库入口）。
 
-collect_source 是调度器（Backlog S1.5.1，待实现）将消费的正式采集入口：
+collect_source 是调度器（Backlog TASK-4.01.01，待实现）将消费的正式采集入口：
 仅运行 enabled: true 的信源；未启用 → SourceDisabledError（附启用流程指引）。
 probe（probe.py）不受门控约束——它是启用前的验证手段。
 

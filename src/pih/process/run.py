@@ -5,7 +5,7 @@
 - 逐条构造初始 state（text 在场契约：prepare_text 产物）；
 - 图结果映射 ProcessResult 写回——extracted（Admiralty 拼装
   reliability + credibility）/ filtered_out / needs_manual；
-- extracted 条目挂事件聚类（S1.3.1，在线增量）；
+- extracted 条目挂事件聚类（TASK-1.02.01，在线增量）；
 - 汇总统计与 token 用量（成本可观测，架构 §9.2；token 记在
   ProcessResult.meta，run() 聚合进 RunnerStats）。
 
@@ -104,7 +104,7 @@ class ProcessRunner:
                 continue
             if result.status == STATUS_EXTRACTED:
                 stats.extracted += 1
-                # 事件聚类（S1.3.1）：extracted 写库成功后挂事件。
+                # 事件聚类（TASK-1.02.01）：extracted 写库成功后挂事件。
                 # 失败不阻塞——warning 入 stats.details，可由 cluster --backfill 补。
                 try:
                     outcome = self._events.cluster(rec.id)
@@ -154,7 +154,7 @@ class ProcessRunner:
 
         admiralty = assemble_admiralty(rec.source_reliability or "?", extraction.credibility)
         if is_placeholder_subject(extraction.subject):
-            # 后验质量门（S1.2.1 AC3）：主体占位值不算抽取成功——结构化字段保留
+            # 后验质量门（TASK-1.02.01 AC3）：主体占位值不算抽取成功——结构化字段保留
             # 供人工复核，状态降 needs_manual（列表不稀释正常情报）
             reason = f"后验质量门：主体为占位值「{extraction.subject}」"
             return (

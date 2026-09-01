@@ -1,6 +1,6 @@
-"""EventService：事件聚类与核实状态机的业务层（Backlog S1.3.1）。
+"""EventService：事件聚类与核实状态机的业务层（Backlog TASK-1.02.01）。
 
-聚类规则（架构 §6.1 / Backlog S1.3.1 AC2-AC3）：
+聚类规则（架构 §6.1 / Backlog TASK-1.02.01 AC5-AC6）：
 1. 主体归一化（领域包 competitors.aliases → display_name）
 2. event_type 精确匹配
 3. fetched_at 时间窗 ±7 天

@@ -6,7 +6,7 @@
 - HTTP 客户端（httpclient）：重试/节流/编码；robots 合规（robots）
 - 原文快照（snapshot）：HTML 存 MinIO，返回快照 ID
 - 采集编排（run）：enabled 门控 + source 表同步 + 幂等落库（ADR-007）
-- 试抓取（probe）：robots→列表→详情→快照 报告（S1.1.1 AC2）
+- 试抓取（probe）：robots→列表→详情→快照 报告（TASK-1.01.01 AC2）
 
 待交付：
 - 调度器：按信源频率触发，失败重试与告警（APScheduler，ADR-004）

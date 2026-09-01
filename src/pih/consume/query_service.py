@@ -70,7 +70,7 @@ class QueryService:
         """按 filters 检索情报列表，返回 items + next_before 游标。
 
         next_before 仅在结果数等于 limit 时给出（即可能还有下一页）；
-        小于 limit 时不提供，避免渲染无意义「下一页」链接（S1.2.2 AC2）。
+        小于 limit 时不提供，避免渲染无意义「下一页」链接（TASK-2.01.01 AC2）。
         """
         records = self._repo.list_by_filter(
             subject=filters.subject,

@@ -1,4 +1,4 @@
-"""集成测试：CLI 端到端真跑（运营者视角验收 S1.1.1 AC2）。
+"""集成测试：CLI 端到端真跑（运营者视角验收 TASK-1.01.01 AC2）。
 
 需 `docker compose up`（MinIO + postgres）+ 外网访问。@pytest.mark.integration。
 - probe-source ccma：真实试抓取，退出码 0，报告含快照 ID

@@ -1,4 +1,4 @@
-"""FastAPI 应用——Web 出口 + JSON API 同源（ADR-006 + 反馈闭环 S1.4.1/S1.4.2 + 事件 S1.3.1）。
+"""FastAPI 应用——Web 出口 + JSON API 同源（ADR-006；反馈 TASK-4.03.01/4.03.02；事件 TASK-2.02.01）。
 
 lifespan 起 PG pool；Jinja2 渲染列表/详情；include api router；
 反馈三路由（POST /feedback 写入、GET /feedback 聚合视图、/feedback/export JSONL）。
@@ -204,7 +204,7 @@ def submit_feedback(
     note: str | None = Form(None),
     user_id: str = Form("operator"),
 ) -> RedirectResponse:
-    """消费页反馈写入（S1.4.1）——303 回详情页，?fb=1 显示已记录。
+    """消费页反馈写入（TASK-4.03.01）——303 回详情页，?fb=1 显示已记录。
 
     无鉴权：与 Web 页面同信任域（ADR-006「内网默认开放」口径）；
     feedback_type 合法性在此校验（store 层信任调用方）。
@@ -232,7 +232,7 @@ def submit_feedback(
 
 @app.get("/feedback", response_class=HTMLResponse)
 def feedback_page(request: Request) -> HTMLResponse:
-    """反馈聚合视图（S1.4.2）——按信源×类型计数 + 明细 + 导出入口。"""
+    """反馈聚合视图（TASK-4.03.02）——按信源×类型计数 + 明细 + 导出入口。"""
     repo = FeedbackRepository(request.app.state.pool)
     return templates.TemplateResponse(
         request,
@@ -248,7 +248,7 @@ def feedback_page(request: Request) -> HTMLResponse:
 
 @app.get("/feedback/export")
 def feedback_export(request: Request) -> Response:
-    """反馈明细 JSONL 导出——process 层 prompt 迭代的 few-shot 素材（S1.4.2 AC2）。"""
+    """反馈明细 JSONL 导出——process 层 prompt 迭代的 few-shot 素材（TASK-4.03.02 AC2）。"""
     rows = FeedbackRepository(request.app.state.pool).list_recent(1000)
     lines = []
     for r in rows:

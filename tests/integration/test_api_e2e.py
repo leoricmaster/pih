@@ -1,6 +1,6 @@
 """消费层端到端集成测试（ADR-006 同源出口）。
 
-覆盖 S1.2.2 AC1/AC2 + S1.2.1 AC1 + ADR-006 同源/字段/鉴权共 6 条。
+覆盖 TASK-2.01.01 AC1/AC2 + TASK-1.02.01 AC1 + ADR-006 同源/字段/鉴权共 6 条。
 「已过期标识」不交付（expires_at 未上线）。
 
 需 docker compose up postgres。@pytest.mark.integration 自动打标。
@@ -38,7 +38,7 @@ def _auth(token: str) -> dict:
 
 
 class TestAC1ListFilters:
-    """S1.2.2 AC1：多条件组合筛选 + 列表列展示 + 事件核实状态。"""
+    """TASK-2.01.01 AC1：多条件组合筛选 + 列表列展示 + 事件核实状态。"""
 
     def test_filter_subject_event_since_and_columns(self, api_token):
         _seed(60)
@@ -62,7 +62,7 @@ class TestAC1ListFilters:
 
 
 class TestAC2EmptyResult:
-    """S1.2.2 AC2：空结果提示 + 不渲染下一页。"""
+    """TASK-2.01.01 AC2：空结果提示 + 不渲染下一页。"""
 
     def test_empty_shows_hint_and_no_next_page(self, api_token):
         _seed(60)
@@ -75,7 +75,7 @@ class TestAC2EmptyResult:
 
 
 class TestAC3DetailPage:
-    """S1.2.1 AC1：详情页 schema 全字段 + 事实/推断分区 + 双入口 + 事件区。"""
+    """TASK-1.02.01 AC1：详情页 schema 全字段 + 事实/推断分区 + 双入口 + 事件区。"""
 
     def test_detail_shows_all_sections(self, api_token):
         ids = _seed(60)
@@ -125,7 +125,7 @@ class TestAC4SameSource:
 
 
 class TestProcessStatusFilter:
-    """process_status 筛选（S1.2.1 AC3 needs_manual 复核队列可达）+ Web/API 同源。"""
+    """process_status 筛选（TASK-1.02.01 AC3 needs_manual 复核队列可达）+ Web/API 同源。"""
 
     def test_status_filter_same_source_web_and_api(self, api_token):
         ids = _seed(20)

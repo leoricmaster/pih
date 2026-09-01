@@ -1,4 +1,4 @@
-"""消费层事件字段集成测试（S1.3.1 AC4）。
+"""消费层事件字段集成测试（TASK-2.02.01 呈现面）。
 
 验事件字段上线后：
   - API /api/intel/list 响应含 event_verification_status 实值（挂事件→英文 key）

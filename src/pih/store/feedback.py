@@ -1,9 +1,9 @@
-"""FeedbackRepository：消费页人类反馈落库与聚合（Backlog S1.4.1/S1.4.2）。
+"""FeedbackRepository：消费页人类反馈落库与聚合（Backlog TASK-4.03.01/TASK-4.03.02）。
 
 接口：
   save(...)             单条反馈写入，返回 id
   list_recent(...)      最近反馈明细（JOIN intel_item 带 title/source_id 供展示）
-  aggregate(...)        按信源×类型聚合计数 + 主体错误率（>30% 高亮，S1.4.2 AC1）
+  aggregate(...)        按信源×类型聚合计数 + 主体错误率（>30% 高亮，TASK-4.03.02 AC1）
 
 反馈类型 4 类（卡片 story 全集）：
   subject_wrong / event_type_wrong / fact_wrong / should_filter
@@ -20,7 +20,7 @@ from psycopg_pool import ConnectionPool
 
 FEEDBACK_TYPES = ("subject_wrong", "event_type_wrong", "fact_wrong", "should_filter")
 
-# 主体错误率高亮阈值（S1.4.2 AC1：>30% 提示需迭代该信源抽取 prompt 或粗筛阈值）
+# 主体错误率高亮阈值（TASK-4.03.02 AC1：>30% 提示需迭代该信源抽取 prompt 或粗筛阈值）
 SUBJECT_ERROR_RATE_HIGHLIGHT = 0.30
 
 _COLUMNS = """

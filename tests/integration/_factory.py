@@ -1,7 +1,7 @@
 """集成测试数据工厂（2026-08-31 收敛各文件内联 seed 辅助）。
 
 - seed_intel_items：批量造 intel_item，混合 subject/event_type/admiralty/source_id/fetched_at，
-  供消费层列表筛选（S1.2.2，≥60 条）使用。
+  供消费层列表筛选（TASK-2.01.01，≥60 条）使用。
 - seed_intel：单条 extracted intel_item（聚类测试用，跳过 collect/process 流程）。
 - seed_event：单条 event + 对应 verification_log（verify/消费层事件字段测试用）。
 - ScriptChat / usage / ok_pred：脚本化 chat 注入确定性 LLM 输出（不依赖凭据）。

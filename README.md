@@ -2,10 +2,11 @@
 
 > 一条"采集 → 核实 → 结构化 → 存储 → 消费"的情报流水线，核心域模型行业无关，行业知识以领域包（Domain Pack，repo 内 YAML 配置）注入。
 
-- 需求：`docs/Project Charter.md`（V2.0，立项文档）
-- 架构：`docs/Architecture.md`（V0.12）
-- Backlog：`docs/Backlog.md`（V3.0）
-- ADR：`docs/adr/`
+- 需求/任务管理：**Backlog.md 工具**（`backlog/` 目录，CLI `backlog`）——需求树事实源
+  - 立项文档：`backlog/docs/doc-001` · 架构：`doc-002` · 非功能需求：`doc-003`
+  - ADR：`backlog/decisions/decision-001`…`007`
+  - 可点击原型：`docs/prototype.html`（IA 验收参照，非需求事实源）
+- **文档分层规则**：工具管理的文档（立项 / 架构 / NFR / ADR）→ `backlog/docs/`、`backlog/decisions/`；独立产物（HTML 原型等）→ `docs/`
 
 ## 仓库布局
 
@@ -15,7 +16,8 @@
 | `domain_packs/` | 领域包 YAML 事实源（架构 §6.3） |
 | `tests/` | unit / contract / integration 三层 |
 | `docker-compose.yml` | 本地环境：PG+pgvector / MinIO / app / web（架构 §3） |
-| `docs/` | 需求/架构/Backlog/ADR |
+| `docs/` | 独立产物（HTML 原型）；文档分层规则见上 |
+| `backlog/` | Backlog.md 工具：tasks（EPIC-FT-US 三级）/decisions/docs/drafts（需求事实源）；milestone 待规划阶段后补 |
 
 ### 包分层（`src/pih/`）
 
@@ -137,11 +139,11 @@ curl http://127.0.0.1:8000/api/healthz          # 健康检查（不鉴权）
 
 后验质量门 + 消费页人类反馈，拦住低质条目增量、积累错误样本驱动 prompt 迭代：
 
-- **后验质量门（S1.2.1 AC3）**：`pih process` 时主体抽成占位值（未知/无/不详/unknown）
+- **后验质量门（TASK-1.02.01 AC3）**：`pih process` 时主体抽成占位值（未知/无/不详/unknown）
   → `process_status=needs_manual`（结构化字段保留供复核），不再混入 extracted；
 - **复核队列**：列表页/API 按 `?process_status=needs_manual` 筛出待复核条目
   （Web 下拉或 API 参数，同源）；
-- **反馈（S1.4.1）**：详情页反馈区四动作——主体错了（datalist 主体清单可选）、
+- **反馈（TASK-4.03.01）**：详情页反馈区四动作——主体错了（datalist 主体清单可选）、
   事件类型错、事实不准（标注到第几条事实）、不该入库；提交即写 `feedback` 表；
 - **聚合视图**：`/feedback` 按信源×类型计数，主体错误率 >30% 高亮提示迭代；
   `/feedback/export` 导出 JSONL 作 prompt 迭代 few-shot 素材。

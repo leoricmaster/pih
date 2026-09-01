@@ -1,4 +1,4 @@
-"""人工核实 CLI 端到端测试（S1.3.2）。
+"""人工核实 CLI 端到端测试（TASK-2.02.02）。
 
 需 docker compose up（postgres）。验：
   - pih verify list 输出 ready_for_manual 队列

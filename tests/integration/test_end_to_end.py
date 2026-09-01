@@ -1,4 +1,4 @@
-"""端到端集成测试：collect → 落库 → query（S1.1.2，AC1–AC5）。
+"""端到端集成测试：collect → 落库 → query（TASK-1.01.02，AC1–AC4）。
 
 需 docker compose up（postgres + minio）+ 外网。@pytest.mark.integration。
 

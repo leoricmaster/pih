@@ -4,7 +4,7 @@ psycopg3 + psycopg_pool，最小 pool（1–3）。DSN 从环境变量 PG_DSN �
 （python-dotenv 在 cli.py 入口已 load_dotenv）。
 
 CLI 单次运行场景：close_pool 在 finally 显式调用，避免连接泄漏。
-调度器（Backlog S1.5.1，待实现）落地后再调优 pool 大小。
+调度器（Backlog TASK-4.01.01，待实现）落地后再调优 pool 大小。
 """
 from __future__ import annotations
 

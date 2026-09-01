@@ -1,7 +1,7 @@
 """北极星指标计数——结构化日志。
 
 按 Web/API 出口分别计数，一行 JSON。当前仅落日志，不读不聚合。
-DB 表形态留调度器（Backlog S1.5.1，待实现）引入可观测性时再补。
+DB 表形态留调度器（Backlog TASK-4.01.01，待实现）引入可观测性时再补。
 """
 from __future__ import annotations
 

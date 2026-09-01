@@ -7,7 +7,7 @@
   get(id)             单条详情
   list_pending(...)   待处理条目（pih process 批处理入口）
   write_process_result(...)  写回抽取结果与处理状态
-  list_by_filter(...)  结构化筛选（S1.2.2，CLI/Web/API 共用）
+  list_by_filter(...)  结构化筛选（TASK-2.01.01，CLI/Web/API 共用）
 
 不引入 ORM；SQL 原生，模型用 dataclass。
 """
@@ -305,7 +305,7 @@ class IntelRepository:
         limit: int = 50,
         ranking: dict | None = None,
     ) -> list[IntelRecord]:
-        """结构化筛选（Backlog S1.2.2，CLI 与 Web/API 同源共用，含事件状态维度）。
+        """结构化筛选（Backlog TASK-2.01.01，CLI 与 Web/API 同源共用，含事件状态维度）。
 
         subject/event_type/admiralty/process_status/event_status 精确匹配；tag 用 JSONB
         containment（tags @> [tag]）；since/until 走 fetched_at 闭区间；
@@ -320,7 +320,7 @@ class IntelRepository:
           credibility_weights: {...}}
           从领域包 pack.ranking 读取，由 QueryService 注入（store 层不依赖领域包）。
 
-        process_status 筛选：needs_manual 人工复核队列的可达路径（S1.2.1 AC3）。
+        process_status 筛选：needs_manual 人工复核队列的可达路径（TASK-1.02.01 AC3）。
         event_status 筛选：按事件核实状态筛选（LEFT JOIN event）。
         """
         clauses: list[str] = []

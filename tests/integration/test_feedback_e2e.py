@@ -1,6 +1,6 @@
-"""反馈闭环端到端集成测试（S1.4.1 反馈动作 + S1.4.2 聚合导出）。
+"""反馈闭环端到端集成测试（TASK-4.03.01 反馈动作 + TASK-4.03.02 聚合导出）。
 
-覆盖 S1.4.1 AC1-AC4 + S1.4.2 AC1-AC2：表单提交落库（主体/事实/不该入库）、
+覆盖 TASK-4.03.01 AC1-AC4 + TASK-4.03.02 AC1-AC2：表单提交落库（主体/事实/不该入库）、
 详情页已记录提示、聚合视图计数与高亮、JSONL 导出、非法入参 422/404。
 
 需 docker compose up postgres。@pytest.mark.integration 自动打标。
@@ -115,7 +115,7 @@ class TestShouldFilterFeedback:
 
 
 class TestAggregationView:
-    """S1.4.2：主体错误率 >30% 高亮 + JSONL 导出。"""
+    """TASK-4.03.02：主体错误率 >30% 高亮 + JSONL 导出。"""
 
     def test_highlight_over_30_percent(self):
         ids = _seed(10)  # 10 条 extracted
