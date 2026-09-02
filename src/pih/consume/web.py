@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import logging
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +20,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from pih.collect.base import SourceConfig, get_adapter
+from pih.collect.httpclient import HttpClient
+from pih.collect.probe import ProbeReport, probe_source
+from pih.collect.snapshot import SnapshotStore
 from pih.consume.api import router as api_router
 from pih.consume.metrics import log_query
 from pih.consume.pack_loader import (
@@ -197,6 +203,130 @@ def sources_page(request: Request) -> HTMLResponse:
         request,
         "sources.html",
         {"sources": sources, "issues": issues, "error": error},
+    )
+
+
+@dataclasses.dataclass
+class ProbeOutcome:
+    """试抓编排结果——report 为 None 时 note 给出未执行原因。"""
+
+    report: ProbeReport | None
+    note: str | None
+
+
+def run_probe(source_id: str) -> ProbeOutcome:
+    """信源页试抓编排（AC3）——pack dict → SourceConfig → probe_source。
+
+    边界降级不 500：无适配器（KeyError）与 MinIO 不可达都归为 note。
+    深依赖按模块命名空间引用（web.get_adapter 等），单测在 web 层替换。
+    """
+    sources, _, _ = load_sources_view()
+    d = next((s for s in sources or [] if s["id"] == source_id), None)
+    if d is None:
+        return ProbeOutcome(None, f"信源 {source_id} 不在领域包中")
+    src = SourceConfig.from_dict(d)
+    try:
+        get_adapter(src)
+    except KeyError as e:
+        return ProbeOutcome(None, f"适配器未接入：{e}")
+    client = make_snapshot_client()
+    if client is None:
+        return ProbeOutcome(None, "快照不可用：MinIO 不可达（docker compose up -d 后重试）")
+    return ProbeOutcome(probe_source(src, HttpClient(), SnapshotStore(client)), None)
+
+
+def _probe_view(report: ProbeReport) -> tuple[list[dict], bool]:
+    """ProbeReport → 四段三态视图（robots/列表页/详情/快照）。
+
+    三态语义（设计文档 §3）：成功=执行且通过；失败=执行且未通过；未达=前置失败未执行。
+    """
+    state_label = {"ok": "成功", "fail": "失败", "skip": "未达"}
+    cls_map = {"ok": "ok", "fail": "warn", "skip": "muted"}
+
+    def seg(label: str, state: str, note: str) -> dict:
+        return {
+            "label": label,
+            "state": state,
+            "state_label": state_label[state],
+            "cls": cls_map[state],
+            "note": note,
+        }
+
+    segs = [seg("robots", "ok" if report.robots_allowed else "fail", report.robots_note)]
+    if not report.robots_allowed:
+        segs += [seg("列表页", "skip", ""), seg("详情", "skip", ""), seg("快照", "skip", "")]
+    elif not report.list_ok:
+        segs += [
+            seg("列表页", "fail", report.list_note),
+            seg("详情", "skip", ""),
+            seg("快照", "skip", ""),
+        ]
+    else:
+        segs.append(seg("列表页", "ok", report.list_note))
+        details = report.detail_results
+        if not details:
+            segs += [seg("详情", "skip", ""), seg("快照", "skip", "")]
+        else:
+            ok_n = sum(1 for d in details if d.ok)
+            snap_n = sum(1 for d in details if d.snapshot_id)
+            segs.append(
+                seg("详情", "ok" if ok_n else "fail", f"{ok_n}/{len(details)} 条详情解析成功")
+            )
+            segs.append(
+                seg("快照", "ok" if snap_n else "fail", f"{snap_n}/{len(details)} 份快照已存档")
+            )
+    return segs, report.success
+
+
+_probe_logger = logging.getLogger("pih.probe")
+
+
+def _log_probe(source_id: str, outcome: ProbeOutcome, duration_ms: float) -> None:
+    """试抓结构化日志（doc-2 §8）——JSON lines，channel=web，与 pih.metrics 同构。"""
+    rep = outcome.report
+    _probe_logger.info(
+        json.dumps(
+            {
+                "event": "probe",
+                "channel": "web",
+                "source_id": source_id,
+                "success": rep.success if rep else False,
+                "robots_allowed": rep.robots_allowed if rep else None,
+                "list_ok": rep.list_ok if rep else None,
+                "details_ok": sum(1 for d in rep.detail_results if d.ok) if rep else 0,
+                "note": outcome.note,
+                "duration_ms": round(duration_ms, 1),
+            },
+            ensure_ascii=False,
+        )
+    )
+
+
+@app.post("/sources/{source_id}/probe", response_class=HTMLResponse)
+def sources_probe(source_id: str, request: Request) -> HTMLResponse:
+    """信源页试抓（AC3）——同步执行 probe_source，直渲染带报告的信源页（POST 可重放）。"""
+    sources, issues, error = load_sources_view()
+    src = next((s for s in sources or [] if s["id"] == source_id), None)
+    if src is None:
+        raise HTTPException(status_code=404, detail=f"信源 {source_id} 不在领域包中")
+    started = time.perf_counter()
+    outcome = run_probe(source_id)
+    _log_probe(source_id, outcome, (time.perf_counter() - started) * 1000)
+    probe_view, probe_success = (
+        _probe_view(outcome.report) if outcome.report else (None, None)
+    )
+    return templates.TemplateResponse(
+        request,
+        "sources.html",
+        {
+            "sources": sources,
+            "issues": issues,
+            "error": error,
+            "probe_src": src,
+            "probe_outcome": outcome,
+            "probe_view": probe_view,
+            "probe_success": probe_success,
+        },
     )
 
 

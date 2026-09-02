@@ -7,6 +7,30 @@
   试抓通过后由运营者在 YAML 置 enabled: true（工具不改 YAML，人是最终环节）。
 </p>
 
+{% if probe_outcome %}
+<section class="probe-report">
+  <h2>试抓报告 · {{ probe_src.name }} <span class="src-id">{{ probe_src.id }}</span></h2>
+  {% if probe_outcome.note %}
+  <div class="probe-verdict warn">未执行：{{ probe_outcome.note }}</div>
+  {% else %}
+  <div class="probe-segs">
+    {% for seg in probe_view %}
+    <div class="seg">
+      <span class="k">{{ seg.label }}</span>
+      <span class="tag {{ seg.cls }}">{{ seg.state_label }}</span>
+      {% if seg.note %}<span class="seg-note">{{ seg.note }}</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% if probe_success %}
+  <div class="probe-verdict ok">试抓通过：可在领域包 YAML 中将该信源 enabled 置 true（人工修改，Git 留痕）。</div>
+  {% else %}
+  <div class="probe-verdict warn">试抓未通过——按上方各段失败原因排查后再试。</div>
+  {% endif %}
+  {% endif %}
+</section>
+{% endif %}
+
 {% if error %}
 <section class="pack-error">
   <h2>领域包加载失败</h2>

@@ -122,3 +122,14 @@ a.fb-link:hover { text-decoration: underline; }
 .pack-error h2 { font-size: 1rem; margin: 0 0 0.5rem; color: #991b1b; }
 .pack-error code { background: #fee2e2; padding: 0 0.3rem; border-radius: 4px; }
 .page-note { color: var(--muted); font-size: 0.9rem; }
+
+/* 试抓报告面板（TASK-1.01.01 AC3） */
+.probe-report { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.2rem; margin-top: 1rem; }
+.probe-report h2 { font-size: 1rem; margin: 0 0 0.6rem; }
+.probe-report .seg { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.22rem 0; font-size: 0.92rem; }
+.probe-report .seg .k { min-width: 4.5em; color: var(--fg); font-weight: 500; }
+.probe-report .seg-note { color: var(--muted); font-size: 0.85rem; }
+.tag.warn { background: #fef3c7; color: #92400e; }
+.probe-verdict { margin-top: 0.6rem; padding: 0.45rem 0.75rem; border-radius: 4px; font-size: 0.9rem; }
+.probe-verdict.ok { background: #dcfce7; color: #166534; }
+.probe-verdict.warn { background: #fef3c7; color: #92400e; }
