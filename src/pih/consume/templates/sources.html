@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}信源 · PIH{% endblock %}
+{% block content %}
+<h1>信源</h1>
+<p class="page-note">
+  配置编辑在仓内 YAML + Git（版本留痕）；本页承载可视与试抓。
+  试抓通过后由运营者在 YAML 置 enabled: true（工具不改 YAML，人是最终环节）。
+</p>
+
+{% if error %}
+<section class="pack-error">
+  <h2>领域包加载失败</h2>
+  <p><code>{{ error }}</code></p>
+</section>
+{% elif issues %}
+<section class="pack-error">
+  <h2>领域包校验失败——共 {{ issues|length }} 个错误，修正 pack.yaml 后刷新本页</h2>
+  <ul>
+    {% for i in issues %}
+    <li><code>{{ i.path }}</code>：{{ i.message }}{% if i.line %}（第 {{ i.line }} 行）{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% else %}
+<table class="source-list">
+  <thead>
+    <tr><th>名称</th><th>类型</th><th>层级</th><th>可靠性</th><th>频率</th><th>启用</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for s in sources %}
+    <tr>
+      <td>{{ s.name }} <span class="src-id">{{ s.id }}</span></td>
+      <td>{{ s.type }}</td>
+      <td>{{ s.level }}</td>
+      <td>{{ s.reliability }}</td>
+      <td>{{ s.fetch_frequency }}</td>
+      <td><span class="tag {{ 'ok' if s.enabled else 'muted' }}">{{ 'on' if s.enabled else 'off' }}</span></td>
+      <td>
+        <form method="post" action="/sources/{{ s.id }}/probe">
+          <button type="submit" class="btn">试抓</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

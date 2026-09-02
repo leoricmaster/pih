@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-02 10:59'
+updated_date: '2026-09-02 11:05'
 labels:
   - web
 milestone: m-0
@@ -71,4 +71,6 @@ ordinal: 15000
 
 <!-- SECTION:NOTES:BEGIN -->
 AC1 完成（TDD）：ValidationIssue 增 line 字段（语义：缺必选字段→父映射起始行；值违规→值所在行），loader 经 yaml.compose 回填行号，validator 保持 dict 纯净。执行中发现并修正偏差：schema sources required 漏列 fetch_frequency——以 AC1 必填清单为准补齐，good 夹具与最小包测试同步。证据：tests/unit/test_loader.py::TestIssueLineNumbers（5 例，先红后绿）、test_validator.py::test_fetch_frequency_required_per_ac1、test_schema_self_consistency 参数化 +fetch_frequency；uv run pytest tests/unit → 269 passed；ruff 干净；pack 契约 10 passed；真实包实测报错「sources[0].reliability: 必选字段缺失（第 25 行）」
+
+AC2 完成（TDD）：GET /sources + sources.html（六字段表格+试抓按钮+错误态不半截）+ pack_loader.load_sources_view（三态：pack 有效/校验失败带行号 issues/文件错误）+ base.html 导航。真包冒烟：9 源全列、3 on/6 off，与 pack.yaml 一一对应。事实源偏差闭环：原型信源表补「可靠性」列，且原层级列的 A/B/C 实为可靠性值——已改为 L2/L2/L3/L3 层级码（reliability vs level 混同的实证，入术语表种子）。证据：contract test_templates_render.py::TestSourcesPageTemplate 6 例、unit consume/test_pack_loader.py 3 例（先红后绿）；tests/unit+contract 294 passed；ruff 干净
 <!-- SECTION:NOTES:END -->

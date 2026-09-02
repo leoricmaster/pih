@@ -20,7 +20,12 @@ from fastapi.templating import Jinja2Templates
 
 from pih.consume.api import router as api_router
 from pih.consume.metrics import log_query
-from pih.consume.pack_loader import load_pack, load_pack_vocab, pack_ranking
+from pih.consume.pack_loader import (
+    load_pack,
+    load_pack_vocab,
+    load_sources_view,
+    pack_ranking,
+)
 from pih.consume.query_service import IntelFilters, QueryService
 from pih.consume.snapshot_url import make_snapshot_client, presigned_snapshot_url
 from pih.envs import load_env
@@ -181,6 +186,17 @@ def detail_page(
             "pack_subjects": pack_subjects,
             "pack_event_types": pack_event_types,
         },
+    )
+
+
+@app.get("/sources", response_class=HTMLResponse)
+def sources_page(request: Request) -> HTMLResponse:
+    """信源页（TASK-1.01.01 AC2）——信源清单可视 + 配置错误诊断面（错误态不半截）。"""
+    sources, issues, error = load_sources_view()
+    return templates.TemplateResponse(
+        request,
+        "sources.html",
+        {"sources": sources, "issues": issues, "error": error},
     )
 
 

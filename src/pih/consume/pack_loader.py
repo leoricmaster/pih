@@ -32,6 +32,26 @@ def load_pack() -> dict | None:
         return None
 
 
+def load_sources_view() -> tuple[list[dict] | None, list, str | None]:
+    """信源页数据（TASK-1.01.01 AC2）。
+
+    返回 (sources, issues, error)：pack 有效 → (sources, [], None)；
+    校验失败 → (None, errors, None)——信源页兼任配置诊断面，issues
+    呈现给运营者而非吞掉（与 load_pack 的降级语义相反：诊断面错误必须可见）；
+    文件级错误 → (None, [], error 文案)。均不抛，呈现是页面的事。
+    """
+    from pih.domainpacks.errors import LoadError
+    from pih.domainpacks.loader import load_and_validate
+
+    try:
+        pack, result = load_and_validate(_pack_path())
+    except LoadError as e:
+        return None, [], str(e)
+    if not result.ok:
+        return None, result.errors, None
+    return pack["sources"], [], None
+
+
 def pack_ranking() -> dict | None:
     """从领域包取 ranking 节（注入 QueryService 排序权重，架构 §6.2）。"""
     pack = load_pack()

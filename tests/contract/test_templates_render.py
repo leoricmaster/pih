@@ -9,6 +9,7 @@ from datetime import datetime
 
 from pih.consume.query_service import IntelFilters
 from pih.consume.web import templates
+from pih.domainpacks.errors import ValidationIssue
 from pih.process.event import STATUS_LABELS, STATUS_ORDER, EventWithLog
 from pih.store.repository import IntelRecord
 
@@ -263,3 +264,63 @@ class TestAutoescape:
         html = _render("detail.html", _detail_ctx(rec=rec))
         assert "<script>x</script>" not in html
         assert "&lt;script&gt;" in html
+
+
+class TestSourcesPageTemplate:
+    """信源页模板契约（TASK-1.01.01 AC2）——字段一一对应、错误态不半截、autoescape。"""
+
+    def _src(self, **over):
+        s = {
+            "id": "sany", "name": "三一集团", "type": "html",
+            "url": "https://www.sanygroup.com/",
+            "list_url": "https://www.sanygroup.com/news",
+            "reliability": "B", "level": "L1", "fetch_frequency": "daily",
+            "enabled": True,
+        }
+        s.update(over)
+        return s
+
+    def _ctx(self, **extra) -> dict:
+        """sources.html 渲染最小 context。"""
+        ctx = {"sources": [], "issues": [], "error": None}
+        ctx.update(extra)
+        return ctx
+
+    def test_renders_all_fields_per_source_row(self):
+        html = _render("sources.html", self._ctx(sources=[self._src()]))
+        # AC2 六字段：名称/类型/层级/可靠性/频率/启用（+id 便于试抓定位）
+        for expect in ("三一集团", "html", "L1", "B", "daily", "on", "sany"):
+            assert expect in html
+
+    def test_disabled_source_shows_off(self):
+        html = _render("sources.html", self._ctx(sources=[self._src(enabled=False)]))
+        assert "off" in html
+        assert ">on<" not in html
+
+    def test_probe_button_posts_to_source_probe(self):
+        html = _render("sources.html", self._ctx(sources=[self._src()]))
+        assert 'action="/sources/sany/probe"' in html
+        assert "试抓" in html
+
+    def test_validation_error_state_lists_issues_without_table(self):
+        issue = ValidationIssue(
+            path="sources[0].reliability", message="必选字段缺失", line=7
+        )
+        html = _render("sources.html", self._ctx(sources=None, issues=[issue]))
+        assert "sources[0].reliability" in html
+        assert "第 7 行" in html
+        assert "<table" not in html  # 不半截：错误态不渲染表格
+
+    def test_file_error_state(self):
+        html = _render(
+            "sources.html", self._ctx(sources=None, error="领域包文件不存在：x.yaml")
+        )
+        assert "领域包文件不存在" in html
+        assert "<table" not in html
+
+    def test_source_name_script_escaped(self):
+        html = _render(
+            "sources.html",
+            self._ctx(sources=[self._src(name="<script>alert(1)</script>")]),
+        )
+        assert "<script>alert(1)</script>" not in html
