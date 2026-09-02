@@ -75,4 +75,6 @@ AC1 完成（TDD）：ValidationIssue 增 line 字段（语义：缺必选字段
 AC2 完成（TDD）：GET /sources + sources.html（六字段表格+试抓按钮+错误态不半截）+ pack_loader.load_sources_view（三态：pack 有效/校验失败带行号 issues/文件错误）+ base.html 导航。真包冒烟：9 源全列、3 on/6 off，与 pack.yaml 一一对应。事实源偏差闭环：原型信源表补「可靠性」列，且原层级列的 A/B/C 实为可靠性值——已改为 L2/L2/L3/L3 层级码（reliability vs level 混同的实证，入术语表种子）。证据：contract test_templates_render.py::TestSourcesPageTemplate 6 例、unit consume/test_pack_loader.py 3 例（先红后绿）；tests/unit+contract 294 passed；ruff 干净
 
 AC3 完成（TDD，ca9f6c3）：POST /sources/{id}/probe 同步直渲染 + run_probe 编排缝（无适配器 KeyError 与 MinIO 不可达降级「未执行」note 不 500）+ _probe_view 四段三态（robots 拒绝→列表/详情/快照未达）+ pih.probe JSON lines 日志。与计划偏差（记录）：面板不加重复的模板契约类——TestClient 单测已直锁渲染输出（强于模板层契约），AC2 既有契约例继续锁模板对缺失 probe_* 上下文的容错；integration 层验证随 CI 切片后的 compose 演练补。证据：unit consume/test_sources_probe.py 12 例（先红后绿）；uvicorn 冒烟 GET /sources=200、未知源 POST=404「不在领域包中」；tests/unit 284 passed、contract 47 passed（需 compose 起 PG/MinIO）；ruff 干净
+
+CI 骨架完成（计划步 7）：.github/workflows/ci.yml——push(main)/PR 触发，单 job：uv sync --frozen --extra dev → ruff → pytest tests/unit tests/contract；契约层 PG 走 service container（pgvector/pg16，参数同 compose，DSN 复用 .env.defaults 入库默认值）；integration/live 不进 CI（理由写入 yml 注释）；并发去重 + 15min 超时。验证：YAML 解析 OK + 本地逐步等价演练 sync --frozen/ruff/pytest = 331 passed（无 actionlint，语法与步骤等价性以本地复跑为证）。actions 用版本 tag 未锁 SHA——遗留改进项记入交付包 checklist 讨论
 <!-- SECTION:NOTES:END -->
