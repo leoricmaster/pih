@@ -26,6 +26,4 @@ status: accepted
 ## Consequences
 
 - 检索体验（北极星指标载体）有保障；
-- 后续 Web 化演进（核实操作页、RAG 问答）在同一应用内叠加。
-
-**实施注脚**：`src/pih/consume/` 落地 FastAPI 单 app 双出口——`QueryService` 为单一事实源，Web 页面（`web.py` + Jinja2 模板）与 JSON API（`api.py` router）共用过滤/排序/引用拼装；同条件返回同 id 集合同序（集成测试 `test_api_e2e.py::TestAC4SameSource` 断言）。鉴权：API 端点 `Authorization: Bearer <PIH_API_TOKEN>`（`hmac.compare_digest` 常量时间比较），Web 内网默认开放。事件核实状态已随 event 表上线实查激活（列表/详情 JOIN event 填实，含跃迁历史时间线）。排序已切换 `W_c(event.status) × map(admiralty)`（权重由领域包 ranking 节注入，CASE WHEN 拼 SQL）；decay 仍留时效管理（未分解的未来需求）。
+- 消费侧后续演进在同一应用内叠加（§11）。
