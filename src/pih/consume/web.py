@@ -20,7 +20,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from pih.collect.base import SourceConfig, get_adapter
+from pih.collect import adapters  # noqa: F401  # import 即注册信源适配器（试抓编排依赖）
+from pih.collect.base import SourceConfig, has_adapter
 from pih.collect.httpclient import HttpClient
 from pih.collect.probe import ProbeReport, probe_source
 from pih.collect.snapshot import SnapshotStore
@@ -225,10 +226,11 @@ def run_probe(source_id: str) -> ProbeOutcome:
     if d is None:
         return ProbeOutcome(None, f"信源 {source_id} 不在领域包中")
     src = SourceConfig.from_dict(d)
-    try:
-        get_adapter(src)
-    except KeyError as e:
-        return ProbeOutcome(None, f"适配器未接入：{e}")
+    # 纯查表（不实例化）：适配器缺失须先于 MinIO 判定，避免误导性「快照不可用」
+    if not has_adapter(src):
+        return ProbeOutcome(
+            None, f"适配器未接入：无适配器（source.id={src.id}, type={src.type}）"
+        )
     client = make_snapshot_client()
     if client is None:
         return ProbeOutcome(None, "快照不可用：MinIO 不可达（docker compose up -d 后重试）")

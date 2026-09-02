@@ -125,7 +125,7 @@ class TestRunProbe:
             calls["src"] = src
             return _ok_report()
 
-        monkeypatch.setattr(web, "get_adapter", lambda s, **kw: object())
+        monkeypatch.setattr(web, "has_adapter", lambda s: True)
         monkeypatch.setattr(web, "make_snapshot_client", lambda: object())
         monkeypatch.setattr(web, "SnapshotStore", lambda c: c)
         monkeypatch.setattr(web, "probe_source", fake_probe)
@@ -134,16 +134,13 @@ class TestRunProbe:
         assert calls["src"].id == "s1"  # SourceConfig 已从 pack dict 构造
 
     def test_adapter_missing_note(self, fixture_pack, monkeypatch):
-        def boom(s, **kw):
-            raise KeyError("无适配器 (source.id=s1, type=rss)")
-
-        monkeypatch.setattr(web, "get_adapter", boom)
+        monkeypatch.setattr(web, "has_adapter", lambda s: False)
         out = web.run_probe("s1")
         assert out.report is None
         assert "适配器未接入" in out.note
 
     def test_minio_unreachable_note(self, fixture_pack, monkeypatch):
-        monkeypatch.setattr(web, "get_adapter", lambda s, **kw: object())
+        monkeypatch.setattr(web, "has_adapter", lambda s: True)
         monkeypatch.setattr(web, "make_snapshot_client", lambda: None)
         out = web.run_probe("s1")
         assert out.report is None

@@ -96,3 +96,8 @@ def get_adapter(source: SourceConfig, *args: object, **kwargs: object) -> Source
             f"已注册 id={list(_REGISTRY_BY_ID)}, type={list(_REGISTRY_BY_TYPE)}）"
         )
     return cls(*args, **kwargs)  # type: ignore[call-arg]
+
+
+def has_adapter(source: SourceConfig) -> bool:
+    """纯查注册表不实例化——启用前可用性检查（web 试抓编排：先于 MinIO 判定）。"""
+    return source.id in _REGISTRY_BY_ID or source.type in _REGISTRY_BY_TYPE
