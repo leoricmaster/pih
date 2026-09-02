@@ -59,6 +59,19 @@ uv run pytest tests/integration -v
 uv run ruff check src/ tests/
 ```
 
+### 测试分层与 CI
+
+| 层 | 目录/标记 | 依赖 | 运行 | 进 CI |
+|---|---|---|---|---|
+| unit | `tests/unit` | 无容器、无 `.env` | `uv run pytest tests/unit` | ✅ |
+| contract | `tests/contract` | PG（迁移/schema/模板契约） | `uv run pytest tests/contract` | ✅（service container） |
+| integration | `tests/integration`（`-m integration`） | compose 全栈（PG+MinIO+网络） | `docker compose up -d` 后跑 | ❌ 本地承载 |
+| live | `tests/integration/test_cli_live.py` | 外网真实站点 + MinIO | 手动 | ❌ 真实站点不可重放 |
+
+不变式：**CI 可运行集单调增长**——用例从 live/integration 降层到 contract/unit 只许不许逆；
+LLM 相关用例在 `PIH_LLM_*` 为空时自动跳过。CI（`.github/workflows/ci.yml`）=
+`uv sync --frozen` → ruff → unit+contract（PG service container 与 compose 同参数）。
+
 ## 运营者 CLI
 
 信源启用走 enabled 门控：新增信源在领域包 YAML 中 `enabled: false` → 试抓取通过后
@@ -119,6 +132,7 @@ uv run uvicorn pih.consume.web:app --reload --port 8000
 
 # 4. 浏览器访问 http://127.0.0.1:8000 —— 列表页 + 筛选 form + 下一页游标
 #    点标题进入 /intel/{id} 详情页（事实/推断分区 + 快照入口占位）
+#    导航「信源」进入 /sources —— 信源清单（六字段）+ 页内试抓
 
 # 5. 调 JSON API（Agent 消费者）
 curl -H "Authorization: Bearer dev-token" \
@@ -134,6 +148,17 @@ curl http://127.0.0.1:8000/api/healthz          # 健康检查（不鉴权）
 未挂事件条目显示 —。可按 `?event_status=` 筛选（Web/API 同源）。
 排序 `W_c(event.status) × map(admiralty) DESC, fetched_at DESC`（架构 §6.3 简化，
 权重来自领域包 ranking 节，CASE WHEN 注入 SQL；decay 待时效管理器）。
+
+### 信源页（TASK-1.01.01）
+
+`GET /sources` 直读领域包（不经 DB）：全部信源六字段清单
+（名称/类型/层级/可靠性/频率/启用），pack 校验失败时渲染带行号的错误诊断面（不半截）。
+页内「试抓」按钮 `POST /sources/{id}/probe` 同步执行并直渲染报告四段
+（robots/列表页/详情/快照），三态语义：**成功**=执行且通过；**失败**=执行且未通过；
+**未达**=前置失败未执行（如 robots 拒绝后列表/详情/快照均未达）。
+无适配器与 MinIO 不可达降级为「未执行」提示，不 500；试抓事件打
+`pih.probe` JSON lines 日志。试抓通过仅作启用依据——人工在 YAML 置
+`enabled: true`（Git 留痕，ADR-001/002）。
 
 ## 质量闭环
 
