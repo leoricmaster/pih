@@ -1,6 +1,6 @@
 ---
-id: decision-005
-title: ADR-005 单一 PostgreSQL 承载混合检索
+id: decision-05
+title: 单一 PostgreSQL 承载混合检索
 date: '2026-09-01 08:39'
 status: accepted
 ---

@@ -1,6 +1,6 @@
 ---
-id: decision-004
-title: ADR-004 流水线编排代码化
+id: decision-04
+title: 流水线编排代码化
 date: '2026-09-01 08:39'
 status: accepted
 ---

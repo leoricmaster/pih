@@ -1,6 +1,6 @@
 ---
-id: decision-006
-title: ADR-006 消费端 Web 与 API 同源
+id: decision-06
+title: 消费端 Web 与 API 同源
 date: '2026-09-01 08:39'
 status: accepted
 ---

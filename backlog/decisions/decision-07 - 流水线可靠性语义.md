@@ -1,6 +1,6 @@
 ---
-id: decision-007
-title: ADR-007 流水线可靠性语义
+id: decision-07
+title: 流水线可靠性语义
 date: '2026-09-01 08:39'
 status: accepted
 ---
@@ -24,5 +24,5 @@ status: accepted
 
 ## Consequences
 
-- 各环节失败处理语义详见架构文档 §8（可靠性与可观测，doc-002）；
-- 死信可见性（NFR doc-003·可靠性）为交付项。
+- 各环节失败处理语义详见架构文档 §8（可靠性与可观测，doc-2）；
+- 死信可见性（NFR doc-3·可靠性）为交付项。

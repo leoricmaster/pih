@@ -1,6 +1,6 @@
 ---
-id: decision-001
-title: ADR-001 领域包为配置而非插件机制
+id: decision-01
+title: 领域包为配置而非插件机制
 date: '2026-09-01 08:39'
 status: accepted
 ---

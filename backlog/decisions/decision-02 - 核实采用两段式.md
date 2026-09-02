@@ -1,6 +1,6 @@
 ---
-id: decision-002
-title: ADR-002 核实采用两段式
+id: decision-02
+title: 核实采用两段式
 date: '2026-09-01 08:39'
 status: accepted
 ---

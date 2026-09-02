@@ -1,6 +1,6 @@
 ---
-id: decision-003
-title: ADR-003 事件与情报分离建模
+id: decision-03
+title: 事件与情报分离建模
 date: '2026-09-01 08:39'
 status: accepted
 ---

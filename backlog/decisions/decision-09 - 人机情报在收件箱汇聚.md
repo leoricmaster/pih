@@ -1,6 +1,6 @@
 ---
-id: decision-9
-title: ADR-009 人机情报在收件箱汇聚
+id: decision-09
+title: 人机情报在收件箱汇聚
 date: '2026-09-01 11:32'
 status: accepted
 ---

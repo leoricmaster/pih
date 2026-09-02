@@ -3,8 +3,8 @@
 > 一条"采集 → 核实 → 结构化 → 存储 → 消费"的情报流水线，核心域模型行业无关，行业知识以领域包（Domain Pack，repo 内 YAML 配置）注入。
 
 - 需求/任务管理：**Backlog.md 工具**（`backlog/` 目录，CLI `backlog`）——需求树事实源
-  - 立项文档：`backlog/docs/doc-001` · 架构（C4 · V2.0）：`doc-002` · 非功能需求：`doc-003`
-  - ADR：`backlog/decisions/decision-001`…`010`
+  - 立项文档：`backlog/docs/doc-1` · 架构（C4 · V2.0）：`doc-2` · 非功能需求：`doc-3`
+  - ADR：`backlog/decisions/decision-01`…`10`
   - 可点击原型：`docs/prototype.html`（IA 验收参照，非需求事实源）
 - **文档分层规则**：工具管理的文档（立项 / 架构 / NFR / ADR）→ `backlog/docs/`、`backlog/decisions/`；独立产物（HTML 原型等）→ `docs/`
 
