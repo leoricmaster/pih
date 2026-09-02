@@ -13,7 +13,7 @@
 | 路径 | 说明 |
 |---|---|
 | `src/pih/` | 工程包，src-layout；分层对齐架构 §4 |
-| `domain_packs/` | 领域包 YAML 事实源（架构 §6.3） |
+| `domain_packs/` | 领域包 YAML 事实源（架构 §6.5） |
 | `tests/` | unit / contract / integration 三层 |
 | `docker-compose.yml` | 本地环境：PG+pgvector / MinIO / app / web（现状）→ 单镜像双角色 pih-web / pih-worker（目标态，架构 §3 · ADR-008） |
 | `docs/` | 独立产物（HTML 原型）；文档分层规则见上 |
@@ -132,7 +132,7 @@ curl http://127.0.0.1:8000/api/healthz          # 健康检查（不鉴权）
 事件核实状态：列表「所属事件核实状态」列与详情页事件区显示
 挂载事件的状态中文标签（待核实/单源确认/多源确认/已证伪）+ 跃迁历史时间线；
 未挂事件条目显示 —。可按 `?event_status=` 筛选（Web/API 同源）。
-排序 `W_c(event.status) × map(admiralty) DESC, fetched_at DESC`（架构 §6.2 简化，
+排序 `W_c(event.status) × map(admiralty) DESC, fetched_at DESC`（架构 §6.3 简化，
 权重来自领域包 ranking 节，CASE WHEN 注入 SQL；decay 待时效管理器）。
 
 ## 质量闭环
@@ -163,7 +163,7 @@ pending → single_source 自动跃迁并进人工队列；多源确认/证伪�
 
 ## 领域包机制
 
-领域包是行业知识的唯一载体（ADR-001 / 架构 §6.3）：信源清单、监控关键词、
+领域包是行业知识的唯一载体（ADR-001 / 架构 §6.5）：信源清单、监控关键词、
 竞品主体、标签树、报告模板、抽取提示词，以 repo 内 YAML 维护，带 schema 校验。
 
 ```bash
