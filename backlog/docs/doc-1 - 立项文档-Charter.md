@@ -1,11 +1,11 @@
 ---
 id: doc-1
-title: 产品情报中心立项文档 (Charter)
+title: 立项文档 (Charter)
 type: specification
 created_date: '2026-09-01 08:38'
 updated_date: '2026-09-02 03:35'
 ---
-# 产品情报中心（Product Intelligence Hub）立项文档
+# 立项文档
 
 - 版本：V2.0（口径变更走版本号）
 - 状态：已评审基线；实施进度由代码与测试反映

@@ -5,7 +5,7 @@ type: specification
 created_date: '2026-09-01 08:38'
 updated_date: '2026-09-02 05:35'
 ---
-# 产品情报中心（Product Intelligence Hub）架构设计
+# 架构设计
 
 - 版本：V2.0（口径变更走版本号）
 - 定位：本文只写**目标态**，不陈述实现进度（进度由代码与测试反映）
