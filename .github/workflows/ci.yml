@@ -1,0 +1,50 @@
+# CI（TASK-1.01.01 标杆基建；测试分层见 README「测试与 CI」）
+#
+# 范围与理由（doc-2 §6 测试分层的 CI 落地）：
+# - unit + contract 进 CI；contract 的 PG 依赖用 service container 提供
+#   （与 docker-compose 同参数：pgvector/pg16、pih/pih/pih；DSN 走仓内
+#   .env.defaults 的 localhost 默认值，零重复配置）。
+# - integration（需 compose 全栈网络）与 live（需外网真实站点）不进 CI，
+#   本地 `pytest -m integration` / compose 演练承载；CI 可运行集单调增长。
+# - LLM 相关测试在 PIH_LLM_* 为空时自动跳过（.env.defaults 默认空）。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        # 与 docker-compose.yml 同镜像（pgvector 留待向量检索故事直接复用）
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: pih
+          POSTGRES_USER: pih
+          POSTGRES_PASSWORD: pih
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pih -d pih"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: 安装依赖（按 uv.lock 冻结）
+        run: uv sync --frozen --extra dev
+      - name: Lint（ruff）
+        run: uv run ruff check .
+      - name: 单元 + 契约测试（contract 走 PG service container）
+        run: uv run pytest tests/unit tests/contract
