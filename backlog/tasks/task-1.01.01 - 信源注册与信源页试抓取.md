@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-02 11:05'
+updated_date: '2026-09-02 11:26'
 labels:
   - web
 milestone: m-0
@@ -30,24 +30,24 @@ ordinal: 15000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 AC1: Given 运营者在领域包 YAML 中新增信源并提交且缺必填字段之一（id / name / type / url / list_url / reliability / level / fetch_frequency / enabled）｜When 流水线加载配置｜Then 加载被拒绝，错误指出缺失字段名与所在行号，且已加载配置不受影响（不半截加载）
-- [ ] #2 AC2: Given 一个已成功加载的领域包｜When 运营者打开 Web 信源页｜Then 页面列出全部信源，每源展示名称、类型、层级、可靠性、频率、启用状态，列表与 sources 节一一对应；新增或删除信源经重载后在页面上反映
-- [ ] #3 AC3: Given 信源页上某个 enabled=false 的新增信源｜When 运营者点击试抓取｜Then 页面展示试抓报告，按 robots / 列表页 / 详情 / 快照 四维逐项标成败；robots 禁止抓取时标记拒绝且不发起后续抓取（合规 NFR · doc-3）
-- [ ] #4 AC4: Given 某信源试抓取通过｜Then 报告仅作启用依据——通过后由运营者在 YAML 中将 enabled 置 true（Git 留痕），工具不自动改写 YAML（人最终环节，ADR-001 / ADR-002）；enabled=false 的源不参与采集（调度器不拾取，跨 TASK-4.01）
-- [ ] #5 AC5: Given 运营者在领域包 YAML 中新增 / 修改 / 删除信源｜When 重新加载配置｜Then 信源页与调度器按新信源清单生效，核心系统无任何代码变更（ADR-001）
+- [x] #1 AC1: Given 运营者在领域包 YAML 中新增信源并提交且缺必填字段之一（id / name / type / url / list_url / reliability / level / fetch_frequency / enabled）｜When 流水线加载配置｜Then 加载被拒绝，错误指出缺失字段名与所在行号，且已加载配置不受影响（不半截加载）
+- [x] #2 AC2: Given 一个已成功加载的领域包｜When 运营者打开 Web 信源页｜Then 页面列出全部信源，每源展示名称、类型、层级、可靠性、频率、启用状态，列表与 sources 节一一对应；新增或删除信源经重载后在页面上反映
+- [x] #3 AC3: Given 信源页上某个 enabled=false 的新增信源｜When 运营者点击试抓取｜Then 页面展示试抓报告，按 robots / 列表页 / 详情 / 快照 四维逐项标成败；robots 禁止抓取时标记拒绝且不发起后续抓取（合规 NFR · doc-3）
+- [x] #4 AC4: Given 某信源试抓取通过｜Then 报告仅作启用依据——通过后由运营者在 YAML 中将 enabled 置 true（Git 留痕），工具不自动改写 YAML（人最终环节，ADR-001 / ADR-002）；enabled=false 的源不参与采集（调度器不拾取，跨 TASK-4.01）
+- [x] #5 AC5: Given 运营者在领域包 YAML 中新增 / 修改 / 删除信源｜When 重新加载配置｜Then 信源页与调度器按新信源清单生效，核心系统无任何代码变更（ADR-001）
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 验收面字段与事实源（领域包 schema / 原型 IA / doc-2）逐项核对一致；偏差先修订事实源或记 ADR，不在代码里私自偏移
-- [ ] #2 无新增未论证的自部署组件；核心代码不出现行业知识硬编码（违反即返工）
-- [ ] #3 AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
+- [x] #1 验收面字段与事实源（领域包 schema / 原型 IA / doc-2）逐项核对一致；偏差先修订事实源或记 ADR，不在代码里私自偏移
+- [x] #2 无新增未论证的自部署组件；核心代码不出现行业知识硬编码（违反即返工）
+- [x] #3 AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
 - [ ] #4 CI 有增量测试且变绿；覆盖正常路径与关键失败路径
-- [ ] #5 无回归（现有测试不破）
-- [ ] #6 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
-- [ ] #7 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
-- [ ] #8 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
-- [ ] #9 不违反贯穿性约束与 ADR（偏离须先记 ADR）
+- [x] #5 无回归（现有测试不破）
+- [x] #6 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
+- [x] #7 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
+- [x] #8 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
+- [x] #9 不违反贯穿性约束与 ADR（偏离须先记 ADR）
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -79,4 +79,12 @@ AC3 完成（TDD，ca9f6c3）：POST /sources/{id}/probe 同步直渲染 + run_p
 CI 骨架完成（计划步 7）：.github/workflows/ci.yml——push(main)/PR 触发，单 job：uv sync --frozen --extra dev → ruff → pytest tests/unit tests/contract；契约层 PG 走 service container（pgvector/pg16，参数同 compose，DSN 复用 .env.defaults 入库默认值）；integration/live 不进 CI（理由写入 yml 注释）；并发去重 + 15min 超时。验证：YAML 解析 OK + 本地逐步等价演练 sync --frozen/ruff/pytest = 331 passed（无 actionlint，语法与步骤等价性以本地复跑为证）。actions 用版本 tag 未锁 SHA——遗留改进项记入交付包 checklist 讨论
 
 integration 层 + 接线修复（计划步 6 收尾）：tests/integration/test_sources_page_e2e.py 3 例先红后绿，暴露单测 monkeypatch 盲区——(a) web 进程适配器注册表为空（web.py 未 import collect.adapters，真实试抓全「适配器未接入」）；(b) 裸 get_adapter(src) 缺 http/snapshots 必参。修复：web.py import adapters 注册 + base.has_adapter 纯查表谓词（预检不实例化，先于 MinIO 判定）。外网抓取在 probe_source 缝打桩（真实站点属 live 层）；真 MinIO 构建出 SnapshotStore、api 型源（xcmg）无适配器不 500 均有回归锁。文档同步（计划步 8）：README 补测试分层表（含「CI 可运行集单调增长」不变式与 LLM 空 key 跳过）+ 信源页章节。证据：integration 3 passed（compose 起 postgres+minio）；unit+contract 331 passed；ruff 干净
+
+finalization（计划步 10/11）：术语表 doc-4（17 词条指针型）+ 交付包 checklist doc-5（标杆蒸馏）落地，CLAUDE.md 加指针（读故事先看 doc-5、术语歧义先查 doc-4、notes 追加实践）。AC 逐条客观验证后勾选——AC1：test_loader/validator 26 passed + 缺字段实测报「sources[0].reliability 必选字段缺失（第 N 行）」且 load_sources_view 返回 (None, issues, None) 不半截；AC2：contract 6 + unit 3 + integration 真包 9 源一一对应；AC3：unit 12（四段渲染/robots→未达×3/pih.probe 日志）+ collect probe 6（robots 早退不发起后续请求）+ integration 3；AC4：单测锁「试抓通过→enabled 指引」文案 + grep 无 YAML 写路径 + run.py enabled 门控 test_run 3 passed（SourceDisabledError）；AC5：/sources 与 collect 均直读同一 pack，改 YAML 刷新即生效、零代码变更（integration 真包验证）。DoD 8/9 项勾选；#4（CI 变绿）留待 push 后 GitHub Actions 实跑确认——本地已等价演练 331 passed，未勾原因是流水线尚未真实执行
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+信源注册与信源页试抓取交付（标杆）：AC1 缺字段拒绝含字段名+行号不半截（ValidationIssue.line + yaml.compose 回填，26 单测）；AC2 /sources 六字段清单直读领域包（契约 6+单测 3+integration 真包 9 源一一对应）；AC3 页内试抓四段三态报告 + pih.probe JSON 日志（单测 12+采集层 6+integration 3，先红后绿，顺带修复 web 适配器注册表未初始化与裸 get_adapter 两处接线 bug）；AC4 试抓仅作启用依据、工具零 YAML 写路径、enabled 门控 SourceDisabledError 有测；AC5 页面与采集同源直读 pack 零代码生效。基建沉淀：ci.yml（ruff+unit+contract，PG service container）、doc-4 术语表、doc-5 交付包 checklist、CLAUDE.md 指针。回归 unit+contract 331 passed + integration 3 passed + ruff 干净；DoD#4（CI 实跑变绿）待 push 后确认
+<!-- SECTION:FINAL_SUMMARY:END -->
