@@ -4,6 +4,7 @@ title: 消费页反馈动作
 status: To Do
 assignee: []
 created_date: '2026-09-01 09:26'
+updated_date: '2026-09-02 08:58'
 labels:
   - web
 dependencies: []
@@ -40,3 +41,14 @@ When 点击不该入库反馈按钮
 Then 反馈写入 feedback 表（type=should_filter）
 And 该信号聚合到粗筛漏报审计（与采集入库 AC3 互补）
 <!-- AC:END -->
+
+## Definition of Done
+<!-- DOD:BEGIN -->
+- [ ] #1 AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
+- [ ] #2 CI 有增量测试且变绿；覆盖正常路径与关键失败路径
+- [ ] #3 无回归（现有测试不破）
+- [ ] #4 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
+- [ ] #5 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
+- [ ] #6 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
+- [ ] #7 不违反贯穿性约束与 ADR（偏离须先记 ADR）
+<!-- DOD:END -->

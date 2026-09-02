@@ -15,3 +15,11 @@ bypass_git_hooks: false
 check_active_branches: false
 active_branch_days: 30
 task_prefix: "task"
+definition_of_done:
+  - AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
+  - CI 有增量测试且变绿；覆盖正常路径与关键失败路径
+  - 无回归（现有测试不破）
+  - 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
+  - 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
+  - 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
+  - 不违反贯穿性约束与 ADR（偏离须先记 ADR）
