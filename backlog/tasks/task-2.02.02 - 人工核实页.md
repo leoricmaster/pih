@@ -4,6 +4,7 @@ title: 人工核实页
 status: To Do
 assignee: []
 created_date: '2026-09-01 09:26'
+updated_date: '2026-09-02 05:35'
 labels:
   - web
 dependencies: []
@@ -19,7 +20,7 @@ ordinal: 21000
 <!-- SECTION:DESCRIPTION:BEGIN -->
 作为运营者，我想在一个 Web 队列页里查看已具备升级条件与待人工的条目，一键确认或证伪，以便控制入库质量、终态由人把关。
 
-验收面：Web 核实页（队列 + 确认 / 证伪操作）。积压降级并入 AC4。
+验收面：Web 核实页（队列 + 确认 / 证伪操作）。积压提醒并入 AC4。
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -33,6 +34,8 @@ Then 事件状态跃迁为 多源确认（人工终态），写 verification_log
 - [ ] #3 AC3: Given 运营者点击证伪并填写理由
 Then 事件状态跃迁为 已证伪，理由写入日志
 And 该事件下情报在检索结果中默认隐藏
-- [ ] #4 AC4: Given 待核实情报持续 7 天无人处理
 Then 其检索权重降级，并在核实页积压提醒区列出
+
+- [ ] #4 AC4: Given 待核实事件持续 7 天无人处理
+Then 在核实页积压提醒区列出（按滞留时长排序）
 <!-- AC:END -->

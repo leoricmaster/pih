@@ -26,5 +26,5 @@ status: accepted
 ## Consequences
 
 - 核实操作（CLI/极简页）为 P0 交付项；
-- 积压治理（待核实超 7 天自动降级）进入需求；
+- 积压治理（待核实超 7 天进核实页积压提醒）进入需求；
 - verification_log 同时成为未来信源画像的数据底座。
