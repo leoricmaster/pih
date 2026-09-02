@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-02 10:52'
+updated_date: '2026-09-02 10:59'
 labels:
   - web
 milestone: m-0
@@ -66,3 +66,9 @@ ordinal: 15000
 
 11. 立术语表 doc-4（用户裁决新增，指针型防腐化）：只收项目特殊含义/易混淆术语，词条=术语+一句话+代码/配置标识符映射+事实源指针，不复制定义正文；本故事收录种子词条（信源/领域包/试抓取vs采集/reliability vs level/Admiralty码/事件vs情报条目/核实状态机/粗筛与process_status/内容指纹/收件箱/站内信/快照/enabled门控/未达 等）；finalization 时 CLAUDE.md 指针含「术语歧义先查 doc-4」
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+AC1 完成（TDD）：ValidationIssue 增 line 字段（语义：缺必选字段→父映射起始行；值违规→值所在行），loader 经 yaml.compose 回填行号，validator 保持 dict 纯净。执行中发现并修正偏差：schema sources required 漏列 fetch_frequency——以 AC1 必填清单为准补齐，good 夹具与最小包测试同步。证据：tests/unit/test_loader.py::TestIssueLineNumbers（5 例，先红后绿）、test_validator.py::test_fetch_frequency_required_per_ac1、test_schema_self_consistency 参数化 +fetch_frequency；uv run pytest tests/unit → 269 passed；ruff 干净；pack 契约 10 passed；真实包实测报错「sources[0].reliability: 必选字段缺失（第 25 行）」
+<!-- SECTION:NOTES:END -->

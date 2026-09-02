@@ -54,3 +54,39 @@ class TestLoadAndValidate:
     def test_load_strict_ok_on_good(self):
         pack = loader.load(FIXTURES / "good" / "pack.yaml")
         assert pack["meta"]["domain_id"] == "fixture_good"
+
+
+class TestIssueLineNumbers:
+    """TASK-1.01.01 AC1：校验 issue 附带 YAML 行号（1 基）。
+
+    语义（docs/design/TASK-1.01.01-design.md §3）：缺必选字段 → 父映射起始行
+    （运营者应看的位置）；值违规（enum 等）→ 值所在行。行号由加载器经
+    yaml.compose 回填，validator 保持 dict 纯净。
+    """
+
+    def _issue(self, fixture: str, path: str):
+        _, result = loader.load_and_validate(FIXTURES / "bad" / fixture)
+        return next(i for i in result.issues if i.path == path)
+
+    def test_missing_field_points_to_parent_mapping_line(self):
+        # source_missing_reliability.yaml：sources[0] 映射起于第 7 行（- id: s1）
+        issue = self._issue("source_missing_reliability.yaml", "sources[0].reliability")
+        assert issue.line == 7
+
+    def test_missing_enabled_points_to_parent_mapping_line(self):
+        issue = self._issue("source_missing_enabled.yaml", "sources[0].enabled")
+        assert issue.line == 7
+
+    def test_enum_violation_points_to_value_line(self):
+        # bad_source_type.yaml：type: foo 在第 9 行
+        issue = self._issue("bad_source_type.yaml", "sources[0].type")
+        assert issue.line == 9
+
+    def test_missing_top_level_points_to_root_line(self):
+        # missing_sources.yaml：根映射起于第 2 行（meta:）
+        issue = self._issue("missing_sources.yaml", "sources")
+        assert issue.line == 2
+
+    def test_issue_str_includes_line(self):
+        issue = self._issue("source_missing_reliability.yaml", "sources[0].reliability")
+        assert "第 7 行" in str(issue)

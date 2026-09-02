@@ -65,6 +65,7 @@
 | 偏差 | 裁决 |
 |---|---|
 | 原型信源表格缺「可靠性」列（AC2 与 pack schema 均要求） | 修订原型补列（DoD#1：偏差修订事实源，不在代码里私自偏移） |
+| schema sources required 漏列 fetch_frequency（AC1 必填清单含之） | 修正 schema 与 AC1 对齐，good 夹具/最小包测试同步补（AC1 为事实源，属实现补齐） |
 | 执行中新发现的偏差 | 追加于此；架构级 → 先记 ADR 并与用户确认，再动代码 |
 
 ## 6. AC 证据清单（finalization 前逐条补齐）

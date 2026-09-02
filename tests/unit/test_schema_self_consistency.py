@@ -21,7 +21,7 @@ def _minimal_valid_pack() -> dict:
             {
                 "id": "s1", "name": "源1", "type": "rss",
                 "url": "http://example.com/feed", "list_url": "http://example.com/list",
-                "reliability": "B", "level": "L2", "enabled": True,
+                "reliability": "B", "level": "L2", "fetch_frequency": "daily", "enabled": True,
             },
         ],
         "keywords": ["关键词1"],
@@ -90,7 +90,9 @@ def test_missing_meta_subfield_rejected():
     _assert_rejected(pack)
 
 
-@pytest.mark.parametrize("field", ["reliability", "level", "list_url", "enabled"])
+@pytest.mark.parametrize(
+    "field", ["reliability", "level", "list_url", "fetch_frequency", "enabled"]
+)
 def test_source_missing_required_field_rejected(field: str):
     pack = _minimal_valid_pack()
     del pack["sources"][0][field]

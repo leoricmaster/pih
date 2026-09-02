@@ -57,7 +57,8 @@ DOMAIN_PACK_SCHEMA: dict = {
                 "type": "object",
                 "additionalProperties": False,
                 "required": [
-                    "id", "name", "type", "url", "reliability", "level", "list_url", "enabled",
+                    "id", "name", "type", "url", "list_url", "reliability", "level",
+                    "fetch_frequency", "enabled",
                 ],
                 "properties": {
                     "id": {"type": "string", "minLength": 1},

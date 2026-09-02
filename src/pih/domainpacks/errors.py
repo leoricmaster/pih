@@ -15,8 +15,11 @@ class ValidationIssue:
     path: str
     message: str
     severity: str = "error"  # error | warning
+    line: int | None = None  # YAML 源文件行号（1 基），加载器回填；无法定位为 None
 
     def __str__(self) -> str:
+        if self.line is not None:
+            return f"{self.path}: {self.message}（第 {self.line} 行）"
         return f"{self.path}: {self.message}"
 
 

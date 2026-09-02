@@ -53,6 +53,14 @@ class TestValidatorPaths:
         assert not result.ok
         assert "sources[0].enabled" in _paths(result.issues)
 
+    def test_fetch_frequency_required_per_ac1(self):
+        """AC1 必填清单含 fetch_frequency（schema 曾漏列，AC1 为事实源）。"""
+        pack, _ = _load(FIXTURES / "good" / "pack.yaml")
+        pack["sources"][0].pop("fetch_frequency", None)
+        result = validate(pack)
+        assert not result.ok
+        assert "sources[0].fetch_frequency" in _paths(result.issues)
+
     def test_minitems_violation_points_at_field(self):
         # keywords = []
         pack, _ = _load(FIXTURES / "bad" / "empty_keywords.yaml")
