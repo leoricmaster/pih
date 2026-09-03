@@ -321,17 +321,24 @@
 
     <!-- ============ 信源 ============ -->
     <section class="page" id="source" data-title="信源">
-      <div class="note">▶ 流 E 信源管理。Web 只承载可视、试抓、健康。</div>
+      <div class="note">▶ 流 E 信源管理。Web 只承载可视、试抓、健康（健康列未上线，属后续故事）。</div>
       <div class="wf" style="padding:0">
+        <dl style="font-size:11px;color:var(--muted);margin:0 0 10px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:10px">
+          <dt><b>类型</b></dt><dd>抓取方式：网页 / RSS / API / 变更监控（对方未提供接口时的主动监控）</dd>
+          <dt><b>层级</b></dt><dd>看出身——L1 官方/主机厂一手、L2 权威/垂直媒体、L3 聚合站、L4 弱信号</dd>
+          <dt><b>可靠性</b></dt><dd>看表现——Admiralty 来源可靠性：A 完全可靠 / B 通常可靠 / C 较为可靠 / D 通常不可靠 / E 不可靠 / F 无法判断</dd>
+          <dt><b>频率</b></dt><dd>采集节奏（每小时/每日/每周）；调度器上线后生效，当前仅配置记录</dd>
+        </dl>
         <table class="wf-table">
           <thead><tr><th>名称</th><th>类型</th><th>层级</th><th>可靠性</th><th>频率</th><th>健康</th><th>启用</th><th></th></tr></thead>
           <tbody>
-            <tr><td>慧聪工程机械</td><td>RSS</td><td>L2</td><td>A</td><td>每日</td><td><span class="tag ok">正常</span></td><td><span class="tag ok">on</span></td><td><button class="btn">试抓</button></td></tr>
-            <tr><td>路面机械网</td><td>网页</td><td>L2</td><td>B</td><td>每日</td><td><span class="tag warn">异常</span></td><td><span class="tag muted">off</span></td><td><button class="btn">试抓</button></td></tr>
-            <tr><td>RSSHub-企业新闻</td><td>RSS</td><td>L3</td><td>B</td><td>每日</td><td><span class="tag ok">正常</span></td><td><span class="tag ok">on</span></td><td><button class="btn">试抓</button></td></tr>
-            <tr><td>千里马招标</td><td>网页</td><td>L3</td><td>C</td><td>≥60s</td><td><span class="tag warn">频控</span></td><td><span class="tag muted">off</span></td><td><button class="btn">试抓</button></td></tr>
+            <tr><td>慧聪工程机械</td><td>RSS</td><td>L2</td><td>A</td><td>每日</td><td><span class="tag ok">正常</span></td><td><span class="tag ok">启用</span></td><td><button class="btn">试抓</button></td></tr>
+            <tr><td>路面机械网</td><td>网页</td><td>L2</td><td>B</td><td>每日</td><td><span class="tag warn">异常</span></td><td><span class="tag muted">停用</span></td><td><button class="btn">试抓</button></td></tr>
+            <tr><td>RSSHub-企业新闻</td><td>RSS</td><td>L3</td><td>B</td><td>每日</td><td><span class="tag ok">正常</span></td><td><span class="tag ok">启用</span></td><td><button class="btn">试抓</button></td></tr>
+            <tr><td>千里马招标</td><td>API <span class="tag muted">未接入</span></td><td>L3</td><td>C</td><td>每小时</td><td><span class="tag warn">频控</span></td><td><span class="tag muted">停用</span></td><td><button class="btn">试抓</button></td></tr>
           </tbody>
         </table>
+        <div class="legend" style="padding:0 10px 10px">字段含义见上方字段说明（实现为可折叠 details）；未接入=该类型暂无抓取适配器（运行时状态，不入词表）。</div>
       </div>
       <div class="wf"><div class="lbl">试抓报告 · 路面机械网</div>
         <div class="seg"><span class="k">robots</span><span class="tag warn">拦截（百度 WAF）</span></div>

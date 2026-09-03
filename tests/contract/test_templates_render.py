@@ -289,13 +289,30 @@ class TestSourcesPageTemplate:
     def test_renders_all_fields_per_source_row(self):
         html = _render("sources.html", self._ctx(sources=[self._src()]))
         # AC2 六字段：名称/类型/层级/可靠性/频率/启用（+id 便于试抓定位）
-        for expect in ("三一集团", "html", "L1", "B", "daily", "on", "sany"):
+        # 值用呈现词（doc-4 呈现基线）：网页/每日/启用，非原始枚举
+        for expect in ("三一集团", "网页", "L1", "B", "每日", "启用", "sany"):
             assert expect in html
 
     def test_disabled_source_shows_off(self):
         html = _render("sources.html", self._ctx(sources=[self._src(enabled=False)]))
-        assert "off" in html
-        assert ">on<" not in html
+        assert '<span class="tag muted">停用</span>' in html
+        assert '<span class="tag ok">启用</span>' not in html  # 表头 <th>启用</th> 不算
+
+    def test_field_legend_renders(self):
+        """R2：字段图例——用户视角的字段含义（doc-4 统一词表呈现基线）。"""
+        html = _render("sources.html", self._ctx(sources=[self._src()]))
+        for expect in ("字段说明", "看出身", "看表现", "变更监控", "Admiralty"):
+            assert expect in html
+
+    def test_adapter_missing_badge_marks_sources_without_adapter(self):
+        """R3：适配器接入状态是运行时事实——无适配器的源在清单面标记「未接入」。"""
+        ready = self._src()
+        missing = self._src(id="x1", name="徐工集团", type="api")
+        html = _render(
+            "sources.html",
+            self._ctx(sources=[ready, missing], adapter_ready_ids={"sany"}),
+        )
+        assert html.count("未接入") == 1
 
     def test_probe_button_posts_to_source_probe(self):
         html = _render("sources.html", self._ctx(sources=[self._src()]))

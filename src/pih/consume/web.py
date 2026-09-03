@@ -26,6 +26,7 @@ from pih.collect.httpclient import HttpClient
 from pih.collect.probe import ProbeReport, probe_source
 from pih.collect.snapshot import SnapshotStore
 from pih.consume.api import router as api_router
+from pih.consume.labels import FIELD_LEGEND, FREQ_LABELS, TYPE_LABELS
 from pih.consume.metrics import log_query
 from pih.consume.pack_loader import (
     load_pack,
@@ -44,6 +45,11 @@ from pih.store.repository import IntelRepository
 
 _BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(_BASE / "templates"))
+
+# 呈现词映射作模板全局（doc-4「呈现」基线；漂移守卫见 tests/unit/consume/test_labels.py）
+templates.env.globals["TYPE_LABELS"] = TYPE_LABELS
+templates.env.globals["FREQ_LABELS"] = FREQ_LABELS
+templates.env.globals["FIELD_LEGEND"] = FIELD_LEGEND
 
 # facts/inferences 按 '；' 拆成事实清单（提示词规定多事实用全角分号分隔）
 templates.env.filters["split_facts"] = lambda s: (
@@ -200,10 +206,18 @@ def detail_page(
 def sources_page(request: Request) -> HTMLResponse:
     """信源页（TASK-1.01.01 AC2）——信源清单可视 + 配置错误诊断面（错误态不半截）。"""
     sources, issues, error = load_sources_view()
+    adapter_ready_ids = {
+        s["id"] for s in sources or [] if has_adapter(SourceConfig.from_dict(s))
+    }
     return templates.TemplateResponse(
         request,
         "sources.html",
-        {"sources": sources, "issues": issues, "error": error},
+        {
+            "sources": sources,
+            "issues": issues,
+            "error": error,
+            "adapter_ready_ids": adapter_ready_ids,
+        },
     )
 
 

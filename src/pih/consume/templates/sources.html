@@ -3,6 +3,15 @@
 {% block title %}信源 · PIH{% endblock %}
 {% block content %}
 <h1>信源</h1>
+<details class="field-legend">
+  <summary>字段说明</summary>
+  <dl>
+    {% for name, desc in FIELD_LEGEND %}
+    <dt>{{ name }}</dt>
+    <dd>{{ desc }}</dd>
+    {% endfor %}
+  </dl>
+</details>
 
 {% if probe_outcome %}
 <section class="probe-report">
@@ -55,11 +64,11 @@
     {% for s in sources %}
     <tr>
       <td>{{ s.name }} <span class="src-id">{{ s.id }}</span></td>
-      <td>{{ s.type }}</td>
+      <td>{{ TYPE_LABELS.get(s.type, s.type) }}{% if s.id not in (adapter_ready_ids or ()) %} <span class="tag muted">未接入</span>{% endif %}</td>
       <td>{{ s.level }}</td>
       <td>{{ s.reliability }}</td>
-      <td>{{ s.fetch_frequency }}</td>
-      <td><span class="tag {{ 'ok' if s.enabled else 'muted' }}">{{ 'on' if s.enabled else 'off' }}</span></td>
+      <td>{{ FREQ_LABELS.get(s.fetch_frequency, s.fetch_frequency) }}</td>
+      <td><span class="tag {{ 'ok' if s.enabled else 'muted' }}">{{ '启用' if s.enabled else '停用' }}</span></td>
       <td>
         <form method="post" action="/sources/{{ s.id }}/probe">
           <button type="submit" class="btn">试抓</button>
