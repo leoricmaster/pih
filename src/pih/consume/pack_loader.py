@@ -71,3 +71,19 @@ def load_pack_vocab() -> tuple[list[str], list[str]]:
         for name in [c["display_name"], *c.get("aliases", [])]
     ]
     return subjects, list(pack["event_types"])
+
+
+def load_filter_vocab() -> tuple[list[str], list[str], list[str]]:
+    """列表筛选表单候选（TASK-2.01.01 D3）：主体 datalist（规范名+别名）/
+    事件类型 select / 标签 select（tag_tree 叶子扁平化）。pack 缺失时全空
+    （自由输入仍可用）。"""
+    pack = load_pack()
+    if pack is None:
+        return [], [], []
+    subjects = [
+        name
+        for c in pack["competitors"]
+        for name in [c["display_name"], *c.get("aliases", [])]
+    ]
+    tags = [leaf for leaves in pack["tag_tree"].values() for leaf in leaves]
+    return subjects, list(pack["event_types"]), tags

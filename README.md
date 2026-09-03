@@ -171,6 +171,12 @@ curl http://127.0.0.1:8000/api/healthz          # 健康检查（不鉴权）
 排序 `W_c(event.status) × map(admiralty) DESC, fetched_at DESC`（架构 §6.3 简化，
 权重来自领域包 ranking 节，CASE WHEN 注入 SQL；decay 待时效管理器）。
 
+组合筛选（TASK-2.01.01）：检索页主行五要素——主体（datalist 候选=领域包
+主体+别名）/ 事件类型（领域包枚举下拉）/ 时间范围（近7/30/90天预设，URL 直参
+since/until 仍受理且优先）/ 标签（标签树叶子下拉）/ 置信度（**≥ 档**下拉，
+Admiralty 来源可靠性 A–F，A 最优；语义 `left(code,1) <= 档位`，Web/API 同源）；
+信源/处理状态/事件状态/每页收「更多筛选」折叠。空结果显示「无结果，建议放宽条件」。
+
 ### 信源页（TASK-1.01.01）
 
 `GET /sources` 直读领域包（不经 DB）：全部信源六字段清单

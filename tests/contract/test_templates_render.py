@@ -99,6 +99,50 @@ class TestListRender:
         assert "徐工 XE470" in html
         assert "B2" in html
 
+
+class TestFilterFormIA:
+    """TASK-2.01.01 D2/D3/D4：主行五要素（词表下拉）+ 时间预设 + 更多筛选折叠 + 清空。"""
+
+    def _html(self, **extra) -> str:
+        return _render(
+            "list.html",
+            _list_ctx(
+                filter_subjects=["三一", "三一重工", "SANY"],
+                filter_event_types=["新品发布", "财报", "其他"],
+                filter_tags=["电动化", "矿山"],
+                time_range="30d",
+                **extra,
+            ),
+        )
+
+    def test_primary_row_vocab_dropdowns(self):
+        html = self._html()
+        # 主体 datalist（可输入的▾，候选含别名）
+        assert '<datalist id="filter-subjects">' in html
+        assert '<option value="三一重工">' in html
+        # 事件类型 / 标签 select 候选来自领域包
+        assert '<option value="新品发布">' in html
+        assert '<option value="电动化">' in html
+        # 置信度 ≥ 档选项（A 最优）
+        assert '<option value="B">≥ B</option>' in html
+        # 时间范围预设（未选项无 selected 后缀，已选项回显）
+        assert '<option value="7d">近7天</option>' in html
+        assert '<option value="30d" selected>近30天</option>' in html
+
+    def test_more_filters_collapsed_and_reset(self):
+        html = self._html()
+        assert "更多筛选" in html
+        assert "<details" in html
+        for label in ("信源", "处理状态", "事件状态"):
+            assert label in html
+        assert 'name="source_id"' in html
+        assert 'name="process_status"' in html
+        assert 'name="event_status"' in html
+        assert ">清空</a>" in html
+        # ISO 手输时间字段撤出表单（预设替代；URL 直参仍受理）
+        assert 'name="since"' not in html
+        assert 'name="until"' not in html
+
     def test_renders_empty_message(self):
         html = _render("list.html", _list_ctx())
         assert "无结果，建议放宽条件" in html
@@ -132,11 +176,20 @@ class TestListRender:
             assert label in html
 
     def test_form_preserves_filter_values(self):
-        filters = IntelFilters(subject="三一", event_type="新品发布", admiralty="B2")
-        html = _render("list.html", _list_ctx(filters=filters))
+        """筛选回显：主体输入框回值，事件类型/置信度下拉 selected（≥ 档语义 D1）。"""
+        filters = IntelFilters(subject="三一", event_type="新品发布", admiralty="B")
+        html = _render(
+            "list.html",
+            _list_ctx(
+                filters=filters,
+                filter_subjects=["三一"],
+                filter_event_types=["新品发布"],
+                filter_tags=[],
+            ),
+        )
         assert 'value="三一"' in html
-        assert 'value="新品发布"' in html
-        assert 'value="B2"' in html
+        assert '<option value="新品发布" selected>' in html
+        assert '<option value="B" selected>≥ B</option>' in html
 
 
 class TestDetailRender:

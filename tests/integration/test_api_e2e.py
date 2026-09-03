@@ -60,6 +60,56 @@ class TestAC1ListFilters:
             # 至少有 1 条命中
             assert "/intel/" in html
 
+    def test_filter_combo_and_admiralty_tier(self, api_token):
+        """五条件组合（主体×事件类型×标签×置信度×时间）+ ≥ 档语义（D1）。"""
+        _seed(60)
+        with TestClient(app) as client:
+            r = client.get(
+                "/api/intel/list",
+                params={
+                    "subject": "三一",
+                    "event_type": "新品发布",
+                    "tag": "电动化",
+                    "admiralty": "B",
+                    "since": "2026-05-30T00:00:00",
+                },
+                headers=_auth(api_token),
+            )
+            body = r.json()
+            assert body["count"] >= 1
+            codes = {it["admiralty_code"] for it in body["items"]}
+            # ≥ B：只留 A/B 档（factory 循环位 0=A1）
+            assert all(c[0] <= "B" for c in codes)
+            # 排除面：专利公开循环位=C3 档——≥B 全排除、≥C 全保留
+            r2 = client.get(
+                "/api/intel/list",
+                params={"event_type": "专利公开", "admiralty": "B"},
+                headers=_auth(api_token),
+            )
+            assert r2.json()["count"] == 0
+            r3 = client.get(
+                "/api/intel/list",
+                params={"event_type": "专利公开", "admiralty": "C"},
+                headers=_auth(api_token),
+            )
+            b3 = r3.json()
+            assert b3["count"] > 0
+            assert {it["admiralty_code"] for it in b3["items"]} == {"C3"}
+            # Web 同源走 time_range 预设路径（D2）
+            rw = client.get(
+                "/",
+                params={
+                    "subject": "三一",
+                    "event_type": "新品发布",
+                    "tag": "电动化",
+                    "admiralty": "B",
+                    "time_range": "90d",
+                },
+            )
+            assert rw.status_code == 200
+            assert "三一" in rw.text
+            assert "C3" not in rw.text
+
 
 class TestAC2EmptyResult:
     """TASK-2.01.01 AC2：空结果提示 + 不渲染下一页。"""

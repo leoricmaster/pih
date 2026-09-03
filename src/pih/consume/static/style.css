@@ -153,3 +153,10 @@ a.fb-link:hover { text-decoration: underline; }
 
 /* Admiralty 双维注解（TASK-1.02.01 AC1）：B2 → 来源可靠性 B × 可信度 2 */
 .adm-note { color: var(--muted); font-size: 0.8rem; }
+
+/* 组合筛选（TASK-2.01.01）：更多筛选折叠区 */
+.more-filters { width: 100
+/* 组合筛选（TASK-2.01.01）：更多筛选折叠区 */
+.more-filters { width: 100%; margin-top: 0.4rem; }
+.more-filters summary { cursor: pointer; font-size: 0.8rem; color: var(--muted); }
+.more-filters .more-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.4rem; }

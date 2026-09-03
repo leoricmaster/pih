@@ -105,7 +105,7 @@ TASK-1.02.01 结构化抽取与详情分区   ← 枢纽：2.01/2.02.01/2.02.02 
 
 | 故事 | 状态 | 设计文档 | AC 证据（测试/命令） | 遗留 |
 |---|---|---|---|---|
-| TASK-1.02.01 | 未开始 | docs/design/TASK-1.02.01-design.md | — | — |
+| TASK-1.02.01 | ✅ Done | docs/design/TASK-1.02.01-design.md | notes 全量索引：AC1 TestInferenceBasis+模板契约+live /intel/1；AC2-AC6 存量 test_graph/TestPostHocQualityGate/test_cluster_e2e+live [B2]/挂事件#1-4 | DoD#4 待 push（PD2）；AC5 口径收窄 comment 记档（D2） |
 | TASK-2.01.01 | 未开始 | docs/design/TASK-2.01.01-design.md | — | — |
 | TASK-2.02.01 | 未开始 | docs/design/TASK-2.02.01-design.md | — | — |
 | TASK-2.02.02 | 未开始 | docs/design/TASK-2.02.02-design.md | — | — |

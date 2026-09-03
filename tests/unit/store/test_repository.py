@@ -315,7 +315,8 @@ class TestListByFilter:
         assert params[3] == 5
 
     def test_admiralty_since_until_before_build_clauses(self):
-        """后增参数：admiralty 精确 / since-until fetched_at 闭区间 / before 游标。"""
+        """后增参数：admiralty ≥ 档（TASK-2.01.01 D1，来源可靠性下限）/
+        since-until fetched_at 闭区间 / before 游标。"""
         from datetime import datetime
 
         m = _MockConn()
@@ -325,7 +326,7 @@ class TestListByFilter:
         until = datetime(2026, 8, 27)
         before = datetime(2026, 8, 26)
         repo.list_by_filter(
-            admiralty="B2",
+            admiralty="B",
             source_id="sany_news",
             since=since,
             until=until,
@@ -334,12 +335,14 @@ class TestListByFilter:
         )
         sql = m.cursor_obj.execute.call_args.args[0]
         params = m.cursor_obj.execute.call_args.args[1]
-        assert "admiralty_code = %s" in sql
+        # ≥ 档语义：left(code,1) <= 档位（A 最优，A–F 字典序升序）
+        assert "left(i.admiralty_code, 1) <= %s" in sql
+        assert "admiralty_code = %s" not in sql
         assert "source_id = %s" in sql
         assert "fetched_at >= %s" in sql
         assert "fetched_at <= %s" in sql
         assert "fetched_at < %s" in sql
-        assert params[0] == "B2"
+        assert params[0] == "B"
         assert params[1] == "sany_news"
         assert params[2] == since
         assert params[3] == until

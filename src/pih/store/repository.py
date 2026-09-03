@@ -394,7 +394,8 @@ class IntelRepository:
     ) -> list[IntelRecord]:
         """结构化筛选（Backlog TASK-2.01.01，CLI 与 Web/API 同源共用，含事件状态维度）。
 
-        subject/event_type/admiralty/process_status/event_status 精确匹配；tag 用 JSONB
+        subject/event_type/process_status/event_status 精确匹配；admiralty 为
+        来源可靠性 ≥ 档（left(code,1) <= 档位，TASK-2.01.01 D1）；tag 用 JSONB
         containment（tags @> [tag]）；since/until 走 fetched_at 闭区间；
         before 为游标（fetched_at < before，分页用）。
 
@@ -419,10 +420,14 @@ class IntelRepository:
             clauses.append("i.event_type = %s")
             params.append(event_type)
         if tag is not None:
-            clauses.append("i.tags @> %s")
+            # Json 参数以 json 类型绑定，containment 需显式 cast jsonb
+            # （真实 PG 无 jsonb @> json 操作符——integration 首跑抓到，单测 mock 掩盖）
+            clauses.append("i.tags @> %s::jsonb")
             params.append(Json([tag]))
         if admiralty is not None:
-            clauses.append("i.admiralty_code = %s")
+            # TASK-2.01.01 D1：置信度筛选 = 来源可靠性 ≥ 所选档（A 最优，
+            # A–F 字典序升序；单轴门槛，可信度维度由排序承载）
+            clauses.append("left(i.admiralty_code, 1) <= %s")
             params.append(admiralty)
         if source_id is not None:
             clauses.append("i.source_id = %s")

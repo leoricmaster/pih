@@ -12,7 +12,7 @@ import json
 import logging
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request
@@ -29,6 +29,7 @@ from pih.consume.api import router as api_router
 from pih.consume.labels import FIELD_LEGEND, FREQ_LABELS, TYPE_LABELS
 from pih.consume.metrics import log_query
 from pih.consume.pack_loader import (
+    load_filter_vocab,
     load_pack,
     load_pack_vocab,
     load_sources_view,
@@ -57,6 +58,9 @@ templates.env.filters["split_facts"] = lambda s: (
 )
 
 load_env()
+
+# 时间范围预设 → 天数（TASK-2.01.01 D2；显式 since 直参优先）
+_TIME_RANGE_DAYS = {"7d": 7, "30d": 30, "90d": 90}
 
 
 def _load_pack_vocab() -> tuple[list[str], list[str]]:
@@ -135,12 +139,22 @@ def list_page(
     source_id: str | None = Query(None),
     process_status: str | None = Query(None),
     event_status: str | None = Query(None),
+    time_range: str | None = Query(None),
     since: datetime | None = Query(None),
     until: datetime | None = Query(None),
     before: datetime | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
 ) -> HTMLResponse:
-    """列表页——筛选 form + 表格 + 下一页游标。"""
+    """列表页——筛选 form + 表格 + 下一页游标。
+
+    time_range 预设（TASK-2.01.01 D2：7d/30d/90d）映射 since=now-N 天；
+    显式 since 直参优先（API/URL 兼容路径）。
+    """
+    effective_since = since
+    if effective_since is None and time_range in _TIME_RANGE_DAYS:
+        effective_since = datetime.now() - timedelta(
+            days=_TIME_RANGE_DAYS[time_range]
+        )
     filters = IntelFilters(
         subject=subject,
         event_type=event_type,
@@ -149,13 +163,14 @@ def list_page(
         source_id=source_id,
         process_status=process_status,
         event_status=event_status,
-        since=since,
+        since=effective_since,
         until=until,
         before=before,
         limit=limit,
     )
     result = _svc(request).list(filters)
     log_query("web", filters.nonempty(), len(result.items))
+    filter_subjects, filter_event_types, filter_tags = load_filter_vocab()
     return templates.TemplateResponse(
         request,
         "list.html",
@@ -165,6 +180,10 @@ def list_page(
             "next_url": _build_next_url(filters, result.next_before),
             "status_labels": STATUS_LABELS,
             "status_options": STATUS_ORDER,
+            "filter_subjects": filter_subjects,
+            "filter_event_types": filter_event_types,
+            "filter_tags": filter_tags,
+            "time_range": time_range or "",
         },
     )
 
