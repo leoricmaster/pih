@@ -26,5 +26,6 @@ Do not edit Backlog task, draft, document, decision, or milestone markdown files
 ## 项目工作约定
 
 - **故事交付**：实现故事前读 backlog doc-5《故事交付包 Checklist》（流程纪律、设计文档模板、证据格式、测试分层与 CI 策略；TASK-1.01.01 标杆蒸馏）。
+- **验收材料包**：人类验收评审前按 doc-5 §5 例行提供五问材料（文档更新/测试报告/产品增量与验收路径/腐烂坏味道/下一步建议），全部客观证据，页面类附原型 IA 布局级对照。
 - **术语歧义先查 backlog doc-4《术语词表》**——只收项目特殊含义/易混淆术语（如 reliability vs level、试抓取 vs 采集、未达），再查事实源正文。
 - 任务 Implementation Notes 追加：CLI 无对应子命令时按仓内既有实践在任务文件 `SECTION:NOTES` 区间内追加并同步 frontmatter `updated_date`（唯一例外，其余仍走 CLI）。
