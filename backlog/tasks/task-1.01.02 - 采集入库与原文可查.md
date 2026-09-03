@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 10:15'
+updated_date: '2026-09-03 10:30'
 labels:
   - web
 milestone: m-0
@@ -130,6 +130,12 @@ R6 评审答问归档——管线记录处（§5/§6.4/ADR-004·007·009·011，
 R7 验收数据重建——contract/integration 测试 fixture 对共享开发库 downgrade base（test_migrations_apply.py:31,55 / conftest.py:34）清空了已造数据；重新 upgrade+collect+seed（3 pending+1 filtered_out+1 dead）。该共享库设计为本地隐患（CI 无害），已向用户提议立独立测试库任务。
 
 本轮回归：unit 343（+4 净增）/ contract 57 / ruff 干净；integration 未重跑（改动缝无 integration 覆盖，grep 零引用；重放缝已 live 实弹验证）。README 同步（两视图段+浏览器访问段改 tab IA）。
+
+二轮评审问答（页面运营模型四问，客观结论）+ 裁定规划补位（不改码）：
+
+入口：收件箱内容现役仅 `pih collect` 手动 CLI（调度 TASK-4.01.01 To Do 只加调度层、明确排除处理；人工录入 TASK-1.03 未实现）；演示数据为验收手造。时限：pending 无 TTL——时效管理器（draft-009 规划）管事件层过期/decay、健康监视（TASK-4.02）管信源连续失败，均不管条目积压。滞留根因：处理链无自动触发（任务树此前无「采集后自动处理」归属），页面亦无引导；收件箱定位为采集验收面+漏报审计（doc-2 §6.4 已载），消化 pending 属处理链职责非页面职责。
+
+处置：新建 TASK-4.01.2「采集后自动处理消化 pending」（挂 TASK-4.01，dep TASK-4.01.01；描述含运营模型澄清与暂缓项入档）；页面引导文案 / Web 处理触发入口 / pending 超期提醒三项裁定暂缓（如需另立）。milestone 未指派（是否入 m-0 待用户定夺）。
 <!-- SECTION:NOTES:END -->
 
 ## Comments
