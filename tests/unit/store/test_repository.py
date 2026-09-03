@@ -289,15 +289,55 @@ class TestWriteProcessResult:
         assert params[8] == "schema 校验 3 次未过"
 
 
+class TestVerifyQueueQueries:
+    """TASK-2.02.02：核实页队列查询（低置信度情报 D6 / 积压事件 AC4）。"""
+
+    def test_list_low_confidence_sql(self):
+        m = _MockConn()
+        m.cursor_obj.fetchall.return_value = []
+        IntelRepository(m.pool).list_low_confidence(limit=30)
+        sql = m.cursor_obj.execute.call_args.args[0]
+        assert "SUBSTRING(admiralty_code FROM 2 FOR 1) IN ('4','5','6')" in sql
+        assert "LEFT(admiralty_code, 1) IN ('D','E','F')" in sql
+        assert "process_status = 'extracted'" in sql
+        # 已证伪事件条目不入低置信复核队列（D6/D7 一致口径）
+        assert "(e.status IS NULL OR e.status <> 'refuted')" in sql
+        assert m.cursor_obj.execute.call_args.args[1] == (30,)
+
+    def test_list_stale_pending_sql(self):
+        from pih.store.event_repository import EventRepository
+
+        m = _MockConn()
+        m.cursor_obj.fetchall.return_value = []
+        EventRepository(m.pool).list_stale_pending(days=7, limit=20)
+        sql = m.cursor_obj.execute.call_args.args[0]
+        assert "status = 'pending'" in sql
+        assert "first_seen_at < now() - make_interval(days => %s)" in sql
+        assert "ORDER BY first_seen_at ASC" in sql
+        assert m.cursor_obj.execute.call_args.args[1] == (7, 20)
+
+
 class TestListByFilter:
-    def test_no_filters_no_where(self):
+    def test_no_filters_default_excludes_refuted(self):
+        """D7（TASK-2.02.02 AC3）：无显式筛选时检索默认排除所属事件=refuted
+        的条目（无挂事件条目不受影响）。"""
         m = _MockConn()
         m.cursor_obj.fetchall.return_value = []
         repo = IntelRepository(m.pool)
         repo.list_by_filter(limit=10)
         sql = m.cursor_obj.execute.call_args.args[0]
-        assert "WHERE" not in sql
+        assert "(e.status IS NULL OR e.status <> 'refuted')" in sql
         assert m.cursor_obj.execute.call_args.args[1] == (10,)
+
+    def test_explicit_refuted_overrides_default_exclusion(self):
+        """显式 event_status=refuted 可查（审计可达），不叠加排除子句。"""
+        m = _MockConn()
+        m.cursor_obj.fetchall.return_value = []
+        repo = IntelRepository(m.pool)
+        repo.list_by_filter(event_status="refuted", limit=10)
+        sql = m.cursor_obj.execute.call_args.args[0]
+        assert "e.status = %s" in sql
+        assert "IS NULL OR e.status" not in sql
 
     def test_combined_filters_build_clauses(self):
         m = _MockConn()

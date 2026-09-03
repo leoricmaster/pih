@@ -163,7 +163,7 @@
       <dt>事件类型</dt><dd>{{ ev.event_type }}</dd>
       <dt>核实状态</dt><dd><span class="status-badge event-{{ ev.status }}">{{ status_labels[ev.status] }}</span></dd>
       <dt>独立信源数</dt><dd>{{ ev.source_count }}</dd>
-      {% if ev.ready_for_manual %}<dt>待人工</dt><dd>已具备升级条件，可执行 <code>pih verify confirm {{ ev.id }}</code></dd>{% endif %}
+      {% if ev.ready_for_manual %}<dt>待人工</dt><dd>已具备升级条件——前往 <a href="/verify">核实页</a> 确认或证伪（或 <code>pih verify confirm {{ ev.id }}</code>）</dd>{% endif %}
       <dt>首见时间</dt><dd>{{ ev.first_seen_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
       <dt>最近见</dt><dd>{{ ev.last_seen_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
     </dl>

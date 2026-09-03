@@ -124,6 +124,7 @@
     <div class="navgroup" data-group="ops">
       <label>运营</label>
       <a class="navlink" data-go="source">信源</a>
+      <a class="navlink" data-go="verify">核实</a>
       <a class="navlink" data-go="intake">录入</a>
       <a class="navlink" data-go="feedback">反馈</a>
       <a class="navlink" data-go="config">配置</a>
@@ -137,7 +138,7 @@
       A 日常监控 · B 录入<br>
       C 检索 · D 假设求证<br>
       E 信源 · F 核实 · G 反馈<br>
-      <span style="color:#94a3b8">收件箱并入情报 tab；F 核实队列随核实层（未来）呈现</span>
+      <span style="color:#94a3b8">收件箱并入情报 tab；F 核实页已随 TASK-2.02.02 呈现</span>
     </div>
   </nav>
 
@@ -213,7 +214,7 @@
             </tbody>
           </table>
         </div>
-        <div class="legend">收件箱 = 采集处理状态视图（漏报审计可筛 filtered_out）；已抽取成品在「检索」。事件核实队列（确认 / 证伪）随核实层（未来故事）另行呈现。</div>
+        <div class="legend">收件箱 = 采集处理状态视图（漏报审计可筛 filtered_out）；已抽取成品在「检索」。事件核实队列（确认 / 证伪）在运营区「核实」页呈现。</div>
       </div>
     </section>
 
@@ -341,6 +342,40 @@
         <div class="seg"><span class="k"></span><span class="mini">抓到 1 条正文，1 份原文已存档，示例：『中国工程机械工业协会关于…的通知』</span></div>
         <div class="seg"><span class="k"></span><a href="#" style="font-size:11px">查看原文：『中国工程机械工业协会关于…的通知』</a> <span class="mini">（临时链接，1 小时内有效）</span></div>
         <div class="legend">成功路径只呈现结论+产出摘要+原文入口；管线四段（robots 合规检查/列表页/详情/快照）仅失败时展开作分段诊断；排查材料只见服务日志。连续 3 次失败 → 站内信告警（不影响他源）。</div>
+      </div>
+    </section>
+
+    <!-- ============ 核实（TASK-2.02.02 交付后反向更新） ============ -->
+    <section class="page" id="verify" data-title="运营 / 核实">
+      <div class="note">▶ 流 F 人工核实 · 终态由人把关。确认（→多源确认）与证伪（必填理由）为人工终态，全程写核实日志；已证伪事件下情报检索默认隐藏（显式可查）。</div>
+      <div class="wf"><div class="lbl">积压提醒（待核实超 7 天 · 按滞留时长排序）</div>
+        <div class="qcard" style="border-color:var(--warn);background:#fffbeb"><div><div class="ttl">徐工 · 中标落地</div><div class="mini">事件 #12 · 滞留 14 天 · 首见 08-20</div></div><span class="mini">→ 去处理</span></div>
+      </div>
+      <div class="wf"><div class="lbl">已具备升级条件的事件（双独立信源 · 待人工确认/证伪）</div>
+        <div class="queue">
+          <div class="qcard"><div><div class="ttl">三一 · 新品发布</div><div class="mini">事件 #5 · 独立信源 2 · 首见 08-27 · 单源确认</div></div>
+            <div class="row"><button class="btn primary">确认 → 多源确认</button><input class="inp" placeholder="证伪理由（必填）"><button class="btn warn">证伪</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="wf"><div class="lbl">低置信度情报（可信度 4–6 或可靠性 D–F · 低置信最老优先）</div>
+          <table class="wf-table">
+            <thead><tr><th>标题</th><th>Admiralty</th><th>采集时间</th></tr></thead>
+            <tbody>
+              <tr class="item" data-go="detail" data-item="某源称三一将退出小型挖机市场"><td>某源称三一将退出小型挖机市场</td><td><span class="adm">E4</span></td><td>08-28 09:20</td></tr>
+              <tr class="item" data-go="detail" data-item="传闻：临工海外建厂"><td>传闻：临工海外建厂</td><td><span class="adm">C5</span></td><td>08-27 15:00</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="wf"><div class="lbl">待人工条目（抽取降级 · 原因可查可重放）</div>
+          <table class="wf-table">
+            <thead><tr><th>标题</th><th>原因</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr class="item" data-go="detail" data-item="(占位主体)海外市场传闻汇总"><td>(占位主体)海外市场传闻汇总</td><td>后验质量门：主体为占位值「未知」</td><td><button class="btn">重放</button></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -492,7 +527,7 @@
 <script>
   const crumbs = {
     lib:'情报 / 列表', detail:'情报 / 详情', hypo:'假设 / 列表', hypodetail:'假设 / 详情',
-    intake:'录入', source:'信源', feedback:'反馈', config:'配置', dash:'仪表盘 / 观察面', notif:'站内信 / 历史'
+    intake:'录入', source:'信源', verify:'运营 / 核实', feedback:'反馈', config:'配置', dash:'仪表盘 / 观察面', notif:'站内信 / 历史'
   };
   let stack = [];
   function go(id, fromNav){

@@ -133,6 +133,10 @@ class EventService:
     def list_ready_for_manual(self, limit: int = 50) -> list[EventRecord]:
         return self._repo.list_ready_for_manual(limit=limit)
 
+    def list_stale(self, days: int = 7, limit: int = 50) -> list[EventRecord]:
+        """积压提醒（TASK-2.02.02 AC4）——委托 repo.list_stale_pending。"""
+        return self._repo.list_stale_pending(days=days, limit=limit)
+
     def confirm(self, event_id: int, operator: str = "operator") -> bool:
         return self._repo.confirm(event_id, operator=operator)
 

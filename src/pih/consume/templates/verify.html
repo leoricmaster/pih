@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block nav_active %}verify{% endblock %}
+{% block title %}核实 · PIH{% endblock %}
+{% block content %}
+
+<header class="page-head">
+  <h1>人工核实</h1>
+  <p class="mini">终态由人把关：确认（单源确认 → 多源确认）与证伪（必填理由）均为人工终态，全程写核实日志。</p>
+</header>
+
+<section class="block stale-zone">
+  <h2>积压提醒</h2>
+  {% if stale_cards %}
+  <p class="mini">待核实事件滞留超 7 天（按滞留时长排序）：</p>
+  <div class="queue">
+    {% for c in stale_cards %}
+    {% set ev = c.event %}
+    <div class="qcard warn">
+      <div>
+        <div class="ttl">{{ ev.subject }} · {{ ev.event_type }}</div>
+        <div class="mini">事件 #{{ ev.id }} · 滞留 {{ c.days }} 天 · 首见 {{ ev.first_seen_at.strftime('%Y-%m-%d') }}</div>
+      </div>
+      <a class="mini" href="/verify#ready">去处理 ↓</a>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="mini">无积压</p>
+  {% endif %}
+</section>
+
+<section class="block" id="ready">
+  <h2>已具备升级条件的事件</h2>
+  <p class="mini">双独立信源命中、已自动跃迁单源确认——等待人工确认或证伪。</p>
+  {% if ready_events %}
+  <div class="queue">
+    {% for ev in ready_events %}
+    <div class="qcard">
+      <div>
+        <div class="ttl">{{ ev.subject }} · {{ ev.event_type }}</div>
+        <div class="mini">事件 #{{ ev.id }} · 独立信源 {{ ev.source_count }} · 首见 {{ ev.first_seen_at.strftime('%Y-%m-%d %H:%M') }} · 状态 {{ status_labels[ev.status] }}</div>
+      </div>
+      <div class="verify-actions">
+        <form method="post" action="/verify/{{ ev.id }}/confirm">
+          <button type="submit">确认 → 多源确认</button>
+        </form>
+        <form method="post" action="/verify/{{ ev.id }}/refute" class="refute-form">
+          <input type="text" name="reason" required placeholder="证伪理由（必填）">
+          <button type="submit" class="danger">证伪</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="mini">（无待处理事件）</p>
+  {% endif %}
+</section>
+
+<section class="block">
+  <h2>低置信度情报</h2>
+  <p class="mini">Admiralty 可信度 4–6（存疑起）或可靠性 D–F 的成品——建议优先复核。</p>
+  {% if low_conf_items %}
+  <table class="intel-list">
+    <thead><tr><th>标题</th><th>主体</th><th>事件类型</th><th>置信度</th><th>采集时间</th></tr></thead>
+    <tbody>
+      {% for r in low_conf_items %}
+      <tr>
+        <td class="title"><a href="/intel/{{ r.id }}">{{ r.title }}</a></td>
+        <td>{{ r.subject or '—' }}</td>
+        <td>{{ r.event_type or '—' }}</td>
+        <td>{{ r.admiralty_code or '—' }}</td>
+        <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="mini">（无低置信度条目）</p>
+  {% endif %}
+</section>
+
+<section class="block">
+  <h2>待人工条目</h2>
+  <p class="mini">抽取降级（schema 校验失败 / 占位主体）——结构化字段保留，可重放后重抽取。</p>
+  {% if needs_manual_items %}
+  <table class="intel-list">
+    <thead><tr><th>标题</th><th>置信度</th><th>原因</th><th>采集时间</th><th></th></tr></thead>
+    <tbody>
+      {% for r in needs_manual_items %}
+      <tr>
+        <td class="title"><a href="/intel/{{ r.id }}">{{ r.title }}</a></td>
+        <td>{{ r.admiralty_code or '—' }}</td>
+        <td class="ts">{{ r.process_error or '—' }}</td>
+        <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td><a class="fb-link" href="/inbox?status=needs_manual">收件箱复核</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="mini">（无待人工条目）</p>
+  {% endif %}
+</section>
+
+{% endblock %}

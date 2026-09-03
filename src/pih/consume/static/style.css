@@ -163,3 +163,22 @@ a.fb-link:hover { text-decoration: underline; }
 
 /* 未挂事件（TASK-2.02.01 AC1）：与状态徽章区分的弱化文案 */
 .no-event { color: var(--muted); font-size: 0.85rem; }
+
+/* 核实页（TASK-2.02.02）：队列卡片 + 终态操作 */
+.page-head h1 { margin: 0 0 0.2rem; font-size: 1.3rem; }
+.mini { color: var(--muted); font-size: 0.8rem; margin: 0.2rem 0 0.6rem; }
+.queue { display: flex; flex-direction: column; gap: 0.5rem; }
+.qcard { border: 1px solid var(--line); border-radius: 6px; padding: 0.6rem 0.8rem;
+         background: #fff; display: flex; justify-content: space-between;
+         align-items: center; gap: 0.8rem; }
+.qcard.warn { border-color: #f59e0b; background: #fffbeb; }
+.qcard .ttl { font-weight: 600; }
+.verify-actions { display: flex; gap: 0.5rem; align-items: center; }
+.verify-actions form { display: flex; gap: 0.4rem; margin: 0; }
+.refute-form input { border: 1px solid var(--line); border-radius: 4px;
+                     padding: 0.25rem 0.5rem; font-size: 0.85rem; width: 13rem; }
+.verify-actions button { cursor: pointer; border: 1px solid var(--line);
+                         border-radius: 4px; padding: 0.3rem 0.8rem;
+                         background: #fff; font-size: 0.85rem; }
+.verify-actions button:hover { background: var(--fill); }
+.verify-actions button.danger { color: #b91c1c; border-color: #b91c1c; }

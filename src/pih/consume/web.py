@@ -42,7 +42,7 @@ from pih.process.event import STATUS_LABELS, STATUS_ORDER, EventService
 from pih.store.db import close_pool, get_pool
 from pih.store.event_repository import EventRepository
 from pih.store.feedback import FEEDBACK_TYPES, FeedbackRepository
-from pih.store.repository import STATUS_PENDING, IntelRepository
+from pih.store.repository import STATUS_NEEDS_MANUAL, STATUS_PENDING, IntelRepository
 
 _BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(_BASE / "templates"))
@@ -219,6 +219,86 @@ def detail_page(
             "pack_event_types": pack_event_types,
         },
     )
+
+
+@app.get("/verify", response_class=HTMLResponse)
+def verify_page(request: Request) -> HTMLResponse:
+    """核实页（TASK-2.02.02）：积压提醒置顶 + 三类队列 + 确认/证伪操作。
+
+    排序 AC1「置信度升序 + 采集时间升序」——条目队列以 map(admiralty)（ranking
+    权重短板）升序=低置信优先，fetched_at 升序破同分；事件队列无置信度维度，
+    按 first_seen_at 升序（滞留最久优先，与积压区口径一致）。队列小（单用户
+    系统），路由层 Python 排序（设计 D8）。
+    """
+    pool = request.app.state.pool
+    intel_repo = IntelRepository(pool)
+    event_svc = _event_svc(request)
+    ranking = _pack_ranking() or {}
+    rel_w = ranking.get("reliability_weights", {})
+    cred_w = ranking.get("credibility_weights", {})
+
+    def _score(code: str | None) -> float:
+        # 无码/畸形码视为最低置信（排最前，进人工视野）
+        if not code or len(code) != 2:
+            return -1.0
+        return min(float(rel_w.get(code[0], 0.0)), float(cred_w.get(code[1], 0.0)))
+
+    def _sort_items(items: list) -> list:
+        return sorted(items, key=lambda r: (_score(r.admiralty_code), r.fetched_at))
+
+    # 滞留天数在路由侧算（DB 时间戳带 tz，模板侧 naive/aware 相减会炸；
+    # naive 输入按本地时区处理——单测 fake 与 DB 两种来源都可算）
+    def _days_ago(t: datetime) -> int:
+        now = datetime.now().astimezone()
+        if t.tzinfo is None:
+            t = t.astimezone()
+        return max(0, (now - t).days)
+
+    stale_cards = [
+        {"event": ev, "days": _days_ago(ev.first_seen_at)}
+        for ev in event_svc.list_stale()
+    ]
+    context = {
+        "ready_events": event_svc.list_ready_for_manual(),
+        "stale_cards": stale_cards,
+        "low_conf_items": _sort_items(intel_repo.list_low_confidence()),
+        "needs_manual_items": _sort_items(
+            intel_repo.list_inbox(process_status=STATUS_NEEDS_MANUAL)
+        ),
+        "status_labels": STATUS_LABELS,
+    }
+    return templates.TemplateResponse(request, "verify.html", context)
+
+
+@app.post("/verify/{event_id}/confirm")
+def verify_confirm(event_id: int, request: Request) -> RedirectResponse:
+    """人工终态：单源确认 → 多源确认（写 verification_log，AC2）。"""
+    event_svc = _event_svc(request)
+    if event_svc.get_event_with_log(event_id).event is None:
+        raise HTTPException(status_code=404, detail=f"event {event_id} not found")
+    if not event_svc.confirm(event_id):
+        raise HTTPException(
+            status_code=400, detail="当前事件状态不允许确认（须为单源确认）"
+        )
+    return RedirectResponse("/verify", status_code=303)
+
+
+@app.post("/verify/{event_id}/refute")
+def verify_refute(
+    event_id: int, request: Request, reason: str = Form("")
+) -> RedirectResponse:
+    """人工终态：证伪（必填理由入日志，AC3；该事件下情报检索默认隐藏 D7）。"""
+    reason_s = (reason or "").strip()
+    if not reason_s:
+        raise HTTPException(status_code=400, detail="证伪必须填写理由")
+    event_svc = _event_svc(request)
+    if event_svc.get_event_with_log(event_id).event is None:
+        raise HTTPException(status_code=404, detail=f"event {event_id} not found")
+    if not event_svc.refute(event_id, reason_s):
+        raise HTTPException(
+            status_code=400, detail="当前事件状态不允许证伪（终态无出边）"
+        )
+    return RedirectResponse("/verify", status_code=303)
 
 
 @app.get("/inbox", response_class=HTMLResponse)

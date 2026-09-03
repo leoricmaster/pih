@@ -147,6 +147,24 @@ class EventRepository:
             rows = cur.fetchall()
         return [EventRecord(**r) for r in rows]
 
+    def list_stale_pending(
+        self, days: int = 7, limit: int = 50
+    ) -> list[EventRecord]:
+        """积压提醒（TASK-2.02.02 AC4）：待核实事件滞留超 days 天，最老优先。"""
+        sql = """
+            SELECT id, subject, event_type, status, source_count,
+                   ready_for_manual, first_seen_at, last_seen_at
+            FROM event
+            WHERE status = 'pending'
+              AND first_seen_at < now() - make_interval(days => %s)
+            ORDER BY first_seen_at ASC, id ASC
+            LIMIT %s
+        """
+        with self._pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(sql, (days, limit))
+            rows = cur.fetchall()
+        return [EventRecord(**r) for r in rows]
+
     def list_intel_ids_without_event(
         self, source_id: str | None = None, limit: int = 200
     ) -> list[int]:

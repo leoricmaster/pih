@@ -108,6 +108,52 @@ class TestListRender:
         assert "未挂事件" in html
 
 
+class TestVerifyPageRender:
+    """TASK-2.02.02：核实页四区 + 确认/证伪表单契约。"""
+
+    def _ctx(self, **extra) -> dict:
+        from pih.store.event_repository import EventRecord
+
+        ev = EventRecord(
+            id=5, subject="三一", event_type="新品发布", status="single_source",
+            source_count=2, ready_for_manual=True,
+            first_seen_at=datetime(2026, 8, 27, 8, 0),
+            last_seen_at=datetime(2026, 9, 1, 8, 0),
+        )
+        return {
+            "ready_events": [ev],
+            "stale_cards": [],
+            "low_conf_items": [],
+            "needs_manual_items": [],
+            "status_labels": STATUS_LABELS,
+            **extra,
+        }
+
+    def test_sections_and_actions_render(self):
+        html = _render("verify.html", self._ctx())
+        for section in ("积压提醒", "已具备升级条件", "低置信度情报", "待人工条目"):
+            assert section in html
+        assert 'action="/verify/5/confirm"' in html
+        assert 'action="/verify/5/refute"' in html
+        assert 'name="reason" required' in html
+        assert "无积压" in html  # 空积压区提示
+
+    def test_stale_event_card_renders(self):
+        from pih.store.event_repository import EventRecord
+
+        stale = EventRecord(
+            id=8, subject="徐工", event_type="中标落地", status="pending",
+            source_count=1, ready_for_manual=False,
+            first_seen_at=datetime(2026, 8, 20, 8, 0),
+            last_seen_at=datetime(2026, 8, 20, 8, 0),
+        )
+        html = _render(
+            "verify.html", self._ctx(stale_cards=[{"event": stale, "days": 14}])
+        )
+        assert "徐工" in html
+        assert "滞留 14 天" in html
+
+
 class TestFilterFormIA:
     """TASK-2.01.01 D2/D3/D4：主行五要素（词表下拉）+ 时间预设 + 更多筛选折叠 + 清空。"""
 

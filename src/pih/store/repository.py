@@ -413,6 +413,11 @@ class IntelRepository:
         """
         clauses: list[str] = []
         params: list = []
+        if event_status is None:
+            # D7（TASK-2.02.02 AC3）：检索默认隐藏已证伪事件的条目
+            # （doc-2 §6.3「已证伪 0 默认不出现在结果」）；无挂事件条目不受影响；
+            # 显式 event_status=refuted 可查（审计可达，不进本分支）。
+            clauses.append("(e.status IS NULL OR e.status <> 'refuted')")
         if subject is not None:
             clauses.append("i.subject = %s")
             params.append(subject)
@@ -467,6 +472,29 @@ class IntelRepository:
         params.append(limit)
         with self._pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute(sql, tuple(params))
+            rows = cur.fetchall()
+        return [IntelRecord(**r) for r in rows]
+
+    def list_low_confidence(self, limit: int = 50) -> list[IntelRecord]:
+        """低置信度情报（TASK-2.02.02 AC1 队列②，D6 阈值）。
+
+        Admiralty 任一维度进低档即入列：可信度 4–6（存疑起）或可靠性 D–F；
+        仅 extracted 成品；已证伪事件条目不入列（D6/D7 一致口径）。
+        取回 fetched_at DESC，由调用方（核实页路由）按 score 升序重排。
+        """
+        sql = f"""
+            SELECT {_COLUMNS_WITH_EVENT}
+            FROM intel_item i
+            LEFT JOIN event e ON e.id = i.event_id
+            WHERE process_status = 'extracted'
+              AND (SUBSTRING(admiralty_code FROM 2 FOR 1) IN ('4','5','6')
+                   OR LEFT(admiralty_code, 1) IN ('D','E','F'))
+              AND (e.status IS NULL OR e.status <> 'refuted')
+            ORDER BY fetched_at DESC, id DESC
+            LIMIT %s
+        """
+        with self._pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(sql, (limit,))
             rows = cur.fetchall()
         return [IntelRecord(**r) for r in rows]
 
