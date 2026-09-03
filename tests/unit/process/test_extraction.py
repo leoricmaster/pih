@@ -70,6 +70,28 @@ class TestValidatePredOk:
         assert isinstance(result, IntelExtraction)
 
 
+class TestInferenceBasis:
+    """AC1「推断字段必须含依据」硬校验（设计 D1）：非空推断须含「依据」标记。"""
+
+    def test_inference_without_basis_rejected(self, vocab):
+        pred = _ok_pred() | {"推断与判断": "布局无人化作业方向"}
+        result = validate_pred(pred, vocab)
+        assert isinstance(result, ValidationFailure)
+        assert any("依据" in b for b in result.bad_values)
+
+    def test_inference_with_basis_passes(self, vocab):
+        """提示词规则 5 要求「依据：」开头——含依据即过（容半角冒号）。"""
+        pred = _ok_pred() | {"推断与判断": "依据: 配遥控系统，布局无人化"}
+        result = validate_pred(pred, vocab)
+        assert isinstance(result, IntelExtraction)
+
+    def test_empty_inference_still_allowed(self, vocab):
+        """无推断（空串）无依据要求——AC 约束对象是非空推断。"""
+        pred = _ok_pred() | {"推断与判断": ""}
+        result = validate_pred(pred, vocab)
+        assert isinstance(result, IntelExtraction)
+
+
 class TestValidatePredFailures:
     def test_missing_keys_listed(self, vocab):
         pred = {"主体": "三一"}

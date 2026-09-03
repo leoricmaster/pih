@@ -5,7 +5,8 @@
 - 7 键齐全且类型正确（主体/事件类型/事实描述非空串）；
 - 事件类型 ∈ 领域包 event_types；
 - 标签 ⊆ 领域包标签树叶子；
-- 信息可信度 ∈ 1–6 单字符（Admiralty，架构 §6.2）。
+- 信息可信度 ∈ 1–6 单字符（Admiralty，架构 §6.2）；
+- 推断与判断非空时须含「依据」标记（AC1 推断必须含依据，提示词规则 5 同构）。
 
 校验失败 → validate 节点重问（≤3），仍失败降级 needs_manual 不丢弃（TASK-1.02.01 AC2）。
 """
@@ -106,6 +107,16 @@ def validate_pred(pred: dict, vocab: PackVocab) -> IntelExtraction | ValidationF
     if isinstance(facts, str) and not facts.strip():
         bad.append(f"{KEY_FACTS}为空")
         facts = None
+
+    # AC1「推断字段必须含依据」：非空推断须含「依据」标记（提示词规则 5 要求
+    # 「依据：」开头，此处硬校验兜底；子串匹配容全/半角冒号，空串放行）。
+    inferences = pred.get(KEY_INFERENCES)
+    if (
+        isinstance(inferences, str)
+        and inferences.strip()
+        and "依据" not in inferences
+    ):
+        bad.append(f"{KEY_INFERENCES}缺依据（须含「依据：…」）")
 
     tags = pred.get(KEY_TAGS)
     if tags is not None and not isinstance(tags, list):

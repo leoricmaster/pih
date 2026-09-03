@@ -140,6 +140,19 @@ class TestValidate:
         assert "schema 校验" in reask
         assert "融资轮次" in reask
 
+    def test_reask_recovers_missing_inference_basis(self):
+        """AC1 推断必须含依据：缺依据触发重问，补依据后通过。"""
+        fake = FakeChat([
+            ({"relevant": True}, _usage()),
+            (_ok_pred() | {"推断与判断": "布局无人化作业方向"}, _usage()),
+            (_ok_pred(), _usage()),
+        ])
+        final = build_graph(PACK, chat=fake).invoke(_state())
+        assert final["extraction"] is not None
+        assert final["validate_rounds"] == 1
+        reask = fake.calls[2][1][-1]["content"]
+        assert "依据" in reask
+
     def test_extract_failure_recovered_by_reask(self):
         """extract 节点 API 失败（pred=None）→ validate 首轮补问成功。"""
         fake = FakeChat([

@@ -150,3 +150,6 @@ a.fb-link:hover { text-decoration: underline; }
 .field-legend dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.75rem; margin: 0.5rem 0 0; }
 .field-legend dt { font-weight: 600; }
 .field-legend dd { margin: 0; }
+
+/* Admiralty 双维注解（TASK-1.02.01 AC1）：B2 → 来源可靠性 B × 可信度 2 */
+.adm-note { color: var(--muted); font-size: 0.8rem; }

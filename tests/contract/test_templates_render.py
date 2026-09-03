@@ -158,6 +158,8 @@ class TestDetailRender:
         assert "事件核实状态与跃迁历史" in html
         assert rec.url in html
         assert "75t" in html  # quant_params
+        # AC1（TASK-1.02.01）：Admiralty 双维注解（来源可靠性 × 可信度）
+        assert "来源可靠性 B × 可信度 2" in html
         assert "技术详情" in html
         assert rec.list_url in html
         assert "快照 ID" not in html

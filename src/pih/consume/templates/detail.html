@@ -43,7 +43,7 @@
       <dd>{% if rec.tags %}{% for t in rec.tags %}<span class="tag">{{ t }}</span> {% endfor %}{% else %}—{% endif %}</dd>
       <dt>量化参数</dt>
       <dd>{% if rec.quant_params %}{% for k, v in rec.quant_params.items() %}{{ k }}={{ v }}；{% endfor %}{% else %}—{% endif %}</dd>
-      <dt>Admiralty</dt><dd>{{ rec.admiralty_code or '—' }}</dd>
+      <dt>Admiralty</dt><dd>{% if rec.admiralty_code and rec.admiralty_code|length == 2 %}{{ rec.admiralty_code }} <span class="adm-note">来源可靠性 {{ rec.admiralty_code[0] }} × 可信度 {{ rec.admiralty_code[1] }}</span>{% else %}{{ rec.admiralty_code or '—' }}{% endif %}</dd>
     </dl>
   </section>
 
