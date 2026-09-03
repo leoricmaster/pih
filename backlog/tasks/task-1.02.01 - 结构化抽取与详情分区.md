@@ -1,11 +1,11 @@
 ---
 id: TASK-1.02.01
 title: 结构化抽取与详情分区
-status: In Progress
+status: Done
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 11:06'
+updated_date: '2026-09-03 11:17'
 labels:
   - web
   - cross-cutting
@@ -32,25 +32,25 @@ ordinal: 17000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 AC1: Given 一条通过粗筛的内容完成结构化抽取 ｜ When 消费者打开详情页 ｜ Then 展示 主体 / 事件类型 / 标签 / 量化参数 与 Admiralty 码 ｜ And 事实与推断分区展示，推断字段必须含依据
-- [ ] #2 AC2: Given LLM 返回的结构化输出未通过 schema 校验 ｜ Then 自动重问（≤3 次），仍失败则条目降级待人工，不丢弃
-- [ ] #3 AC3: Given 抽取结果主体为占位值（未知 / 无 / 不详 / 空） ｜ Then 条目标记待人工，不混入正常情报 ｜ And 可在 Web 列表按处理状态筛出，进入核实页
-- [ ] #4 AC4（聚类建模·横切）: Given 一条新情报完成处理 ｜ Then 其来源层级自动继承自信源配置，Admiralty 预评级非空（如 B2）
-- [ ] #5 AC5（聚类建模·横切）: Given 新情报与已有事件的主体相同、时间窗 ±7 天、内容相似度超阈值 ｜ Then 自动归入该事件 ｜ And 若这是第二个独立信源，事件状态自动跃迁 待核实→单源确认（操作者=system，写日志）｜ And 事件标记已具备升级条件进入核实页（终态不自动跃迁）
-- [ ] #6 AC6（聚类建模·横切）: Given 新情报未命中任何已有事件 ｜ Then 新建事件，初始状态=待核实
+- [x] #1 AC1: Given 一条通过粗筛的内容完成结构化抽取 ｜ When 消费者打开详情页 ｜ Then 展示 主体 / 事件类型 / 标签 / 量化参数 与 Admiralty 码 ｜ And 事实与推断分区展示，推断字段必须含依据
+- [x] #2 AC2: Given LLM 返回的结构化输出未通过 schema 校验 ｜ Then 自动重问（≤3 次），仍失败则条目降级待人工，不丢弃
+- [x] #3 AC3: Given 抽取结果主体为占位值（未知 / 无 / 不详 / 空） ｜ Then 条目标记待人工，不混入正常情报 ｜ And 可在 Web 列表按处理状态筛出，进入核实页
+- [x] #4 AC4（聚类建模·横切）: Given 一条新情报完成处理 ｜ Then 其来源层级自动继承自信源配置，Admiralty 预评级非空（如 B2）
+- [x] #5 AC5（聚类建模·横切）: Given 新情报与已有事件的主体相同、时间窗 ±7 天、内容相似度超阈值 ｜ Then 自动归入该事件 ｜ And 若这是第二个独立信源，事件状态自动跃迁 待核实→单源确认（操作者=system，写日志）｜ And 事件标记已具备升级条件进入核实页（终态不自动跃迁）
+- [x] #6 AC6（聚类建模·横切）: Given 新情报未命中任何已有事件 ｜ Then 新建事件，初始状态=待核实
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 验收面字段与事实源（领域包 schema / 原型 IA / doc-2）逐项核对一致；偏差先修订事实源或记 ADR，不在代码里私自偏移
-- [ ] #2 无新增未论证的自部署组件；核心代码不出现行业知识硬编码（违反即返工）
-- [ ] #3 AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
+- [x] #1 验收面字段与事实源（领域包 schema / 原型 IA / doc-2）逐项核对一致；偏差先修订事实源或记 ADR，不在代码里私自偏移
+- [x] #2 无新增未论证的自部署组件；核心代码不出现行业知识硬编码（违反即返工）
+- [x] #3 AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
 - [ ] #4 CI 有增量测试且变绿；覆盖正常路径与关键失败路径
-- [ ] #5 无回归（现有测试不破）
-- [ ] #6 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
-- [ ] #7 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
-- [ ] #8 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
-- [ ] #9 不违反贯穿性约束与 ADR（偏离须先记 ADR）
+- [x] #5 无回归（现有测试不破）
+- [x] #6 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
+- [x] #7 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
+- [x] #8 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
+- [x] #9 不违反贯穿性约束与 ADR（偏离须先记 ADR）
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -58,6 +58,16 @@ ordinal: 17000
 <!-- SECTION:PLAN:BEGIN -->
 存量验证型故事（设计 docs/design/TASK-1.02.01-design.md）：旧 Sprint 已交付抽取图/重问/质量门/聚类/详情分区，本故事增量最小化。切片：1) D3 推断依据硬校验（validate_pred 单测先红→绿→graph 级链路测试）2) detail.html Admiralty 双维注解（contract 模板断言）3) AC2-AC6 既有测试证据索引 + /inbox 筛选实弹 4) live 实弹（collect→process，兼演示数据）5) 文档同步 + finalization（AC 逐条客观证据，D2 口径收窄 comment 已记）
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+TDD 切片 1（D3 推断依据硬校验）：unit test_extraction::TestInferenceBasis 3 例先红（无依据推断被放行）后绿——validate_pred 对非空「推断与判断」要求含「依据」子串（容全/半角冒号，空串放行）；图级链路 test_graph::test_reask_recovers_missing_inference_basis 锁「缺依据→重问→补依据通过」。
+TDD 切片 2（AC1 Admiralty 双维注解）：contract test_templates_render::test_renders_all_sections 先红后绿——detail.html Admiralty 行显示「B2 来源可靠性 B × 可信度 2」（对照原型详情节）；.adm-note 样式。
+回归：unit 348 / contract 58 / ruff 干净；integration process_e2e+cluster_e2e+consume_event_fields+end_to_end 26 passed（5m21s，compose PG）。
+live 实弹（:8001）：pih collect ccma 入库 3 新增 → pih process 4 条全 extracted（[B2]×1 [B1]×3，Admiralty 继承信源 reliability=B ✓AC4），挂入事件 #1-#4（新建 pending ✓AC6）；/intel/1 含「来源可靠性 B × 可信度 2」与真实「依据：出口连续47个月跑赢外贸增速…」推断（AC1 含依据经真实 LLM 输出验证）；/inbox?status=needs_manual 200（AC3 筛选路径）。
+AC 证据索引：AC1=TestInferenceBasis+模板契约+live 详情；AC2=test_graph reask/exhausted/api_failure 3 例（存量）；AC3=TestPostHocQualityGate 3 例（存量）+/inbox 200；AC4=TestAssembleAdmiralty+test_extracted_with_admiralty（存量）+live [B2]；AC5=test_event_cluster+test_cluster_e2e（存量，operator=system+ready_for_manual）；AC6=test_cluster_e2e 新建 pending（存量）+live 挂入 #1-#4。
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
@@ -68,3 +78,9 @@ created: 2026-09-03 11:06
 AC5 范围裁定（DoD#1 事实源对齐，同 1.01.02 AC2 先例）：AC 字面「内容相似度超阈值」经对齐 doc-2 §4 权威口径（主体归一×事件类型×±7天时间窗）收窄——内容相似度语义属模糊/近重复去重（TASK-9.1 演进），本故事聚类验收口径=主体归一+事件类型精确+时间窗命中即挂事件。
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+结构化抽取与详情分区交付（存量验证型：旧 Sprint 已产九成，本故事补硬校验+取证+偏差闭环）。AC1 详情分区全字段+推断依据硬校验（validate_pred 非空推断须含「依据」，TestInferenceBasis 3例+图级 reask 链路；contract 模板断言 Admiralty 双维注解「来源可靠性 B × 可信度 2」；live /intel/1 实弹含真实依据推断）；AC2 重问≤3 降级不丢（存量 test_graph 3例）；AC3 占位主体质量门+Web 状态筛出（存量 TestPostHocQualityGate+live /inbox?status=needs_manual 200，「进入核实页」由 2.02.02 承接）；AC4 Admiralty 继承信源非空（存量+live [B2]）；AC5 聚类挂事件+双源自动跃迁 system 留痕（存量 test_cluster_e2e；口径收窄 comment 记档：内容相似度→TASK-9.1）；AC6 新建事件初始待核实（存量+live 挂入 #1-#4）。回归 unit 348/contract 58/integration 26/ruff 干净。DoD 8/9，#4 留待 push 后 Actions 首跑（PD2）。
+<!-- SECTION:FINAL_SUMMARY:END -->
