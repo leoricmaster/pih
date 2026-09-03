@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block nav_active %}sources{% endblock %}
 {% block title %}信源 · PIH{% endblock %}
 {% block content %}
 <h1>信源</h1>
@@ -23,7 +24,11 @@
     {% endfor %}
   </div>
   {% if probe_success %}
-  <div class="probe-verdict ok">试抓通过：可在领域包 YAML 中将该信源 enabled 置 true（人工修改，Git 留痕）。</div>
+    {% if probe_warns %}
+    <div class="probe-verdict warn">试抓通过（含 {{ probe_warns|length }} 项告警：{{ probe_warns|join("；") }}）——建议人工复核后再在 YAML 置 enabled（人工修改，Git 留痕）。</div>
+    {% else %}
+    <div class="probe-verdict ok">试抓通过：可在领域包 YAML 中将该信源 enabled 置 true（人工修改，Git 留痕）。</div>
+    {% endif %}
   {% else %}
   <div class="probe-verdict warn">试抓未通过——按上方各段失败原因排查后再试。</div>
   {% endif %}

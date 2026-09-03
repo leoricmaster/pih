@@ -108,6 +108,14 @@ class TestProbeSuccess:
         assert report.success is True
         assert len(report.detail_results[0].snapshot_id) == 40  # 指纹仍产出
 
+    def test_soft200_robots_sets_structured_warn_flag(self):
+        """软 200 robots：允许但置结构化告警位（web 结论行聚合用，验收反馈修复）。"""
+        list_html = (FIXTURES / "ccma_list.html").read_text(encoding="utf-8")
+        detail_html = (FIXTURES / "ccma_detail.html").read_text(encoding="utf-8")
+        hc, _ = _http(_mapping(list_html, detail_html))
+        report = probe_source(_source(), hc, _FakeSnapshots(), details=1)
+        assert report.robots_invalid is True
+
 
 class TestProbeFailures:
     def test_robots_disallowed_skips_list(self):

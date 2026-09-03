@@ -145,3 +145,31 @@ class TestRunProbe:
         out = web.run_probe("s1")
         assert out.report is None
         assert "MinIO" in out.note
+
+
+class TestProbeWarnAggregation:
+    """告警与三态正交：通过+告警时结论行聚合呈现（TASK-1.01.01 验收反馈修复）。"""
+
+    def test_warns_extraction(self):
+        rep = _ok_report()
+        rep.robots_invalid = True
+        warns = web._probe_warns(rep)
+        assert len(warns) == 1
+        assert "robots" in warns[0]
+
+    def test_no_warns_when_valid(self):
+        assert web._probe_warns(_ok_report()) == []
+
+    def test_pass_with_warn_renders_review_verdict(self, client, fixture_pack, monkeypatch):
+        rep = _ok_report()
+        rep.robots_invalid = True
+        monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(rep, None))
+        html = client.post("/sources/s1/probe").text
+        assert "试抓通过" in html
+        assert "含 1 项告警" in html
+        assert "人工复核" in html
+
+    def test_pass_without_warn_keeps_plain_verdict(self, client, fixture_pack, monkeypatch):
+        monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(_ok_report(), None))
+        html = client.post("/sources/s1/probe").text
+        assert "项告警" not in html

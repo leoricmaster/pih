@@ -280,6 +280,18 @@ def _probe_view(report: ProbeReport) -> tuple[list[dict], bool]:
     return segs, report.success
 
 
+def _probe_warns(report: ProbeReport) -> list[str]:
+    """结论行聚合的告警（与三态正交）——决策点必须可见的复核提示。
+
+    验收反馈修复：通过+告警（如 robots 软 200）时结论须呈现「含 N 项告警」，
+    否则复核责任只活在 note 小字里，决策点信息不足。
+    """
+    warns = []
+    if report.robots_invalid:
+        warns.append("robots 无效（软 200）按未声明处理，建议人工复核站点行为")
+    return warns
+
+
 _probe_logger = logging.getLogger("pih.probe")
 
 
@@ -296,6 +308,7 @@ def _log_probe(source_id: str, outcome: ProbeOutcome, duration_ms: float) -> Non
                 "robots_allowed": rep.robots_allowed if rep else None,
                 "list_ok": rep.list_ok if rep else None,
                 "details_ok": sum(1 for d in rep.detail_results if d.ok) if rep else 0,
+                "warns": len(_probe_warns(rep)) if rep else 0,
                 "note": outcome.note,
                 "duration_ms": round(duration_ms, 1),
             },
@@ -317,6 +330,7 @@ def sources_probe(source_id: str, request: Request) -> HTMLResponse:
     probe_view, probe_success = (
         _probe_view(outcome.report) if outcome.report else (None, None)
     )
+    probe_warns = _probe_warns(outcome.report) if outcome.report else []
     return templates.TemplateResponse(
         request,
         "sources.html",
@@ -328,6 +342,7 @@ def sources_probe(source_id: str, request: Request) -> HTMLResponse:
             "probe_outcome": outcome,
             "probe_view": probe_view,
             "probe_success": probe_success,
+            "probe_warns": probe_warns,
         },
     )
 
