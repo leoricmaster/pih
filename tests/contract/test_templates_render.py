@@ -302,6 +302,13 @@ class TestSourcesPageTemplate:
         assert 'action="/sources/sany/probe"' in html
         assert "试抓" in html
 
+    def test_customer_page_has_no_implementation_note(self):
+        """验收反馈（2026-09-03）：客户界面不承载实现者术语——页首 YAML/Git 说明撤下。"""
+        html = _render("sources.html", self._ctx(sources=[self._src()]))
+        assert "配置编辑在仓内" not in html
+        assert "版本留痕" not in html
+        assert "page-note" not in html
+
     def test_validation_error_state_lists_issues_without_table(self):
         issue = ValidationIssue(
             path="sources[0].reliability", message="必选字段缺失", line=7

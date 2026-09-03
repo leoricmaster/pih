@@ -121,7 +121,6 @@ a.fb-link:hover { text-decoration: underline; }
 .pack-error { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.8rem 1.1rem; margin-top: 1rem; }
 .pack-error h2 { font-size: 1rem; margin: 0 0 0.5rem; color: #991b1b; }
 .pack-error code { background: #fee2e2; padding: 0 0.3rem; border-radius: 4px; }
-.page-note { color: var(--muted); font-size: 0.9rem; }
 
 /* 试抓报告面板（TASK-1.01.01 AC3） */
 .probe-report { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.2rem; margin-top: 1rem; }
