@@ -45,16 +45,20 @@ def fixture_pack(monkeypatch):
 
 
 class TestProbeRouteRendering:
-    def test_success_renders_four_dimensions(self, client, fixture_pack, monkeypatch):
+    def test_success_renders_summary_not_pipeline_segments(self, client, fixture_pack, monkeypatch):
+        """R7：成功路径收敛为结论+产出摘要+快照链接；管线分段不呈现。"""
         monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(_ok_report(), None))
         r = client.post("/sources/s1/probe")
         assert r.status_code == 200
         html = r.text
-        for label in ("robots", "列表页", "详情", "快照"):
-            assert label in html
-        assert "成功" in html
         assert "试抓通过" in html
+        assert "抓到 1 条正文" in html
+        assert "原文已存档" in html
+        assert "示例：『某详情』" in html  # 「真抓到了」的用户可感证据
         assert "enabled" in html  # 通过后的启用指引（AC4 语义：人改 YAML）
+        assert 'class="probe-segs"' not in html  # 工程分段不上成功路径
+        assert "robots 合规检查" not in html
+        assert "列表页可达" not in html
 
     def test_robots_denied_marks_following_unreached(self, client, fixture_pack, monkeypatch):
         rep = ProbeReport(source_id="s1", robots_allowed=False, robots_note="robots 拒绝：Disallow")
@@ -63,6 +67,9 @@ class TestProbeRouteRendering:
         html = client.post("/sources/s1/probe").text
         assert "失败" in html
         assert html.count("未达") >= 3  # 列表/详情/快照均未执行
+        assert "robots 合规检查" in html  # 失败路径保留分段诊断（R7）
+        assert "试抓未通过" in html
+        assert "服务日志" in html
 
     def test_not_executed_note_renders(self, client, fixture_pack, monkeypatch):
         monkeypatch.setattr(
@@ -192,6 +199,20 @@ class TestRunProbe:
         out = web.run_probe("s1")
         assert out.report is None
         assert "MinIO" in out.note
+
+
+class TestProbeSummary:
+    """R7：成功路径的产出摘要——一句「试抓产出了什么」。"""
+
+    def test_summary_counts_and_sample(self):
+        assert web._probe_summary(_ok_report()) == (
+            "抓到 1 条正文，1 份原文已存档，示例：『某详情』"
+        )
+
+    def test_summary_without_title_omits_sample(self):
+        rep = _ok_report()
+        rep.detail_results[0].title = ""
+        assert "示例" not in web._probe_summary(rep)
 
 
 class TestProbeWarnAggregation:

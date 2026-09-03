@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 12:40'
+updated_date: '2026-09-03 13:20'
 labels:
   - web
 milestone: m-0
@@ -89,6 +89,7 @@ finalization（计划步 10/11）：术语表 doc-4（17 词条指针型）+ 交
 验收反馈修复（二轮 b，robots 排查材料分层，用户裁定「本轮撤下只留日志」）：RobotsResult 增 detail 字段（Content-Type+正文前 200 字），note 改纯结论句；ProbeReport.robots_detail 贯穿；CLI 打「（排查，不上页面）」行保留开发者面；pih.probe 日志加 robots_detail 字段（排查材料留日志）；Web 页面不渲染 detail。证据：collect test_ac2_soft200_html_robots_invalid 扩展断言 + test_soft200_robots_detail_layered_out_of_note + web test_robots_detail_not_rendered_on_page（页面负控）/ test_probe_log_carries_robots_detail + cli test_probe_report_prints_robots_detail——4 红 1 负控先行；回归 unit+contract 345 passed、ruff 干净；live 重启 uvicorn 后 POST ccma 实弹：robots 段仅结论句。裁定记录：用户确认深化工作继续在本故事单完成（需求端到端规矩）；遗留同段【告警】后缀与结论行 YAML 措辞并入本故事内「原型改稿建议」讨论（原型先行）
 验收反馈修复（三轮，统一含义 + 信源页呈现深化 R1–R6，用户逐项裁定后落地）。前置裁定：层级/可靠性两轴不合并（出身 vs 表现，消费方与标准对齐各异）；赋值口径层删除——只经两途：注册人按官方定义人工初评 + 画像重估（verification_log），无并行规则（「实抓→B」类阶梯废除）；类型词不带状态备注（易过时），适配器接入状态属运行时查注册表渲染。统一含义落地（事实源优先）：doc-2 §6.3 补 Admiralty A–F 官方分档 + 两轴不合并段（含重访条件：level 长期无消费方再议降级）+ §6.4 人工初评落 A/B 口径 + §4/§5 图与表补「变更监控」；doc-4 重写为统一词表（词条=特殊含义/易混淆 + 「呈现」行=UI 标签基线）；schema 层级引用漂移修正（§6.2→§6.3）。R1–R3 清单面：labels.py（类型/频率呈现词 + 字段图例，漂移守卫 test_labels 锁 key 集与 schema 枚举一致）+ sources.html 字段说明折叠图例/呈现词列/未接入徽标/启用停用标签 + 原型清单面同步。R4–R6 报告面（TDD 8 红先行）：ProbeReport.list_count 结构化计数（web 不再解析 note）；_probe_view 用户文案——「robots 合规检查/允许抓取/站点未提供有效 robots 声明…按无限制处理/列表页可达，找到 N 条待抓内容/已抓取 x/y 条正文；示例：『title』/N 份原文快照已存档」；_probe_warns 改「该站点未提供有效 robots 声明，已按无限制处理——请确认可接受」；结论行 R6——通过「启用本信源：在信源配置文件中将 enabled 改为 true 并提交（人工操作，留版本记录）」、失败补「详细排查材料见服务日志（pih.probe）」；R5 报告附 presigned 查看原文链接（MinIO 不可达降级省略，存档事实仍在）。原型报告块与 README 同步。证据：unit+contract 434 passed、ruff 干净；live :8000 实弹 ccma——四段新文案 + 「找到 51 条待抓内容」+ 查看原文链接 curl 200 text/html 25888B（presigned 实开验证；首验 400 系提取未还原 &amp; 实体的假象）。停用断言修正：锁 <span class="tag ok">启用</span> 而非裸文本（表头 <th>启用</th> 误伤）
 三轮后续裁定（2026-09-03）：(a) 可靠性冷启动按事实与逻辑——无画像即如实无画像，初评以层级等已知信息为参考；画像体系结合人类反馈故事提前 → 已建 TASK-4.03.3「信源画像与可靠性闭环重估」（裁定原文与 F 权重遗留输入录于该单）。(b) 报告面新三问（robots 合规检查的必要性/列表·详情·快照分段时间对用户的意义/试抓结果顶部呈现是否合适）已客观答复，处置（R7 报告信息架构：成功路径收敛为结论+产出摘要+快照链接，失败路径保留四段诊断）待用户裁决后落地
+R7 报告信息架构重排（三轮新三问裁定「采纳建议」：robots 检查留管线不留成功呈现、分段成功态对用户无边际信息、顶部位置对但体量错）：成功路径收敛为结论行（含告警并列）+ 产出摘要一句（web._probe_summary：抓到 N 条正文，M 份原文已存档，示例：『title』——「真抓到了」的用户可感证据）+ presigned 查看原文链接；失败路径保留四段诊断（robot 合规检查/列表页/详情/快照——分段在失败归因时才挣得呈现位置）；未执行降级不变。管线与全量四段信息不丢：pih.probe 日志保持，CLI 不动。渐进披露原则：正常给结论，异常给诊断。证据：TestProbeSummary 2 例 + test_success_renders_summary_not_pipeline_segments（成功负控：probe-segs/robots 合规检查/列表页可达 零命中）+ 失败路径断言扩展（robots 合规检查/试抓未通过/服务日志）——3 红先行；unit+contract 359 passed、integration 77 passed、ruff 干净；live :8000 ccma 实弹（成功路径新形状全命中、四段 0 命中）+ xcmg 未执行降级行。原型报告块与 README 同步
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

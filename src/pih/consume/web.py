@@ -357,6 +357,9 @@ def sources_probe(source_id: str, request: Request) -> HTMLResponse:
     )
     probe_warns = _probe_warns(outcome.report) if outcome.report else []
     snapshot_links = _probe_snapshot_links(outcome.report)
+    probe_summary = (
+        _probe_summary(outcome.report) if outcome.report and outcome.report.success else None
+    )
     return templates.TemplateResponse(
         request,
         "sources.html",
@@ -370,8 +373,24 @@ def sources_probe(source_id: str, request: Request) -> HTMLResponse:
             "probe_success": probe_success,
             "probe_warns": probe_warns,
             "probe_snapshot_links": snapshot_links,
+            "probe_summary": probe_summary,
         },
     )
+
+
+def _probe_summary(report: ProbeReport) -> str:
+    """R7：成功路径的产出摘要——一句「试抓产出了什么」。
+
+    成功时用户只需要知道产出与证据（含示例标题）；管线四段是失败归因用的
+    诊断信息，不在成功路径呈现（渐进披露：正常给结论，异常给诊断）。
+    """
+    ok_n = sum(1 for d in report.detail_results if d.ok)
+    snap_n = sum(1 for d in report.detail_results if d.snapshot_id)
+    text = f"抓到 {ok_n} 条正文，{snap_n} 份原文已存档"
+    sample = next((d.title for d in report.detail_results if d.ok and d.title), None)
+    if sample:
+        text += f"，示例：『{sample}』"
+    return text
 
 
 def _probe_snapshot_links(report: ProbeReport | None) -> list[dict]:

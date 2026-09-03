@@ -341,12 +341,11 @@
         <div class="legend" style="padding:0 10px 10px">字段含义见上方字段说明（实现为可折叠 details）；未接入=该类型暂无抓取适配器（运行时状态，不入词表）。</div>
       </div>
       <div class="wf"><div class="lbl">试抓报告 · 中国工程机械工业协会 ccma</div>
-        <div class="seg"><span class="k">robots 合规检查</span><span class="tag ok">成功</span><span class="mini">站点未提供有效 robots 声明（返回的是网页而非规则文件），按无限制处理</span></div>
-        <div class="seg"><span class="k">列表页</span><span class="tag ok">成功</span><span class="mini">列表页可达，找到 30 条待抓内容</span></div>
-        <div class="seg"><span class="k">详情</span><span class="tag ok">成功</span><span class="mini">已抓取 1/1 条正文；示例：『中国工程机械工业协会关于…的通知』</span></div>
-        <div class="seg"><span class="k">快照</span><span class="tag ok">成功</span><span class="mini">1 份原文快照已存档</span></div>
+        <div class="seg"><span class="k"></span><span class="tag warn">试抓通过（含 1 项告警）</span></div>
+        <div class="seg"><span class="k"></span><span class="mini">该站点未提供有效 robots 声明，已按无限制处理——请确认可接受。确认无碍后再启用。启用本信源：在信源配置文件中将 enabled 改为 true 并提交（人工操作，留版本记录）。</span></div>
+        <div class="seg"><span class="k"></span><span class="mini">抓到 1 条正文，1 份原文已存档，示例：『中国工程机械工业协会关于…的通知』</span></div>
         <div class="seg"><span class="k"></span><a href="#" style="font-size:11px">查看原文：『中国工程机械工业协会关于…的通知』</a> <span class="mini">（临时链接，1 小时内有效）</span></div>
-        <div class="legend">试抓通过（含 1 项告警：该站点未提供有效 robots 声明，已按无限制处理——请确认可接受）——确认无碍后再启用。启用本信源：在信源配置文件中将 enabled 改为 true 并提交（人工操作，留版本记录）。排查材料（软 200 dump 等）只见服务日志，不上客户页。连续 3 次失败 → 站内信告警（不影响他源）。</div>
+        <div class="legend">成功路径只呈现结论+产出摘要+原文入口；管线四段（robots 合规检查/列表页/详情/快照）仅失败时展开作分段诊断；排查材料只见服务日志。连续 3 次失败 → 站内信告警（不影响他源）。</div>
       </div>
     </section>
 

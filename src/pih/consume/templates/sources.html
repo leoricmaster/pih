@@ -18,6 +18,21 @@
   <h2>试抓报告 · {{ probe_src.name }} <span class="src-id">{{ probe_src.id }}</span></h2>
   {% if probe_outcome.note %}
   <div class="probe-verdict warn">未执行：{{ probe_outcome.note }}</div>
+  {% elif probe_success %}
+  {# R7：成功路径只呈现结论 + 产出摘要 + 原文入口；管线四段是失败归因的诊断信息 #}
+    {% if probe_warns %}
+    <div class="probe-verdict warn">试抓通过（含 {{ probe_warns|length }} 项告警：{{ probe_warns|join("；") }}）——确认无碍后再启用。启用本信源：在信源配置文件中将 enabled 改为 true 并提交（人工操作，留版本记录）。</div>
+    {% else %}
+    <div class="probe-verdict ok">试抓通过。启用本信源：在信源配置文件中将 enabled 改为 true 并提交（人工操作，留版本记录）。</div>
+    {% endif %}
+  <div class="probe-summary">{{ probe_summary }}</div>
+  {% if probe_snapshot_links %}
+  <div class="probe-links">
+    {% for l in probe_snapshot_links %}
+    <a href="{{ l.url }}" target="_blank" rel="noopener">查看原文：『{{ l.title }}』</a>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% else %}
   <div class="probe-segs">
     {% for seg in probe_view %}
@@ -28,22 +43,7 @@
     </div>
     {% endfor %}
   </div>
-  {% if probe_snapshot_links %}
-  <div class="probe-links">
-    {% for l in probe_snapshot_links %}
-    <a href="{{ l.url }}" target="_blank" rel="noopener">查看原文：『{{ l.title }}』</a>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% if probe_success %}
-    {% if probe_warns %}
-    <div class="probe-verdict warn">试抓通过（含 {{ probe_warns|length }} 项告警：{{ probe_warns|join("；") }}）——确认无碍后再启用。启用本信源：在信源配置文件中将 enabled 改为 true 并提交（人工操作，留版本记录）。</div>
-    {% else %}
-    <div class="probe-verdict ok">试抓通过。启用本信源：在信源配置文件中将 enabled 改为 true 并提交（人工操作，留版本记录）。</div>
-    {% endif %}
-  {% else %}
   <div class="probe-verdict warn">试抓未通过——按上方各段失败原因排查后再试；详细排查材料见服务日志（pih.probe）。</div>
-  {% endif %}
   {% endif %}
 </section>
 {% endif %}
