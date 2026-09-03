@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 08:36'
+updated_date: '2026-09-03 10:15'
 labels:
   - web
 milestone: m-0
@@ -31,23 +31,23 @@ ordinal: 16000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 AC1: Given 某已启用信源 ｜ When 运营者执行采集 ｜ Then 新内容抓取入库，输出统计「入库 N 新增 / M 幂等跳过 / K 失败」｜ And 新条目出现在 Web 列表（标题、信源、采集时间）｜ And 详情页提供原文快照与原始链接两个入口（无快照的内容不入库）
-- [ ] #2 AC2: Given 重复采集同一信源而内容未更新 ｜ Then URL 指纹相同或内容相似度超阈值的条目被幂等跳过 ｜ And 情报库行数不变
-- [ ] #3 AC3: Given 一条新内容被粗筛（关键词 + 小模型二分类）判为不相关 ｜ Then 它不进入消费列表，行级标记保留 ｜ And 运营者可在 Web 列表按处理状态筛出复核（漏报审计）
-- [ ] #4 AC4: Given 抓取或处理失败 ｜ Then 原始内容先落盘不丢失，失败原因可查、可重放（细则见 NFR doc-3 与架构 §8）
+- [x] #1 AC1: Given 某已启用信源 ｜ When 运营者执行采集 ｜ Then 新内容抓取入库，输出统计「入库 N 新增 / M 幂等跳过 / K 失败」｜ And 新条目出现在 Web 列表（标题、信源、采集时间）｜ And 详情页提供原文快照与原始链接两个入口（无快照的内容不入库）
+- [x] #2 AC2: Given 重复采集同一信源而内容未更新 ｜ Then URL 指纹相同或内容相似度超阈值的条目被幂等跳过 ｜ And 情报库行数不变
+- [x] #3 AC3: Given 一条新内容被粗筛（关键词 + 小模型二分类）判为不相关 ｜ Then 它不进入消费列表，行级标记保留 ｜ And 运营者可在 Web 列表按处理状态筛出复核（漏报审计）
+- [x] #4 AC4: Given 抓取或处理失败 ｜ Then 原始内容先落盘不丢失，失败原因可查、可重放（细则见 NFR doc-3 与架构 §8）
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 验收面字段与事实源（领域包 schema / 原型 IA / doc-2）逐项核对一致；偏差先修订事实源或记 ADR，不在代码里私自偏移
-- [ ] #2 无新增未论证的自部署组件；核心代码不出现行业知识硬编码（违反即返工）
-- [ ] #3 AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
+- [x] #1 验收面字段与事实源（领域包 schema / 原型 IA / doc-2）逐项核对一致；偏差先修订事实源或记 ADR，不在代码里私自偏移
+- [x] #2 无新增未论证的自部署组件；核心代码不出现行业知识硬编码（违反即返工）
+- [x] #3 AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
 - [ ] #4 CI 有增量测试且变绿；覆盖正常路径与关键失败路径
-- [ ] #5 无回归（现有测试不破）
-- [ ] #6 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
-- [ ] #7 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
-- [ ] #8 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
-- [ ] #9 不违反贯穿性约束与 ADR（偏离须先记 ADR）
+- [x] #5 无回归（现有测试不破）
+- [x] #6 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
+- [x] #7 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
+- [x] #8 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
+- [x] #9 不违反贯穿性约束与 ADR（偏离须先记 ADR）
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -112,6 +112,24 @@ replay 命令：pih replay <id> 重置 dead/needs_manual → pending 重入处�
 文档同步：README 运营者 CLI 补 --prefilter-only / replay 命令；新增「采集入库与两视图（ADR-011）」段（收件箱/检索两视图、无快照不入库、精确幂等+模糊演进）；Web 段补 /inbox 与检索默认 extracted。AC2 范围裁定记入任务 comment（模糊去重留演进，本故事只精确指纹）。
 
 回归：unit 396 / contract / ruff 干净；integration end_to_end+process_e2e 13 passed。
+
+一轮评审修订（用户多轮评审第 1 轮，7 项反馈）：
+
+R1 页面说明文字去除——inbox.html 页首 lbl「收件箱（采集先落盘·处理状态视图）」+ note 段（pending/filtered_out/dead 解释）删除，实现者口吻不上客户界面（同 TASK-1.01.01 先例）。
+
+R2 IA 归位（用户裁定：并入情报页做 tab）——原型「待处理」tab 与本实现 /inbox 非同一概念（原型=事件核实队列 §6.1，实现=item 处理状态 §6.4），且原实现私自新增侧栏「收件箱」nav 未先讨论（违反原型变更先讨论约定，已记忆）。落地：侧栏撤收件箱 navlink；list.html/inbox.html 页内 [检索]/[收件箱] tab 栏；prototype.html 反向更新（待处理→收件箱 tab，内容改为 item 处理状态表，事件核实队列标注随核实层未来呈现）。
+
+R3 重放上 Web（AC4 页面动作）——POST /inbox/{id}/replay（mark_status pending，303 回收件箱，同 /feedback 信任域）；收件箱非 pending 行「重放」按钮。证据：unit test_inbox_page replay 3 例（仅非 pending 行有按钮/重置 pending+303/未知 id 404）+ live 实弹 POST id5 dead→pending→恢复。
+
+R4 来源列删除——恒 auto（manual 录入未实现）无信息量，manual 实现时再复列。表头现为 标题/信源/处理状态/失败原因/采集时间/操作。
+
+R5 doc-2 对齐——§6.4 状态机去 done（代码与 §7 均无此态）；§6.4 补 process_error 归属（dead←collect 抓取异常/filtered_out←粗筛固定串/needs_manual←抽取校验失败/pending·extracted←无）；§5 开头补端到端管线统览图（主链+状态分支+两视图分读）。经 backlog doc update 写入（diff +16/-2）。
+
+R6 评审答问归档——管线记录处（§5/§6.4/ADR-004·007·009·011，缺单点统览已由 R5 补）、处理状态与 source_type 语义出处（§6.4/§7/ADR-009·011）、失败原因三写手（R5 已入档）。
+
+R7 验收数据重建——contract/integration 测试 fixture 对共享开发库 downgrade base（test_migrations_apply.py:31,55 / conftest.py:34）清空了已造数据；重新 upgrade+collect+seed（3 pending+1 filtered_out+1 dead）。该共享库设计为本地隐患（CI 无害），已向用户提议立独立测试库任务。
+
+本轮回归：unit 343（+4 净增）/ contract 57 / ruff 干净；integration 未重跑（改动缝无 integration 覆盖，grep 零引用；重放缝已 live 实弹验证）。README 同步（两视图段+浏览器访问段改 tab IA）。
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -123,3 +141,13 @@ created: 2026-09-03 08:34
 AC2 范围裁定（DoD#1 事实源对齐）：AC2 原文「内容相似度超阈值」模糊去重经用户裁定留演进故事，本故事只做精确指纹（content_sha1 ON CONFLICT + url 同源）幂等。模糊去重另记 backlog 单。本故事 AC2 验收口径据此收窄：重采同源内容未变 → 行数不变（精确 sha1 幂等已满足），不验模糊相似度。
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+采集入库与原文可查交付（ADR-011 枢轴：inbox 逻辑汇聚、物理单表两视图）。AC1 采集落 intel_item pending + 统计「入库 N/M/K」+ /inbox 收件箱视图显示新条目 + /intel/{id} 详情原文快照与原始链接双入口 + 无快照不入库（snapshot_id NOT NULL 守卫）；AC2 精确 content_sha1 幂等（重采 0 新增/2 跳过，行数不变），模糊去重留演进故事（裁定记 comment）；AC3 粗筛解耦独立模块（关键词+小模型二分类双通道，不耦合大模型配置，pih process --prefilter-only）+ filtered_out 行级标记 + 不进检索视图（/ 默认 extracted，天然成立）+ /inbox 按状态筛出漏报审计；AC4 fetch 失败落 dead 行（process_error 记因）+ /inbox 可查 + pih replay <id> 重置 pending 重入链。
+
+架构事实源同步（DoD#1）：doc-2 §6.4/§7/§5.4/§1/§10 修订 + ADR-011 accepted（inbox 逻辑汇聚而非独立表，intel_item 单表承载处理状态机，采集落 pending 抽取原地升级不复制 raw）。裁决 C 由用户在评审中拍板（质疑两表合并视图→一实体两页面）。回退了此前的 inbox_item 独立表迁移与 InboxRepository（slice 2/3 初版），保留粗筛解耦（slice 5）改指 IntelRepository。
+
+证据：unit 339 / contract 57 / integration 77 / ruff 干净；live :8001 实弹——pih collect ccma 入库 2 新增、重采 0 新增/2 跳过、pih query 见 pending 行、--prefilter-only 关键词命中保留；/inbox 200 显示 2 条 pending（标题/信源/采集时间）、/ 检索默认 extracted「无结果」（AC3 天然）、/intel/2 详情原文快照+原始链接。DoD 8/9 勾选，#4（CI 变绿）留待 push 后 GitHub Actions 首跑确认（本地已等价演练全绿，未 push 依项目惯例停在人类验收后）。
+<!-- SECTION:FINAL_SUMMARY:END -->
