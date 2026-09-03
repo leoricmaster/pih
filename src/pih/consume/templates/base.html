@@ -7,16 +7,29 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <nav class="navbar">
-    <a class="brand" href="/">PIH 产品情报中心</a>
-    <span class="tagline">采集 → 核实 → 结构化 → 存储 → 消费</span>
-    <span class="navlinks">
-      <a href="/">情报</a>
-      <a href="/sources">信源</a>
-    </span>
+<div class="app">
+  <nav class="sidebar">
+    <div class="brand"><b>PIH 产品情报中心</b><small>采集 → 核实 → 结构化 → 存储 → 消费</small></div>
+    <div class="navgroup">
+      <label>消费区</label>
+      <a class="navlink{% if self.nav_active() == 'intel' %} active{% endif %}" href="/">情报</a>
+      <span class="navlink disabled" title="未上线">假设</span>
+    </div>
+    <div class="navgroup">
+      <label>运营</label>
+      <a class="navlink{% if self.nav_active() == 'sources' %} active{% endif %}" href="/sources">信源</a>
+      <span class="navlink disabled" title="未上线">录入</span>
+      <a class="navlink{% if self.nav_active() == 'feedback' %} active{% endif %}" href="/feedback">反馈</a>
+      <span class="navlink disabled" title="未上线">配置</span>
+    </div>
+    <div class="navgroup">
+      <label>观察面</label>
+      <span class="navlink disabled" title="未上线">仪表盘</span>
+    </div>
   </nav>
   <main class="content">
     {% block content %}{% endblock %}
   </main>
+</div>
 </body>
 </html>

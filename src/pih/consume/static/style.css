@@ -14,17 +14,19 @@ body {
   background: var(--bg);
   line-height: 1.6;
 }
-.navbar {
-  display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  background: #fff;
-  border-bottom: 1px solid var(--border);
-}
-.navbar .brand { font-weight: 600; font-size: 1.1rem; color: var(--fg); text-decoration: none; }
-.navbar .tagline { color: var(--muted); font-size: 0.85rem; }
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 200px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--bg); padding-bottom: 1rem; }
+.sidebar .brand { padding: 0.9rem 1rem 0.7rem; border-bottom: 1px solid var(--border); margin-bottom: 0.4rem; }
+.sidebar .brand small { display: block; color: var(--muted); font-size: 0.7rem; font-weight: 400; margin-top: 0.15rem; }
+.navgroup { padding: 0.3rem 0; }
+.navgroup > label { display: block; padding: 0.25rem 1rem; font-size: 0.72rem; color: var(--muted); }
+.navlink { display: block; padding: 0.35rem 1rem 0.35rem calc(1rem - 3px); color: var(--fg); text-decoration: none; border-left: 3px solid transparent; font-size: 0.95rem; }
+.navlink:hover { background: #eceff3; }
+.navlink.active { border-left-color: var(--accent); background: #fff; font-weight: 600; }
+.navlink.disabled { color: #a8aeb8; cursor: default; }
+.navlink.disabled:hover { background: none; }
 .content { max-width: 1100px; margin: 1.5rem auto; padding: 0 1.5rem; }
+.app > .content { flex: 1; min-width: 0; }
 
 /* 筛选 form */
 .filters {
@@ -108,8 +110,6 @@ a.fb-link:hover { text-decoration: underline; }
 .recent-list td.wrong-to-right, .recent-list td.note-cell { font-size: 0.85rem; word-break: break-all; }
 
 /* 信源页（TASK-1.01.01） */
-.navbar .navlinks { margin-left: auto; display: inline-flex; gap: 0.9rem; }
-.navbar .navlinks a { color: var(--fg); text-decoration: none; font-size: 0.95rem; }
 .source-list { width: 100%; border-collapse: collapse; margin-top: 1rem; background: #fff; }
 .source-list th, .source-list td { text-align: left; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
 .source-list th { color: var(--muted); font-weight: 500; }

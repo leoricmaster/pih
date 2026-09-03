@@ -324,3 +324,34 @@ class TestSourcesPageTemplate:
             self._ctx(sources=[self._src(name="<script>alert(1)</script>")]),
         )
         assert "<script>alert(1)</script>" not in html
+
+
+class TestSidebarNav:
+    """全局侧边栏 IA（原型还原，TASK-1.01.01 验收反馈）——分组导航与禁用态。"""
+
+    def _ctx(self) -> dict:
+        return {"sources": [], "issues": [], "error": None}
+
+    def test_sidebar_groups_and_links(self):
+        html = _render("sources.html", self._ctx())
+        assert 'class="sidebar"' in html
+        for group in ("消费区", "运营", "观察面"):
+            assert group in html
+        assert 'href="/"' in html          # 情报
+        assert 'href="/sources"' in html   # 信源
+        assert 'href="/feedback"' in html  # 反馈
+
+    def test_unimplemented_entries_disabled(self):
+        html = _render("sources.html", self._ctx())
+        # 假设/录入/配置/仪表盘 未上线：呈现 IA 但禁用
+        assert html.count('navlink disabled') == 4
+
+    def test_active_marker_on_sources(self):
+        html = _render("sources.html", self._ctx())
+        assert 'class="navlink active" href="/sources"' in html
+        assert 'class="navlink" href="/"' in html  # 情报非当前页
+
+    def test_active_marker_on_intel(self):
+        html = _render("list.html", _list_ctx())
+        assert 'class="navlink active" href="/"' in html
+        assert 'class="navlink" href="/sources"' in html
