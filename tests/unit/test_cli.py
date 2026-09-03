@@ -120,3 +120,40 @@ class TestQueryUsageErrors:
             subject=None, event_type="新品发布", tag=None,
             source_id=None, limit=10,
         )
+
+
+class TestReplayCommand:
+    """pih replay <id>：重放失败条目 → 重置 pending 重入处理链（AC4 可重放）。"""
+
+    def test_replay_resets_to_pending(self, capsys, monkeypatch):
+        from unittest.mock import MagicMock
+
+        rec = MagicMock()
+        rec.id = 7
+        rec.title = "(抓取失败)"
+        rec.process_status = "dead"
+        rec.process_error = "ConnectionError: timeout"
+        repo = MagicMock()
+        repo.get.return_value = rec
+        monkeypatch.setattr("pih.cli.get_pool", lambda: None)
+        monkeypatch.setattr("pih.cli.IntelRepository", lambda pool: repo)
+        monkeypatch.setattr("pih.cli.close_pool", lambda: None)
+        assert main(["replay", "7"]) == 0
+        repo.mark_status.assert_called_once()
+        args = repo.mark_status.call_args[0]
+        assert args[0] == 7
+        assert args[1] == "pending"  # 默认重置 pending 重入链
+        out = capsys.readouterr().out
+        assert "已重置" in out
+        assert "ConnectionError: timeout" in out  # 失败原因可查
+
+    def test_replay_unknown_id_fails(self, capsys, monkeypatch):
+        from unittest.mock import MagicMock
+
+        repo = MagicMock()
+        repo.get.return_value = None
+        monkeypatch.setattr("pih.cli.get_pool", lambda: None)
+        monkeypatch.setattr("pih.cli.IntelRepository", lambda pool: repo)
+        monkeypatch.setattr("pih.cli.close_pool", lambda: None)
+        assert main(["replay", "999"]) == 1
+        assert "未找到" in capsys.readouterr().err

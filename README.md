@@ -87,7 +87,9 @@ uv run pih probe-source khl --no-snapshot  # 不落快照的快速可达性验�
 uv run pih collect ccma                  # 正式采集 + 默认落库
 uv run pih collect ccma --no-ingest      # 不落库，仅 stdout 摘要
 uv run pih process --source-id=ccma --limit=5   # 批处理：粗筛→抽取→校验，写回结构化字段
-uv run pih query --source-id=ccma --limit=10   # 查询库中按信源最近入库
+uv run pih process --prefilter-only --source-id=ccma  # 仅粗筛（关键词+小模型，不耦合大模型配置）
+uv run pih replay 42                     # 重放失败条目：dead/needs_manual → 重置 pending 重入链（AC4）
+uv run pih query --source-id=ccma --limit=10   # 查询库中按信源最近入库（含 pending，不分状态）
 uv run pih query --event-type=新品发布          # 按事件类型筛选（结构化）
 uv run pih query --subject=三一 --tag=电动化    # 按主体/标签筛选（JSONB containment）
 uv run pih query --id=42                      # 单条详情（含 Admiralty 与结构化字段）
@@ -100,7 +102,21 @@ uv run pih cluster --backfill --limit=200     # 对存量 extracted 未挂事件
 ```
 
 `collect` 输出末尾统计：`产出 N 条 RawItem → 入库 X 新增 / Y 幂等跳过 / Z 失败`
-（content_sha1 唯一约束保障重复抓取不产生重复行，ADR-007）。
+（content_sha1 唯一约束保障重复抓取不产生重复行，ADR-007；精确指纹幂等，
+模糊/近重复去重为演进方向）。采集即落 `intel_item` 的 `pending` 行（先落盘可重放，
+ADR-011），抽取原地 UPDATE 升级结构化字段，不另建 inbox 表。fetch 失败的 URL 落
+一行死信（`process_status=dead`，`process_error` 记因），`pih replay <id>` 重置重入链。
+
+### 采集入库与两视图（ADR-011）
+
+采集入库的条目先停在 `pending` 态，Web 分两视图读同表不同状态：
+
+- **收件箱视图** `/inbox`：`pending` / `needs_manual` / `filtered_out` / `dead`——
+  采集验收面（新条目出现于此）与漏报审计（按 `process_status=filtered_out` 筛出粗筛丢弃的条目）。
+- **检索视图** `/`：`extracted` 已抽取成品——消费列表，默认只看成品；
+  `filtered_out` 不进检索（AC3 天然成立），`process_status` 显式给定可覆盖（如 needs_manual 复核队列）。
+
+无快照不入库（贯穿性约束 2）：`snapshot_id` NOT NULL 为守卫；详情页给原文快照与原始链接双入口。
 
 `process` 需在 `.env` 配置 `PIH_LLM_*` 四变量（OpenAI 兼容端点 + 大小模型名，
 模板见入库的 `.env.defaults` 注释区）；输出逐条明细 + 汇总行（`处理 N 条 → 抽取成功 X / 粗筛丢弃
@@ -130,8 +146,10 @@ docker compose up -d web
 # 3b. 本地开发启动（热重载）
 uv run uvicorn pih.consume.web:app --reload --port 8000
 
-# 4. 浏览器访问 http://127.0.0.1:8000 —— 列表页 + 筛选 form + 下一页游标
-#    点标题进入 /intel/{id} 详情页（事实/推断分区 + 快照入口占位）
+# 4. 浏览器访问 http://127.0.0.1:8000
+#    检索视图 / —— 已抽取成品列表 + 筛选 form + 下一页游标（默认 extracted）
+#    收件箱视图 /inbox —— 采集入库 pending/失败/粗筛丢弃条目（采集验收 + 漏报审计）
+#    点标题进入 /intel/{id} 详情页（事实/推断分区 + 原文快照与原始链接双入口）
 #    导航「信源」进入 /sources —— 信源清单（六字段）+ 页内试抓
 
 # 5. 调 JSON API（Agent 消费者）

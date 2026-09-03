@@ -141,6 +141,15 @@ def _build_parser() -> argparse.ArgumentParser:
     clp.add_argument("--limit", type=int, default=200, help="单次回填条数上限（默认 200）")
     clp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
 
+    rp = sub.add_parser(
+        "replay",
+        help="重放失败条目：dead/needs_manual → 重置 pending 重入处理链（AC4 可重放）",
+    )
+    rp.add_argument("intel_id", type=int, help="intel_item.id")
+    rp.add_argument(
+        "--to", default="pending", help="重置目标状态（默认 pending 重入处理链）"
+    )
+
     return parser
 
 
@@ -541,6 +550,33 @@ def _cmd_cluster(args: argparse.Namespace) -> int:
         close_pool()
 
 
+def _cmd_replay(args: argparse.Namespace) -> int:
+    """重放失败条目：dead/needs_manual → 重置 pending 重入处理链（AC4 可重放）。
+
+    丢弃留痕即保持 dead 态不删行；可查即 /inbox 与 pih query 可见 dead + process_error。
+    """
+    try:
+        pool = get_pool()
+    except RuntimeError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        repo = IntelRepository(pool)
+        rec = repo.get(args.intel_id)
+        if rec is None:
+            print(f"未找到 id={args.intel_id}", file=sys.stderr)
+            return EXIT_FAILED
+        repo.mark_status(args.intel_id, args.to)
+        print(
+            f"已重置 #{args.intel_id}（{rec.title}）"
+            f" → {args.to}（重入处理链；原状态 {rec.process_status}，"
+            f"失败原因：{rec.process_error or '—'}）"
+        )
+        return EXIT_OK
+    finally:
+        close_pool()
+
+
 def _print_record_detail(rec) -> None:
     """单条详情打印。"""
     print(f"== 情报 #{rec.id} ==")
@@ -586,6 +622,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_verify(args)
         if args.command == "cluster":
             return _cmd_cluster(args)
+        if args.command == "replay":
+            return _cmd_replay(args)
         return _cmd_collect(args)
     except LoadError as exc:
         print(f"领域包加载失败：{exc}", file=sys.stderr)

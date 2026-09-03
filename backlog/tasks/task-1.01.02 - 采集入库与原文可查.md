@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 08:32'
+updated_date: '2026-09-03 08:36'
 labels:
   - web
 milestone: m-0
@@ -104,4 +104,22 @@ AC1 验收面厘清：采集入库的 pending 条目出现在 /inbox（Web）+ p
 修复集成回归：INSERT_SQL 占位符数错（13 vs 12 列，加 source_type 时手误）致采集 3 条全 FAILED——integration 真库抓到（单测 mock 不触 SQL 故未现），已修正为 12 占位符。
 
 证据：unit test_inbox_page 6 例（pending 渲染/status 透传/filtered_out 可见/dead 带原因/空提示/导航）+ test_query_service 增 2 例（默认 extracted / 显式覆盖）；回归 unit 394 / contract / integration end_to_end+process_e2e 13 passed / ruff 干净。
+
+slice 7 AC4 可重放 CLI + slice 8 文档同步完成：
+
+replay 命令：pih replay <id> 重置 dead/needs_manual → pending 重入处理链（mark_status）；未找到 id 退出 1；打印原失败原因（可查）。丢弃=留 dead 态不删行留痕。证据：unit test_cli TestReplayCommand 2 例（重置 pending 含失败原因/未知 id 失败）。
+
+文档同步：README 运营者 CLI 补 --prefilter-only / replay 命令；新增「采集入库与两视图（ADR-011）」段（收件箱/检索两视图、无快照不入库、精确幂等+模糊演进）；Web 段补 /inbox 与检索默认 extracted。AC2 范围裁定记入任务 comment（模糊去重留演进，本故事只精确指纹）。
+
+回归：unit 396 / contract / ruff 干净；integration end_to_end+process_e2e 13 passed。
 <!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @lancer
+created: 2026-09-03 08:34
+---
+AC2 范围裁定（DoD#1 事实源对齐）：AC2 原文「内容相似度超阈值」模糊去重经用户裁定留演进故事，本故事只做精确指纹（content_sha1 ON CONFLICT + url 同源）幂等。模糊去重另记 backlog 单。本故事 AC2 验收口径据此收窄：重采同源内容未变 → 行数不变（精确 sha1 幂等已满足），不验模糊相似度。
+---
+<!-- COMMENTS:END -->
