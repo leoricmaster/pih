@@ -95,6 +95,10 @@ class TestFetchRobotsOk:
         assert r.allowed is True
         assert r.invalid_robots is True
         assert "软 200" in r.note
+        # 二轮验收反馈：结论与排查材料分层——note 面向用户；dump 只进 detail（CLI/日志）
+        assert "正文前" not in r.note
+        assert "text/html" in r.detail
+        assert "正文前 200 字" in r.detail
 
     def test_non_200_rejected(self):
         client = _FakeClient({ROBOTS_URL: _FakeResponse(500)})

@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 10:59'
+updated_date: '2026-09-03 11:15'
 labels:
   - web
 milestone: m-0
@@ -85,6 +85,8 @@ finalization（计划步 10/11）：术语表 doc-4（17 词条指针型）+ 交
 验收反馈修复（首轮人类评审，TDD）：(a) 告警聚合——ccma 试抓四段全成功但 robots 软 200 告警埋在 note 小字、结论行「试抓通过」决策点信息不足；修法：ProbeReport.robots_invalid 结构化标志贯穿 + web._probe_warns 聚合 + 结论行「试抓通过（含 N 项告警：…）——建议人工复核」+ pih.probe 日志加 warns 计数字段。证据：collect test_soft200_robots_sets_structured_warn_flag（红=AttributeError）、unit TestProbeWarnAggregation 4 例（含无告警负控）；README 信源页章节补口径。(b) 侧边栏还原（裁决 A）——导航迁右上角偏离原型且未讨论；修法：base.html 按原型 IA 重写（brand+消费区/运营/观察面三组、未上线项 disabled、active 左边条），list/detail/sources/feedback 墰 nav_active 块（base 用 self.nav_active() 取值——块内容非变量，首轮 {% if nav_active == %} 引用未定义变量致 2 例红，属修复内回归）；style.css 重写 .app/.sidebar/.navgroup/.navlink。证据：contract TestSidebarNav 4 例（分组/链接/disabled×4/active 标记互斥）。(c) 流程沉淀——doc-5 增 §5 验收材料包（五问固定结构+客观证据约束+原型 IA 布局级对照附加项），CLAUDE.md 加触发线；ci.yml 引用漂移修正（「doc-2 §6」不实→README+doc-5）。回归：unit+contract 340 passed、integration 待复跑确认
 
 验收反馈修复（二轮，用户视角文案）：页首「配置编辑在仓内 YAML+Git…人是最终环节」说明撤下——实现者术语（YAML/Git/留痕）出现在客户界面（该句源头是原型 source 页 note，用户裁定不要）。修法：sources.html 删 page-note 块 + style.css 删闲置 .page-note 规则 + 原型同步删该句（保留「▶ 流 E 信源管理」流标注）。证据：contract test_customer_page_has_no_implementation_note 负控（先红后绿）；回归 unit+contract 341 passed；live :8000 页面 grep 0 命中。同轮验收识别的更大缺口（表格字段零解释层、报告文案面向实现者、快照存档无指向、结论行仍含「领域包 YAML」内部词）超文案微调量级，按 doc-5 §6 属需排期讨论项——处置待用户裁决（并 TASK-6 或新单，涉及原型升级先行）
+
+验收反馈修复（二轮 b，robots 排查材料分层，用户裁定「本轮撤下只留日志」）：RobotsResult 增 detail 字段（Content-Type+正文前 200 字），note 改纯结论句；ProbeReport.robots_detail 贯穿；CLI 打「（排查，不上页面）」行保留开发者面；pih.probe 日志加 robots_detail 字段（排查材料留日志）；Web 页面不渲染 detail。证据：collect test_ac2_soft200_html_robots_invalid 扩展断言 + test_soft200_robots_detail_layered_out_of_note + web test_robots_detail_not_rendered_on_page（页面负控）/ test_probe_log_carries_robots_detail + cli test_probe_report_prints_robots_detail——4 红 1 负控先行；回归 unit+contract 345 passed、ruff 干净；live 重启 uvicorn 后 POST ccma 实弹：robots 段仅结论句。裁定记录：用户确认深化工作继续在本故事单完成（需求端到端规矩）；遗留同段【告警】后缀与结论行 YAML 措辞并入本故事内「原型改稿建议」讨论（原型先行）
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

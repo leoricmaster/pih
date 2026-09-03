@@ -24,14 +24,17 @@ class RobotsResult:
 
     Attributes:
         allowed: 是否允许抓取
-        note: 人类可读说明（含 robots 正文前 200 字，便于追溯）
+        note: 面向用户的结论句（无排查材料）
         invalid_robots: robots 是否无效（软 200：200 但非 text/plain）。True 时
             allowed 仍为 True（按未声明处理），但调用方应记录告警。
+        detail: 排查材料（Content-Type + robots 正文前 200 字）——只进 CLI
+            排查面与结构化日志，不上 Web 客户页（二轮验收反馈裁定）。
     """
 
     allowed: bool
     note: str
     invalid_robots: bool = False
+    detail: str = ""
 
 
 def robots_allows(robots_txt: str, url: str, base_url: str, user_agent: str = "*") -> bool:
@@ -91,9 +94,9 @@ def fetch_robots_ok(
         # 软 200：CCMA 这类站点任意路径返 200 HTML，robots 体是模板页
         return RobotsResult(
             True,
-            f"无效 robots（软 200：Content-Type={content_type or '空'}，正文非 robots 指令），"
-            f"按未声明处理（正文前 200 字：{resp.text[:200]!r}）",
+            "无效 robots（软 200）：返回 200 但正文非 robots 指令，按未声明处理",
             invalid_robots=True,
+            detail=f"Content-Type={content_type or '空'}，正文前 200 字：{resp.text[:200]!r}",
         )
 
     ok = robots_allows(resp.text, url, robots_url)

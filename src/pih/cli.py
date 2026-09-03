@@ -187,6 +187,8 @@ def _print_probe_report(report: ProbeReport, source: SourceConfig) -> None:
     flag = "true" if source.enabled else "false"
     print(f"== 试抓取：{source.id}（{source.name}，enabled={flag}）==")
     print(f"robots  : {'允许' if report.robots_allowed else '拒绝'}——{report.robots_note}")
+    if report.robots_detail:
+        print(f"          （排查，不上页面）{report.robots_detail}")
     print(f"列表页  : {'✓' if report.list_ok else '✗'} {report.list_note or '（未执行）'}")
     for i, d in enumerate(report.detail_results, 1):
         if d.ok:

@@ -39,6 +39,7 @@ class ProbeReport:
     robots_allowed: bool
     robots_note: str
     robots_invalid: bool = False
+    robots_detail: str = ""
     list_ok: bool = False
     list_note: str = ""
     detail_results: list[DetailProbeResult] = field(default_factory=list)
@@ -90,6 +91,7 @@ def probe_source(
         robots_allowed=robots.allowed,
         robots_note=_robots_note(robots),
         robots_invalid=robots.invalid_robots,
+        robots_detail=robots.detail,
     )
     if not robots.allowed:
         report.list_note = "robots 不允许抓取，未发起列表页请求"

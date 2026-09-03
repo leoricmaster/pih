@@ -51,6 +51,27 @@ class TestUsageErrors:
         assert "暂无特化适配器" in capsys.readouterr().err
 
 
+class TestProbeReportRendering:
+    def test_probe_report_prints_robots_detail(self, capsys, monkeypatch):
+        """二轮验收反馈：排查材料分层——CLI（开发者面）保留 dump，Web 客户页不上。"""
+        from pih.collect.probe import DetailProbeResult, ProbeReport
+
+        rep = ProbeReport(
+            source_id="ccma", robots_allowed=True,
+            robots_note="无效 robots（软 200）：按未声明处理【告警】建议人工复核站点行为",
+            robots_detail="Content-Type=text/html，正文前 200 字：'<html>…'",
+        )
+        rep.list_ok = True
+        rep.list_note = "列表页 200，解析出 51 条详情链接"
+        rep.detail_results = [
+            DetailProbeResult("https://x/1", True, title="t", snapshot_id="s" * 40)
+        ]
+        monkeypatch.setattr("pih.cli.probe_source", lambda *a, **k: rep)
+        assert main(["probe-source", "ccma", "--no-snapshot"]) == 0
+        out = capsys.readouterr().out
+        assert "正文前 200 字" in out  # CLI 排查面保留
+
+
 class TestProcessUsageErrors:
     def _clear_llm_env(self, monkeypatch):
         for var in ("PIH_LLM_BASE_URL", "PIH_LLM_API_KEY",

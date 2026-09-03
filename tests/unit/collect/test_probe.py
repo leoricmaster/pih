@@ -116,6 +116,15 @@ class TestProbeSuccess:
         report = probe_source(_source(), hc, _FakeSnapshots(), details=1)
         assert report.robots_invalid is True
 
+    def test_soft200_robots_detail_layered_out_of_note(self):
+        """二轮验收反馈：排查材料分层——dump 进 robots_detail（CLI/日志），note 保持结论句。"""
+        list_html = (FIXTURES / "ccma_list.html").read_text(encoding="utf-8")
+        detail_html = (FIXTURES / "ccma_detail.html").read_text(encoding="utf-8")
+        hc, _ = _http(_mapping(list_html, detail_html))
+        report = probe_source(_source(), hc, _FakeSnapshots(), details=1)
+        assert "正文前" not in report.robots_note
+        assert "正文前 200 字" in report.robots_detail
+
 
 class TestProbeFailures:
     def test_robots_disallowed_skips_list(self):

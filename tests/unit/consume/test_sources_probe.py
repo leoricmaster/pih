@@ -86,6 +86,28 @@ class TestProbeRouteRendering:
         assert payload["success"] is True
         assert "duration_ms" in payload
 
+    def test_robots_detail_not_rendered_on_page(self, client, fixture_pack, monkeypatch):
+        """二轮验收反馈：robots 排查材料（正文前 200 字 dump）不上客户页。"""
+        rep = _ok_report()
+        rep.robots_invalid = True
+        rep.robots_note = "无效 robots（软 200）：按未声明处理【告警】建议人工复核站点行为"
+        rep.robots_detail = "Content-Type=text/html，正文前 200 字：'<html>…'"
+        monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(rep, None))
+        html = client.post("/sources/s1/probe").text
+        assert "按未声明处理" in html
+        assert "正文前" not in html
+
+    def test_probe_log_carries_robots_detail(self, client, fixture_pack, monkeypatch, caplog):
+        """排查材料只留日志（用户裁定）：pih.probe JSON line 含 robots_detail。"""
+        rep = _ok_report()
+        rep.robots_detail = "Content-Type=text/html，正文前 200 字：'<html>…'"
+        monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(rep, None))
+        with caplog.at_level(logging.INFO, logger="pih.probe"):
+            client.post("/sources/s1/probe")
+        record = next(r for r in caplog.records if r.name == "pih.probe")
+        payload = json.loads(record.getMessage())
+        assert "正文前 200 字" in payload["robots_detail"]
+
 
 class TestProbeViewMapping:
     """四段三态映射语义锁定（robots/列表页/详情/快照）。"""

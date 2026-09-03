@@ -306,6 +306,7 @@ def _log_probe(source_id: str, outcome: ProbeOutcome, duration_ms: float) -> Non
                 "source_id": source_id,
                 "success": rep.success if rep else False,
                 "robots_allowed": rep.robots_allowed if rep else None,
+                "robots_detail": rep.robots_detail if rep else "",
                 "list_ok": rep.list_ok if rep else None,
                 "details_ok": sum(1 for d in rep.detail_results if d.ok) if rep else 0,
                 "warns": len(_probe_warns(rep)) if rep else 0,
