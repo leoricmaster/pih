@@ -83,19 +83,21 @@ class TestSave:
         item = _item()
         repo.save(item)
         params = m.cursor_obj.execute.call_args.args[1]
-        # INSERT 顺序：source_id, url, title, list_url, fetched_at, http_status,
-        #             content_type, encoding, snapshot_id, content_sha1, raw_html
+        # INSERT 顺序：source_id, source_type, url, title, list_url, fetched_at,
+        #             http_status, content_type, encoding, snapshot_id,
+        #             content_sha1, raw_html
         assert params[0] == item.source_id
-        assert params[1] == item.url
-        assert params[2] == item.title
-        assert params[3] == item.list_url
-        assert params[4] == item.fetched_at
-        assert params[5] == item.http_status
-        assert params[6] == item.content_type
-        assert params[7] == item.encoding
-        assert params[8] == item.snapshot_id
-        assert params[9] == item.content_sha1
-        assert params[10] == item.raw_html
+        assert params[1] == "auto"  # source_type（ADR-011）
+        assert params[2] == item.url
+        assert params[3] == item.title
+        assert params[4] == item.list_url
+        assert params[5] == item.fetched_at
+        assert params[6] == item.http_status
+        assert params[7] == item.content_type
+        assert params[8] == item.encoding
+        assert params[9] == item.snapshot_id
+        assert params[10] == item.content_sha1
+        assert params[11] == item.raw_html
 
 
 class TestSaveBatch:

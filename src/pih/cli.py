@@ -38,8 +38,7 @@ from pih.process.llm import LLMConfigError
 from pih.process.run import ProcessRunner
 from pih.store.db import close_pool, get_pool
 from pih.store.event_repository import EventRepository
-from pih.store.inbox import InboxRepository, SaveOutcome
-from pih.store.repository import IntelRepository
+from pih.store.repository import IntelRepository, SaveOutcome
 from pih.store.source_sync import sync_sources
 
 EXIT_OK = 0
@@ -266,12 +265,12 @@ def _cmd_collect(args: argparse.Namespace) -> int:
     if snapshots is None:
         return EXIT_USAGE
     http = HttpClient(trust_env=args.proxy_env)
-    repo: InboxRepository | None = None
+    repo: IntelRepository | None = None
     try:
         if not args.no_ingest:
             pool = get_pool()
             sync_sources(sources, domain_id, pool)
-            repo = InboxRepository(pool)
+            repo = IntelRepository(pool)
         try:
             items, outcomes = collect_source(
                 source, http, snapshots, max_items=args.max_items, repository=repo
@@ -380,11 +379,11 @@ def _cmd_process(args: argparse.Namespace) -> int:
         print(f"✗ {exc}", file=sys.stderr)
         return EXIT_USAGE
 
-    # 粗筛独立路径：不耦合大模型配置，从 inbox 取 pending（TASK-1.01.02 D3）
+    # 粗筛独立路径：不耦合大模型配置，从 intel pending 取（ADR-011 单表）
     if args.prefilter_only:
         from pih.process.run import run_prefilter_batch
 
-        inbox = InboxRepository(pool)
+        repo = IntelRepository(pool)
         try:
             if args.source_id:
                 known = {s["id"] for s in pack["sources"]}
@@ -395,7 +394,7 @@ def _cmd_process(args: argparse.Namespace) -> int:
                     )
                     return EXIT_USAGE
             stats = run_prefilter_batch(
-                inbox, pack, chat=None, source_id=args.source_id, limit=args.limit
+                repo, pack, chat=None, source_id=args.source_id, limit=args.limit
             )
             print(
                 f"== 粗筛（--prefilter-only）："

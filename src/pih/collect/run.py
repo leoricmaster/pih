@@ -4,8 +4,8 @@ collect_source 是调度器（Backlog TASK-4.01.01，待实现）将消费的正
 仅运行 enabled: true 的信源；未启用 → SourceDisabledError（附启用流程指引）。
 probe（probe.py）不受门控约束——它是启用前的验证手段。
 
-落库目标为 inbox_item（TASK-1.01.02 D1：采集先落盘，不再直写 intel_item）。
-可选 repository 参数——传入 InboxRepository 则落盘，不传则只产出 RawItem（仅 stdout
+落库目标为 intel_item 的 pending 行（ADR-011：采集先落盘，抽取原地升级，不另建 inbox 表）。
+可选 repository 参数——传入 IntelRepository 则落盘，不传则只产出 RawItem（仅 stdout
 摘要，不落库）。fetch 失败的 URL 经 record_failure 落一行死信（AC4：失败原因可查可重放）。
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ from .rawitem import RawItem
 from .snapshot import SnapshotStore
 
 if TYPE_CHECKING:
-    from pih.store.inbox import InboxRepository, SaveOutcome
+    from pih.store.repository import IntelRepository, SaveOutcome
 
 DEFAULT_MAX_ITEMS = 10  # 首跑防爆量：列表通常 10–30 条，节流 2s/请求
 
@@ -33,12 +33,12 @@ def collect_source(
     http: HttpClient,
     snapshots: SnapshotStore,
     max_items: int = DEFAULT_MAX_ITEMS,
-    repository: InboxRepository | None = None,
+    repository: IntelRepository | None = None,
 ) -> tuple[list[RawItem], list[SaveOutcome]]:
     """正式采集单源：门控 → 列表页 → 前 max_items 条详情（快照随 fetch_detail 存档）。
 
     Args:
-        repository: 若给定，每条 RawItem 落 inbox_item，返回 outcomes；
+        repository: 若给定，每条 RawItem 落 intel_item(pending)，返回 outcomes；
                     None 则不落库（outcomes 为空）。fetch 失败的 URL 经
                     repository.record_failure 落一行死信（AC4）。
 
@@ -73,5 +73,6 @@ def collect_source(
     if repository is not None and items:
         outcomes = repository.save_batch(items)
     return items, outcomes
+
 
 

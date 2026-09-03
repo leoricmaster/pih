@@ -283,80 +283,37 @@ def test_verification_log_table_and_fk():
     assert "idx_vlog_event" in {r[0] for r in idx}
 
 
-INBOX_COLUMNS = [
-    "id", "source_id", "source_type", "url", "title", "list_url", "fetched_at",
-    "http_status", "content_type", "encoding", "snapshot_id", "content_sha1",
-    "raw_html", "process_status", "process_error", "process_meta", "processed_at",
-    "created_at",
-]
-
-
-def test_inbox_item_table_exists():
-    """TASK-1.01.02 D1：inbox_item 表存在且列齐全（采集先落盘载体）。"""
-    rows = _q(
-        "SELECT column_name FROM information_schema.columns "
-        "WHERE table_name = 'inbox_item'"
-    )
-    cols = {r[0] for r in rows}
-    for c in INBOX_COLUMNS:
-        assert c in cols, f"缺列 {c}"
-
-
-def test_inbox_no_snapshot_guard():
-    """无快照不入库（贯穿性约束 2）：snapshot_id NOT NULL 为守卫。"""
-    rows = _q(
-        "SELECT is_nullable FROM information_schema.columns "
-        "WHERE table_name = 'inbox_item' AND column_name = 'snapshot_id'"
-    )
-    assert rows == [("NO",)], f"snapshot_id 应 NOT NULL：{rows}"
-
-
-def test_inbox_idempotent_unique_sha1():
-    """AC2 精确去重：content_sha1 UNIQUE（幂等键）。"""
-    rows = _q(
-        "SELECT conname FROM pg_constraint "
-        "WHERE conrelid = 'inbox_item'::regclass AND contype = 'u'"
-    )
-    assert any(r[0] == "inbox_item_content_sha1_key" for r in rows), rows
-
-
-def test_inbox_fk_to_source():
-    """inbox_item.source_id FK → source（信源外键）。"""
-    rows = _q(
-        "SELECT confrelid::regclass::text FROM pg_constraint "
-        "WHERE conrelid = 'inbox_item'::regclass AND contype = 'f'"
-    )
-    assert any(r[0] == "source" for r in rows), rows
-
-
-def test_inbox_default_pending_and_status_index():
-    """inbox 行入库即 pending 默认；process_status 索引在（状态筛选）。"""
+def test_intel_item_source_type_column():
+    """ADR-011：intel_item 加 source_type 列（inbox 逻辑汇聚的物理载体）。"""
     rows = _q(
         "SELECT column_default, is_nullable FROM information_schema.columns "
-        "WHERE table_name = 'inbox_item' AND column_name = 'process_status'"
+        "WHERE table_name = 'intel_item' AND column_name = 'source_type'"
     )
-    assert "'pending'" in (rows[0][0] or "")
+    assert rows, "source_type 列不存在"
+    assert "'auto'" in (rows[0][0] or "")
     assert rows[0][1] == "NO"
-    idx = _q("SELECT indexname FROM pg_indexes WHERE tablename = 'inbox_item'")
-    names = {r[0] for r in idx}
-    assert "idx_inbox_process_status" in names
-    assert "idx_inbox_source_fetched" in names
 
 
-def test_inbox_downgrade_drops_table():
-    """downgrade 0001 前先降 0002：inbox_item 可逆消失（回滚不丢 intel 数据）。"""
+def test_intel_item_source_type_index():
+    """source_type 索引在（按来源类型区分采集/人工）。"""
+    idx = _q("SELECT indexname FROM pg_indexes WHERE tablename = 'intel_item'")
+    assert "idx_intel_item_source_type" in {r[0] for r in idx}
+
+
+def test_source_type_downgrade_drops_column():
+    """downgrade 0001：source_type 列可逆移除（回滚不伤既有 intel 数据）。"""
     _run(["downgrade", "0001"])
     rows = _q(
-        "SELECT table_name FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'inbox_item'"
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'intel_item' AND column_name = 'source_type'"
     )
-    assert rows == [], f"downgrade 0001 后 inbox_item 应消失：{rows}"
-    # intel_item 仍在（加表非改列，回滚不伤既有数据）
+    assert rows == [], f"downgrade 0001 后 source_type 应消失：{rows}"
+    # intel_item 仍在且结构化列未伤
     keep = _q(
-        "SELECT table_name FROM information_schema.tables "
-        "WHERE table_schema = 'public' AND table_name = 'intel_item'"
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'intel_item' AND column_name = 'subject'"
     )
-    assert keep, "intel_item 应仍在"
+    assert keep, "intel_item.subject 应仍在"
 
 
 def test_intel_item_event_id_index():

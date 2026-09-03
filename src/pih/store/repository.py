@@ -25,21 +25,22 @@ from pih.store.errors import IntegrityConflict
 
 INSERT_SQL = """
     INSERT INTO intel_item
-        (source_id, url, title, list_url, fetched_at, http_status,
+        (source_id, source_type, url, title, list_url, fetched_at, http_status,
          content_type, encoding, snapshot_id, content_sha1, raw_html)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ON CONFLICT (content_sha1) DO NOTHING
     RETURNING id
 """
 
-# process_status 枚举（应用层约束，迁移 0002 落列）
+# process_status 枚举（应用层约束，迁移 0001 落列默认 pending）
 STATUS_PENDING = "pending"
 STATUS_EXTRACTED = "extracted"
 STATUS_FILTERED_OUT = "filtered_out"
 STATUS_NEEDS_MANUAL = "needs_manual"
+STATUS_DEAD = "dead"
 
 _COLUMNS = """
-    id, source_id, url, title, list_url, fetched_at,
+    id, source_id, source_type, url, title, list_url, fetched_at,
     http_status, content_type, encoding, snapshot_id,
     content_sha1, raw_html, event_id, created_at,
     subject, event_type, facts, inferences, tags, quant_params,
@@ -113,6 +114,7 @@ class IntelRecord:
     raw_html: str
     event_id: int | None
     created_at: datetime
+    source_type: str = "auto"
     subject: str | None = None
     event_type: str | None = None
     facts: str | None = None
@@ -134,17 +136,18 @@ class IntelRepository:
     def __init__(self, pool: ConnectionPool) -> None:
         self._pool = pool
 
-    def save(self, item: RawItem) -> SaveOutcome:
+    def save(self, item: RawItem, source_type: str = "auto") -> SaveOutcome:
         """单条入库。content_sha1 冲突 → SKIPPED；其他异常 → FAILED。
 
         ON CONFLICT DO NOTHING + RETURNING id：插入成功返回 id，
-        冲突时无行返回 → SKIPPED。
+        冲突时无行返回 → SKIPPED。source_type 区分采集(auto)/人工(manual)，
+        ADR-009 汇聚语义的物理载体（ADR-011）。
         """
         with self._pool.connection() as conn, conn.cursor() as cur:
             cur.execute(
                 INSERT_SQL,
                 (
-                    item.source_id, item.url, item.title, item.list_url,
+                    item.source_id, source_type, item.url, item.title, item.list_url,
                     item.fetched_at, item.http_status, item.content_type,
                     item.encoding, item.snapshot_id, item.content_sha1,
                     item.raw_html,
@@ -157,12 +160,14 @@ class IntelRepository:
             )
         return SaveOutcome(status=SaveOutcome.SKIPPED, content_sha1=item.content_sha1)
 
-    def save_batch(self, items: list[RawItem]) -> list[SaveOutcome]:
+    def save_batch(
+        self, items: list[RawItem], source_type: str = "auto"
+    ) -> list[SaveOutcome]:
         """批量入库，逐条 save；单条异常不阻塞其他条目（D8 容错）。"""
         outcomes: list[SaveOutcome] = []
         for item in items:
             try:
-                outcomes.append(self.save(item))
+                outcomes.append(self.save(item, source_type=source_type))
             except IntegrityConflict:
                 outcomes.append(
                     SaveOutcome(status=SaveOutcome.SKIPPED, content_sha1=item.content_sha1)
@@ -176,6 +181,88 @@ class IntelRepository:
                     )
                 )
         return outcomes
+
+    def record_failure(
+        self,
+        *,
+        source_id: str,
+        url: str,
+        list_url: str,
+        reason: str,
+        fetched_at: str,
+        http_status: int = 0,
+        source_type: str = "auto",
+    ) -> None:
+        """AC4：fetch 失败落一行——状态 dead，process_error 记失败原因（ADR-011）。
+
+        抓取未完成无正文/快照；snapshot_id 以失败标识占位满足 NOT NULL 守卫，
+        content_sha1 取 url+reason 指纹（失败行幂等）。process_status=dead 使其
+        不进检索视图（收件箱视图可按状态筛出，漏报审计）。
+        """
+        import hashlib
+
+        fail_sha = hashlib.sha1(f"{url}|{reason}".encode()).hexdigest()
+        sql = """
+            INSERT INTO intel_item
+                (source_id, source_type, url, title, list_url, fetched_at, http_status,
+                 snapshot_id, content_sha1, raw_html, process_status, process_error)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        with self._pool.connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                sql,
+                (
+                    source_id, source_type, url, "(抓取失败)", list_url, fetched_at,
+                    http_status, "__no_snapshot_fetch_failed__", fail_sha, "",
+                    STATUS_DEAD, reason,
+                ),
+            )
+
+    def list_inbox(
+        self,
+        *,
+        source_id: str | None = None,
+        process_status: str | None = None,
+        limit: int = 50,
+    ) -> list[IntelRecord]:
+        """收件箱视图：列出未抽取条目（pending/needs_manual/filtered_out/dead）。
+
+        ADR-011 两视图之一——读 intel_item 非 extracted 状态子集。process_status
+        给定时筛单态（漏报审计筛 filtered_out）；不给定则取全部非 extracted。
+        排序 fetched_at DESC（最近采集在前）。
+        """
+        clauses = ["process_status != %s"]
+        params: list = [STATUS_EXTRACTED]
+        if process_status is not None:
+            clauses.append("process_status = %s")
+            params.append(process_status)
+        if source_id is not None:
+            clauses.append("source_id = %s")
+            params.append(source_id)
+        sql = (
+            f"SELECT {_COLUMNS} FROM intel_item "
+            f"WHERE {' AND '.join(clauses)} "
+            "ORDER BY fetched_at DESC LIMIT %s"
+        )
+        params.append(limit)
+        with self._pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(sql, tuple(params))
+            rows = cur.fetchall()
+        return [IntelRecord(**r) for r in rows]
+
+    def mark_status(self, intel_id: int, status: str, error: str | None = None) -> None:
+        """写回处理状态：filtered_out（粗筛）/ dead（失败终态）/ 重置 pending（重放）。
+
+        轻量状态写——不触结构化字段（write_process_result 留抽取用）。AC4 可重放
+        = mark_status(id, 'pending') 重入处理链；丢弃 = 留 dead 态留痕。
+        """
+        sql = (
+            "UPDATE intel_item SET process_status = %s, "
+            "process_error = COALESCE(%s, process_error), processed_at = NOW() "
+            "WHERE id = %s"
+        )
+        with self._pool.connection() as conn, conn.cursor() as cur:
+            cur.execute(sql, (status, error, intel_id))
 
     def list_by_source(
         self, source_id: str, limit: int = 50, before: datetime | None = None

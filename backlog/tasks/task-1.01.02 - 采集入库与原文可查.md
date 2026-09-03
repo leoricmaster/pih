@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 07:32'
+updated_date: '2026-09-03 08:18'
 labels:
   - web
 milestone: m-0
@@ -86,4 +86,14 @@ run_prefilter_batch 编排缝（process/run.py）：inbox pending → prefilter 
 证据：unit test_prefilter 8 例（keyword_hit 3 + prefilter 双通道 5：关键词命中短路/未命中LLM相关保留/未命中LLM不相关过滤/LLM失败灰保留/无chat灰保留）+ test_prefilter_run 5 例（过滤落标记/关键词保持/无chat灰保持/mark失败不阻断/source_id透传）；回归 unit 328 passed、ruff 干净。
 
 范围缝厘清（设计 §3）：粗筛通过条目停 inbox pending 等 TASK-1.02.01 抽取提升 intel_item；本故事 inbox 仅 pending/filtered_out/dead 三态流转，needs_manual/extracted 留 1.02.01。TASK-1.02.01 不先行裁定落实——AC3 取证不绑大模型、不蹭抽取验收。
+
+进度 checkpoint（slice 6 合并视图进行前）：slice 2 迁移 + slice 3 collect→inbox + slice 5 粗筛解耦 已落地提交（unit 328 / contract 21 / ruff 干净）。剩余：slice 4 AC2 幂等端到端、slice 6 合并视图（AC1 列表/详情读 inbox+intel，默认排除 filtered_out）、slice 7 dead 可查可重放 CLI、slice 8 文档同步、slice 9 finalization。
+
+合并视图设计要点（待实现）：list.html 现用 IntelRecord 字段（subject/event_type/admiralty/event_status）；inbox pending 项无结构化字段。统一显示记录需兼容两源——pending 项结构化列显示「—/待抽取」，原文快照+原始链接在 inbox 即有。详情路由倾向单一 /intel/{id} 内部判表（inbox vs intel）。回归底线：不破既有 list/detail/feedback 契约测试与 integration（seed_intel_items 直写 intel 不经 collect，合并视图须同时显示 intel extracted + inbox pending）。
+
+架构裁决 C（ADR-011：inbox 逻辑汇聚、物理单表两视图）落地——回退此前的 inbox_item 独立表方案，改 intel_item 单表 + source_type 列 + 两视图。事实源先行（DoD#1）：doc-2 §6.4 状态归属/§7 表行/§7 死注释/§5.4 检索描述/§1 技术栈/§10 索引同步修订（指向 ADR-011）；ADR-011 创建并 accepted。
+
+代码重构：迁移 0002 改为 ALTER intel_item ADD source_type（NOT NULL default auto）+ 索引，含 downgrade；删 InboxRepository（store/inbox.py）；IntelRepository 增 source_type(save/save_batch)、record_failure（落 dead 行）、list_inbox（收件箱视图读非 extracted）、mark_status（filtered_out/dead/重放 pending）；collect_source 改回写 intel_item（保留 fetch 失败落死信）；run_prefilter_batch + CLI --prefilter-only 改指 IntelRepository；粗筛解耦模块（prefilter.py）保留不变。
+
+证据：契约迁移测试改锁 source_type 列/索引/downgrade 可逆（18 passed）；unit test_inbox 重写为 IntelRepository 采集入库方法测试（source_type save 2 + record_failure 1 + list_inbox 3 + mark_status 2）；回归 unit 329 / contract 57 / ruff 干净。
 <!-- SECTION:NOTES:END -->

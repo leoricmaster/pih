@@ -3,7 +3,7 @@ id: doc-2
 title: 架构设计 (Architecture)
 type: specification
 created_date: '2026-09-01 08:38'
-updated_date: '2026-09-03 03:53'
+updated_date: '2026-09-03 08:10'
 ---
 # 架构设计
 
@@ -32,7 +32,7 @@ updated_date: '2026-09-03 03:53'
 | 采集调度 | APScheduler（worker 进程内） | ADR-004 / ADR-008 |
 | Web / API | FastAPI 单应用（查询服务单一事实源）：Web 为当前出口，JSON API 出口随 Agent 同源消费演进（§11） | ADR-006 |
 | 主存储 | PostgreSQL + pgvector + 中文全文（zhparser/pg_jieba，备选应用层分词） | ADR-005 |
-| 队列 / 死信 | PG 表承载（inbox / dead_letter），不引入 MQ | ADR-007 / ADR-009 |
+| 队列 / 死信 | PG 表承载（intel_item 处理状态机承载 inbox 与死信，不独立建表），不引入 MQ | ADR-007 / ADR-009 / ADR-011 |
 | 对象存储 | MinIO（原文快照、录入附件） | §5.5 |
 | 通知 | 站内信（PG 表 + Web 未读/已读/历史），外部渠道为演进方向 | §4 / §11 |
 | 行业知识 | 领域包 YAML + schema 校验 | ADR-001 / §6.5 |
@@ -255,7 +255,7 @@ flowchart LR
 
 ### 5.4 检索消费
 
-**结构化检索**：筛选条件（主体 / 事件类型 / 时间 / 标签 / 置信度 / 处理状态〔合并视图，§6.4〕/ 事件核实状态）→ SQL 结构化过滤 → score 排序（§6.3）→ 列表 / 详情。出口当前为 Web 页面；JSON API 出口随 Agent 同源消费演进（§11），同源同序由单一查询服务保证（ADR-006）。
+**结构化检索**：筛选条件（主体 / 事件类型 / 时间 / 标签 / 置信度 / 处理状态〔收件箱视图 / 检索视图分读同表不同状态，§6.4〕/ 事件核实状态）→ SQL 结构化过滤 → score 排序（§6.3）→ 列表 / 详情。出口当前为 Web 页面；JSON API 出口随 Agent 同源消费演进（§11），同源同序由单一查询服务保证（ADR-006）。
 
 **语义/混合检索**：同批数据经 pgvector + 中文全文两路召回——检索质量属产品本身，语义查询端点随 API 出口一并演进。**自然语言问答（RAG）不属产品范围**：检索半由本产品承载，生成半由消费方 Agent 组合实现（§11）。
 
@@ -336,8 +336,8 @@ score 只反映信息价值（可信 × 可靠 × 时效），不掺处理过程
 - **inbox 汇聚语义**：处理链的唯一输入是 inbox 条目（raw 文本 + 附件引用 + 来源标记）；信源适配器与录入网关都只是 inbox 的生产者——两链在此汇成一链（ADR-009）；
 - **人工来源规则**：`source_type=manual`，Admiralty 来源可靠性人工初评通常落 A/B（一手见闻按官方分档即完全/通常可靠），信息可信度照常由抽取与核实评定——"仍需事实核查"；
 - **录入即时可见**：录入网关落盘即返回，条目以 `pending` 态进 Web 列表，结构化异步完成——30 秒约束指人的操作时间；
-- **状态归属**：处理状态机挂 `inbox_item`（阶段状态：`pending` → `needs_manual` / `filtered_out` / `dead` / `done`）；`intel_item` 在通过质量门、挂入事件后才创建。列表与检索基于合并视图——进行中条目来自 inbox、已入库来自 intel，"处理状态"筛选作用于该合并视图，`needs_manual` 队列与事件核实队列同在核实页呈现；
-- **质量门**：主体抽成占位值 → `needs_manual`（抽取产物随 inbox 条目保留，占位字段供人工补全后继续走链）；schema 校验失败自动重问，持续失败降级 `needs_manual`，**降级不丢弃**；粗筛判无关行级标记 `filtered_out` 保留可审计。
+- **状态归属（ADR-011：单表两视图）**：处理状态机挂 `intel_item`（`pending` → `needs_manual` / `filtered_out` / `dead` / `done` / `extracted`）；采集即落 `intel_item` 的 `pending` 行，抽取原地 UPDATE 升级结构化字段，**不复制 raw、不另建 inbox 表**。`inbox` 为 ADR-009 的逻辑汇聚点——即 `intel_item` 在抽取前的各处理状态（`source_type` 区分采集/人工）；`dead` 即死信（失败终态标记，非独立表）。列表分两视图读同表不同状态：**收件箱视图**（`pending` / `needs_manual` / `filtered_out` / `dead`，采集验收面与漏报审计）与**检索视图**（`extracted`，消费成品）；`needs_manual` 队列与事件核实队列同在核实页呈现；
+- **质量门**：主体抽成占位值 → `needs_manual`（抽取产物随条目保留，占位字段供人工补全后继续走链）；schema 校验失败自动重问，持续失败降级 `needs_manual`，**降级不丢弃**；粗筛判无关行级标记 `filtered_out` 保留可审计（留在收件箱视图，不进检索视图）。
 
 ### 6.5 领域包机制
 
@@ -359,15 +359,14 @@ erDiagram
     HYPOTHESIS ||--o{ NOTIFICATION : "命中提醒"
 ```
 
-> 注：死信（dead_letter）为 inbox 条目的失败终态标记而非独立实体；pipeline_run 记录每次调度运行（吞吐/失败/时长/token）。
+> 注：死信（dead_letter）为 `intel_item` 的失败终态标记（`process_status='dead'`）而非独立实体（ADR-011）；pipeline_run 记录每次调度运行（吞吐/失败/时长/token）。
 
 **PostgreSQL 单一事实源**（ADR-005/007），表按层分组：
 
 | 层 | 表 | 要点 |
 |---|---|---|
 | 事实层 | `source` | 信源注册与健康统计；`enabled` 门控人在领域包 YAML 终审 |
-| 事实层 | `inbox_item` | 原始内容先落盘（可回放）；来源标记（采集/人工）；处理状态机（`pending` / `needs_manual` / `filtered_out` / `dead`，§6.4）——`needs_manual` 的抽取产物随条目保留 |
-| 事实层 | `intel_item` | 结构化字段（JSONB + GIN，主体/标签 containment 筛选）；`content_sha1` UNIQUE 幂等；`snapshot_id` → MinIO；Admiralty 码 |
+| 事实层 | `intel_item` | 采集先落盘（可回放，`pending`）+ 抽取原地升级结构化字段（JSONB + GIN，主体/标签 containment 筛选）；`source_type` 区分采集/人工（ADR-009 汇聚）；`content_sha1` UNIQUE 幂等；`snapshot_id` → MinIO（无快照不入库）；处理状态机（`pending` / `needs_manual` / `filtered_out` / `dead` / `extracted`，§6.4 / ADR-011）；Admiralty 码 |
 | 事实层 | `event` / `verification_log` | 核实状态机（§6.1）：状态挂事件层，跃迁全程留痕；`verification_log` 单表双主属——`event_id` XOR `hypothesis_id` 互斥（CHECK 约束） |
 | 判断层 | `hypothesis` | 陈述 + 匹配键（主体/类型/时间窗/关键词）+ 状态机（§6.2）+ 结论字段（依据/时间）；结论跃迁写 `verification_log`（与事件共用，互斥外键） |
 | 判断层 | `hypothesis_evidence` | 假设 × 情报多对多 + 命中时间 |
@@ -448,6 +447,7 @@ flowchart LR
 | ADR-008 | 单一部署单元双运行角色 | 单镜像 `pih serve` / `pih work`，交互介质仅 PG |
 | ADR-009 | 人机情报在收件箱汇聚 | 录入网关只生产 inbox，处理链零特判 |
 | ADR-010 | 判断层常驻流水线、结论与反哺经人工 | 假设匹配为 worker 旁路阶段；结论终态人工；反哺只出建议 |
+| ADR-011 | inbox 逻辑汇聚、物理单表两视图 | inbox 为 ADR-009 逻辑汇聚点而非独立表；intel_item 单表承载处理状态机，采集落 pending、抽取原地升级；收件箱视图 + 检索视图分读同表不同状态 |
 
 ## 11. 演进方向与产品边界
 

@@ -1,18 +1,20 @@
-"""InboxRepository 单元测试——mock pool 验 SQL/分支（TASK-1.01.02 D1）。
+"""IntelRepository 采集入库相关单元测试（ADR-011 单表两视图，TASK-1.01.02）。
 
-采集先落盘 inbox_item（不再直写 intel_item）。mock 策略同 test_repository：
-cursor.fetchone/fetchall 控制返回；验 execute SQL 与参数。不依赖真实 DB。
+采集落 intel_item(pending) + source_type；record_failure 落死信行；
+list_inbox 收件箱视图读非 extracted；mark_status 写回处理状态。
+mock 策略同 test_repository：cursor.fetchone/fetchall 控制返回。
 """
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
 from pih.collect.rawitem import RawItem
-from pih.store.inbox import (
+from pih.store.repository import (
     STATUS_DEAD,
+    STATUS_EXTRACTED,
+    STATUS_FILTERED_OUT,
     STATUS_PENDING,
-    InboxRecord,
-    InboxRepository,
+    IntelRepository,
     SaveOutcome,
 )
 
@@ -42,98 +44,90 @@ class _MockConn:
         self.pool.connection.return_value = self.conn
 
 
-class TestSave:
-    def test_saved_when_new(self):
-        """新内容入库 → SAVED，写 inbox_item 表（非 intel_item）。"""
+class TestSaveSourceType:
+    def test_save_writes_source_type_auto(self):
+        """采集入库写 intel_item，source_type=auto（ADR-011 物理载体）。"""
         m = _MockConn()
         m.cursor_obj.fetchone.return_value = (42,)
-        repo = InboxRepository(m.pool)
+        repo = IntelRepository(m.pool)
         outcome = repo.save(_item())
         assert outcome.status == SaveOutcome.SAVED
-        assert outcome.inbox_id == 42
-        sql = m.cursor_obj.execute.call_args[0][0]
-        assert "INSERT INTO inbox_item" in sql
-        assert "intel_item" not in sql
+        params = m.cursor_obj.execute.call_args[0][1]
+        assert params[1] == "auto"  # source_type 位
 
-    def test_skipped_when_sha1_conflict(self):
-        """幂等：content_sha1 冲突（无行返回）→ SKIPPED。"""
+    def test_save_manual_source_type(self):
+        """人工录入 source_type=manual（ADR-009 汇聚，TASK-1.03 预留）。"""
         m = _MockConn()
-        m.cursor_obj.fetchone.return_value = None  # ON CONFLICT DO NOTHING 无行
-        repo = InboxRepository(m.pool)
-        outcome = repo.save(_item())
-        assert outcome.status == SaveOutcome.SKIPPED
-
-    def test_failed_on_other_exception(self):
-        """其他异常 → FAILED，单条不阻塞（容错 D8）。"""
-        m = _MockConn()
-        m.cursor_obj.execute.side_effect = RuntimeError("boom")
-        repo = InboxRepository(m.pool)
-        outcome = repo.save(_item())
-        assert outcome.status == SaveOutcome.FAILED
-        assert "boom" in (outcome.reason or "")
+        m.cursor_obj.fetchone.return_value = (42,)
+        repo = IntelRepository(m.pool)
+        repo.save(_item(), source_type="manual")
+        params = m.cursor_obj.execute.call_args[0][1]
+        assert params[1] == "manual"
 
 
-class TestSaveBatch:
-    def test_batch_aggregates_outcomes(self):
-        """批量：混合 saved/skipped/failed 各计入，单条失败不阻塞。"""
-        m = _MockConn()
-        repo = InboxRepository(m.pool)
-        # save 内部逐条调用 fetchone；用 side_effect 序列控制
-        m.cursor_obj.fetchone.side_effect = [(1,), None, RuntimeError("x")]
-        outcomes = repo.save_batch([_item("a"), _item("b"), _item("c")])
-        statuses = [o.status for o in outcomes]
-        assert SaveOutcome.SAVED in statuses
-        assert SaveOutcome.SKIPPED in statuses
-        assert SaveOutcome.FAILED in statuses
-
-
-class TestFetchFailureRow:
-    def test_record_failure_writes_dead_with_reason(self):
+class TestRecordFailure:
+    def test_failure_writes_dead_with_reason(self):
         """AC4：fetch 失败落一行——状态 dead，process_error 记失败原因。"""
         m = _MockConn()
-        repo = InboxRepository(m.pool)
+        repo = IntelRepository(m.pool)
         repo.record_failure(
-            source_id="ccma",
-            url="http://x/failed",
-            list_url="http://x/list",
-            reason="ConnectionError: timeout",
-            fetched_at="2026-08-26T10:00:00+00:00",
+            source_id="ccma", url="http://x/failed", list_url="http://x/list",
+            reason="ConnectionError: timeout", fetched_at="2026-08-26T10:00:00+00:00",
         )
         sql, params = m.cursor_obj.execute.call_args[0]
-        assert "INSERT INTO inbox_item" in sql
-        assert "process_status" in sql
-        # 参数含 dead 状态与失败原因
+        assert "INSERT INTO intel_item" in sql
         assert STATUS_DEAD in params
         assert "ConnectionError: timeout" in params
+        assert "auto" in params  # source_type 默认
 
 
-class TestGetAndList:
-    def test_get_returns_inbox_record(self):
-        """单条详情从 inbox 读（原文快照+原始链接在 inbox 即有，AC1）。"""
-        m = _MockConn()
-        m.cursor_obj.fetchone.return_value = {
-            "id": 7, "source_id": "ccma", "source_type": "auto",
-            "url": "http://x/7", "title": "t7", "list_url": "http://x/l",
-            "fetched_at": "2026-08-26T10:00:00+00:00", "http_status": 200,
-            "content_type": "text/html", "encoding": "utf-8",
-            "snapshot_id": "s7", "content_sha1": "s7", "raw_html": "<html/>",
-            "process_status": STATUS_PENDING, "process_error": None,
-            "process_meta": None, "processed_at": None,
-            "created_at": "2026-08-26T10:00:00+00:00",
-        }
-        repo = InboxRepository(m.pool)
-        rec = repo.get(7)
-        assert isinstance(rec, InboxRecord)
-        assert rec.id == 7
-        assert rec.process_status == STATUS_PENDING
-
-    def test_list_pending_orders_old_first(self):
-        """list_pending 取 pending 条目，先老后新（处理链消费入口）。"""
+class TestListInbox:
+    def test_inbox_excludes_extracted(self):
+        """收件箱视图读非 extracted（pending/needs_manual/filtered_out/dead）。"""
         m = _MockConn()
         m.cursor_obj.fetchall.return_value = []
-        repo = InboxRepository(m.pool)
-        repo.list_pending(source_id="ccma", limit=10)
-        sql = m.cursor_obj.execute.call_args[0][0]
-        assert "inbox_item" in sql
-        assert "process_status" in sql
-        assert "ORDER BY" in sql and "fetched_at ASC" in sql
+        repo = IntelRepository(m.pool)
+        repo.list_inbox()
+        sql, params = m.cursor_obj.execute.call_args[0]
+        assert "process_status != %s" in sql
+        assert STATUS_EXTRACTED in params
+
+    def test_inbox_filter_single_status(self):
+        """process_status 给定筛单态（漏报审计筛 filtered_out，AC3）。"""
+        m = _MockConn()
+        m.cursor_obj.fetchall.return_value = []
+        repo = IntelRepository(m.pool)
+        repo.list_inbox(process_status=STATUS_FILTERED_OUT)
+        sql, params = m.cursor_obj.execute.call_args[0]
+        assert "process_status = %s" in sql
+        assert STATUS_FILTERED_OUT in params
+
+    def test_inbox_source_id_filter(self):
+        """source_id 透传限定信源。"""
+        m = _MockConn()
+        m.cursor_obj.fetchall.return_value = []
+        repo = IntelRepository(m.pool)
+        repo.list_inbox(source_id="ccma", limit=10)
+        sql, params = m.cursor_obj.execute.call_args[0]
+        assert "source_id = %s" in sql
+        assert "ccma" in params
+
+
+class TestMarkStatus:
+    def test_mark_filtered_out(self):
+        """粗筛判不相关 → mark_status(filtered_out)（AC3 行级标记）。"""
+        m = _MockConn()
+        repo = IntelRepository(m.pool)
+        repo.mark_status(7, STATUS_FILTERED_OUT, error="粗筛不相关")
+        sql, params = m.cursor_obj.execute.call_args[0]
+        assert "UPDATE intel_item" in sql
+        assert STATUS_FILTERED_OUT in params
+        assert 7 in params
+
+    def test_mark_replay_resets_pending(self):
+        """AC4 可重放：mark_status(id, pending) 重入处理链。"""
+        m = _MockConn()
+        repo = IntelRepository(m.pool)
+        repo.mark_status(7, STATUS_PENDING)
+        params = m.cursor_obj.execute.call_args[0][1]
+        assert STATUS_PENDING in params

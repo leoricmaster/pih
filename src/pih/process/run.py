@@ -24,8 +24,6 @@ from pih.process.prefilter import ChatFn as PrefilterChatFn
 from pih.process.prefilter import prefilter
 from pih.process.textprep import prepare_text
 from pih.store.event_repository import EventRepository
-from pih.store.inbox import STATUS_FILTERED_OUT as INBOX_FILTERED_OUT
-from pih.store.inbox import InboxRepository
 from pih.store.repository import (
     STATUS_EXTRACTED,
     STATUS_FILTERED_OUT,
@@ -216,19 +214,19 @@ class PrefilterStats:
 
 
 def run_prefilter_batch(
-    inbox: InboxRepository,
+    repository: IntelRepository,
     pack: dict,
     chat: PrefilterChatFn | None = None,
     source_id: str | None = None,
     limit: int = 20,
 ) -> PrefilterStats:
-    """粗筛独立编排：inbox pending → prefilter 双通道 → 标记（AC3）。
+    """粗筛独立编排：intel pending → prefilter 双通道 → 标记（AC3，ADR-011 单表）。
 
     不耦合大模型配置（chat=None 时仅关键词通道，灰条目保留）。kept=False 落
     filtered_out（mark_status），kept=True 保持 pending（等 TASK-1.02.01 抽取）。
     mark_status 异常计入 failed 不阻断其余条目（架构 §8 容错）。
     """
-    records = inbox.list_pending(source_id=source_id, limit=limit)
+    records = repository.list_pending(source_id=source_id, limit=limit)
     stats = PrefilterStats(total=len(records))
     for rec in records:
         text = prepare_text(rec.raw_html)
@@ -239,7 +237,7 @@ def run_prefilter_batch(
             continue
         # 判不相关 → 落 filtered_out（行级标记保留可审计，漏报审计可按状态筛出）
         try:
-            inbox.mark_status(rec.id, INBOX_FILTERED_OUT, error=reason)
+            repository.mark_status(rec.id, STATUS_FILTERED_OUT, error=reason)
         except Exception as exc:  # noqa: BLE001 单条写库失败不阻断
             stats.failed += 1
             stats.details.append(f"[{rec.id}] ✗ mark_status 失败：{exc}")
