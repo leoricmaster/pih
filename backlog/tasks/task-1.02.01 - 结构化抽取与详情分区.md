@@ -1,10 +1,11 @@
 ---
 id: TASK-1.02.01
 title: 结构化抽取与详情分区
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-02 09:21'
+updated_date: '2026-09-03 11:06'
 labels:
   - web
   - cross-cutting
@@ -51,3 +52,19 @@ ordinal: 17000
 - [ ] #8 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
 - [ ] #9 不违反贯穿性约束与 ADR（偏离须先记 ADR）
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+存量验证型故事（设计 docs/design/TASK-1.02.01-design.md）：旧 Sprint 已交付抽取图/重问/质量门/聚类/详情分区，本故事增量最小化。切片：1) D3 推断依据硬校验（validate_pred 单测先红→绿→graph 级链路测试）2) detail.html Admiralty 双维注解（contract 模板断言）3) AC2-AC6 既有测试证据索引 + /inbox 筛选实弹 4) live 实弹（collect→process，兼演示数据）5) 文档同步 + finalization（AC 逐条客观证据，D2 口径收窄 comment 已记）
+<!-- SECTION:PLAN:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+author: @lancer
+created: 2026-09-03 11:06
+---
+AC5 范围裁定（DoD#1 事实源对齐，同 1.01.02 AC2 先例）：AC 字面「内容相似度超阈值」经对齐 doc-2 §4 权威口径（主体归一×事件类型×±7天时间窗）收窄——内容相似度语义属模糊/近重复去重（TASK-9.1 演进），本故事聚类验收口径=主体归一+事件类型精确+时间窗命中即挂事件。
+---
+<!-- COMMENTS:END -->
