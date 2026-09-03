@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 07:26'
+updated_date: '2026-09-03 07:32'
 labels:
   - web
 milestone: m-0
@@ -78,4 +78,12 @@ InboxRepository（store/inbox.py）：save（冲突→SKIPPED，异常→FAILED 
 collect_source 重构落库目标 intel_item→inbox_item：fetch 异常捕获调 record_failure 落死信（AC4 失败原因可查可重放），不阻断其余条目；fetch_detail 返回 None（robots 拒绝/无快照）不落行（无快照不入库）。CLI _cmd_collect 切 InboxRepository。unit collect 10 例（含 3 失败场景：失败落死信不阻断/无 repo 不记录/None 跳过不落死信）。
 
 回归：unit 315 passed、ruff 干净。与计划偏差：save 吞异常返回 FAILED 而非抛出（与 IntelRepository.save 抛出由 batch 捕获不同）——inbox 调用方是采集循环，直接拿 FAILED 计入统计更直白，已注释说明。
+
+AC3 粗筛解耦完成（TDD，slice 5）：prefilter 独立模块（process/prefilter.py）——关键词命中（领域包 keywords 子串）+ 小模型二分类双通道。语义：关键词命中→kept 短路省小模型调用；未命中+小模型判否→filtered_out；未命中+小模型不可用/无 chat→灰条目保留（架构 §8 不丢弃）。不耦合大模型配置（chat=None 独立成立）。
+
+run_prefilter_batch 编排缝（process/run.py）：inbox pending → prefilter → kept=False 落 mark_status(filtered_out)，kept=True 保持 pending 等抽取；mark 异常计入 failed 不阻断。CLI pih process --prefilter-only 入口（InboxRepository，不走大模型配置前置校验）。
+
+证据：unit test_prefilter 8 例（keyword_hit 3 + prefilter 双通道 5：关键词命中短路/未命中LLM相关保留/未命中LLM不相关过滤/LLM失败灰保留/无chat灰保留）+ test_prefilter_run 5 例（过滤落标记/关键词保持/无chat灰保持/mark失败不阻断/source_id透传）；回归 unit 328 passed、ruff 干净。
+
+范围缝厘清（设计 §3）：粗筛通过条目停 inbox pending 等 TASK-1.02.01 抽取提升 intel_item；本故事 inbox 仅 pending/filtered_out/dead 三态流转，needs_manual/extracted 留 1.02.01。TASK-1.02.01 不先行裁定落实——AC3 取证不绑大模型、不蹭抽取验收。
 <!-- SECTION:NOTES:END -->

@@ -20,8 +20,12 @@ from dataclasses import dataclass, field
 from pih.process.event import EventService
 from pih.process.extraction import is_placeholder_subject
 from pih.process.graph import ChatFn, ItemState, build_graph
+from pih.process.prefilter import ChatFn as PrefilterChatFn
+from pih.process.prefilter import prefilter
 from pih.process.textprep import prepare_text
 from pih.store.event_repository import EventRepository
+from pih.store.inbox import STATUS_FILTERED_OUT as INBOX_FILTERED_OUT
+from pih.store.inbox import InboxRepository
 from pih.store.repository import (
     STATUS_EXTRACTED,
     STATUS_FILTERED_OUT,
@@ -189,3 +193,58 @@ class ProcessRunner:
                 f"{extraction.subject} / {extraction.event_type}"
             ),
         )
+
+
+# ---- 粗筛独立编排（TASK-1.01.02 D3）----
+
+
+@dataclass
+class PrefilterStats:
+    """粗筛批处理统计（独立路径，不跑抽取图）。"""
+
+    total: int = 0
+    kept: int = 0          # 保持 pending（关键词命中 / 小模型判相关 / 灰条目保留）
+    filtered_out: int = 0  # 判不相关落 filtered_out
+    failed: int = 0        # mark_status 写库失败（不阻断其余条目）
+    details: list[str] = field(default_factory=list)
+
+    def summary_line(self) -> str:
+        return (
+            f"粗筛 {self.total} 条 → 保留 {self.kept} / "
+            f"丢弃 {self.filtered_out} / 失败 {self.failed}"
+        )
+
+
+def run_prefilter_batch(
+    inbox: InboxRepository,
+    pack: dict,
+    chat: PrefilterChatFn | None = None,
+    source_id: str | None = None,
+    limit: int = 20,
+) -> PrefilterStats:
+    """粗筛独立编排：inbox pending → prefilter 双通道 → 标记（AC3）。
+
+    不耦合大模型配置（chat=None 时仅关键词通道，灰条目保留）。kept=False 落
+    filtered_out（mark_status），kept=True 保持 pending（等 TASK-1.02.01 抽取）。
+    mark_status 异常计入 failed 不阻断其余条目（架构 §8 容错）。
+    """
+    records = inbox.list_pending(source_id=source_id, limit=limit)
+    stats = PrefilterStats(total=len(records))
+    for rec in records:
+        text = prepare_text(rec.raw_html)
+        kept, reason = prefilter(text, pack, chat=chat)
+        if kept:
+            stats.kept += 1
+            stats.details.append(f"[{rec.id}] 保留（{reason}）")
+            continue
+        # 判不相关 → 落 filtered_out（行级标记保留可审计，漏报审计可按状态筛出）
+        try:
+            inbox.mark_status(rec.id, INBOX_FILTERED_OUT, error=reason)
+        except Exception as exc:  # noqa: BLE001 单条写库失败不阻断
+            stats.failed += 1
+            stats.details.append(f"[{rec.id}] ✗ mark_status 失败：{exc}")
+            continue
+        stats.filtered_out += 1
+        stats.details.append(f"[{rec.id}] ⊘ filtered_out（{reason}）")
+    return stats
+

@@ -108,6 +108,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     prp.add_argument("--source-id", default=None, help="仅处理该信源的 pending 条目")
     prp.add_argument("--limit", type=int, default=20, help="单次处理条数上限（默认 20）")
+    prp.add_argument(
+        "--prefilter-only",
+        action="store_true",
+        help="仅跑粗筛（关键词+小模型），不耦合大模型配置；判不相关落 filtered_out",
+    )
     prp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
 
     # ---- 事件聚类（TASK-1.02.01/TASK-2.02.02）----
@@ -374,6 +379,35 @@ def _cmd_process(args: argparse.Namespace) -> int:
     except RuntimeError as exc:
         print(f"✗ {exc}", file=sys.stderr)
         return EXIT_USAGE
+
+    # 粗筛独立路径：不耦合大模型配置，从 inbox 取 pending（TASK-1.01.02 D3）
+    if args.prefilter_only:
+        from pih.process.run import run_prefilter_batch
+
+        inbox = InboxRepository(pool)
+        try:
+            if args.source_id:
+                known = {s["id"] for s in pack["sources"]}
+                if args.source_id not in known:
+                    print(
+                        f"未知信源 id：{args.source_id}（可用：{', '.join(sorted(known))}）",
+                        file=sys.stderr,
+                    )
+                    return EXIT_USAGE
+            stats = run_prefilter_batch(
+                inbox, pack, chat=None, source_id=args.source_id, limit=args.limit
+            )
+            print(
+                f"== 粗筛（--prefilter-only）："
+                f"source_id={args.source_id or '全部'} limit={args.limit} =="
+            )
+            for line in stats.details:
+                print(f"  {line}")
+            print(stats.summary_line())
+            return EXIT_OK if stats.failed == 0 else EXIT_FAILED
+        finally:
+            close_pool()
+
     try:
         repo = IntelRepository(pool)
         # 配置校验先于取条目：LLM env 缺失不产生半写状态（AC8）
