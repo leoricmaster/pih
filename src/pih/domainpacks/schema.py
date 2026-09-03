@@ -16,7 +16,7 @@ RELIABILITY_VALUES = ["A", "B", "C", "D", "E", "F"]
 CREDIBILITY_VALUES = ["1", "2", "3", "4", "5", "6"]
 # 信源类型（架构 §4 信源适配器：RSS/网页/API/变更监控）
 SOURCE_TYPES = ["rss", "html", "api", "change_monitor"]
-# 信源层级（架构 §6.2）：L1 官方/主机厂、L2 权威/垂直媒体、L3 聚合、L4 弱信号
+# 信源层级（架构 §6.3）：L1 官方/主机厂、L2 权威/垂直媒体、L3 聚合、L4 弱信号
 SOURCE_LEVELS = ["L1", "L2", "L3", "L4"]
 # 抓取频率（调度器 Backlog TASK-4.01.01 消费，当前仅落盘）
 FETCH_FREQUENCIES = ["hourly", "daily", "weekly"]

@@ -3,7 +3,7 @@ id: doc-2
 title: 架构设计 (Architecture)
 type: specification
 created_date: '2026-09-01 08:38'
-updated_date: '2026-09-02 05:35'
+updated_date: '2026-09-03 03:53'
 ---
 # 架构设计
 
@@ -131,7 +131,7 @@ flowchart TB
     end
     subgraph COLLECT["采集层 · pih-worker"]
         SC["调度器 APScheduler<br/>按信源频率触发"]
-        AD["信源适配器<br/>RSS/网页/API · robots 门控 · 试抓取"]
+        AD["信源适配器<br/>RSS/网页/API/变更监控 · robots 门控 · 试抓取"]
     end
     subgraph CROSS["横切"]
         PK["领域包 YAML + schema 校验"]
@@ -162,7 +162,7 @@ flowchart TB
 | 层 | 模块 | 职责 / 关键接口 | 承载 |
 |---|---|---|---|
 | 采集 | 调度器 | 按领域包信源频率触发；失败指数退避 ×3；连续 3 次失败告警 | TASK-4.01 |
-| 采集 | 信源适配器 | `fetch(source) → RawItem[]`（RSS/网页/API）；robots 门控；试抓取（probe）产出成败报告，`enabled` 门控人在 YAML 终审 | TASK-1.01 |
+| 采集 | 信源适配器 | `fetch(source) → RawItem[]`（RSS/网页/API/变更监控——无接口站点的主动监控）；robots 门控；试抓取（probe）产出成败报告，`enabled` 门控人在 YAML 终审 | TASK-1.01 |
 | 处理 | 处理图（LangGraph） | 粗筛（小模型）→ 结构化抽取（大模型 + 领域包提示词）→ 校验（schema 失败自动重问）；Admiralty 预评级、事实/推断分离 | TASK-1.02 / ADR-004 |
 | 处理 | 质量门 | 占位主体（未知/不详…）→ `needs_manual`；持续失败降级不丢弃 | TASK-1.02 / §6.4 |
 | 处理 | 事件聚类器 | 主体归一（领域包别名）× 事件类型 × 时间窗 → 挂事件；双独立信源自动跃迁 | ADR-003 / TASK-2.02 |
@@ -316,6 +316,10 @@ stateDiagram-v2
 
 **置信度词表——Admiralty Code**：来源可靠性 A–F × 信息可信度 1–6，单字符双维度（如 B2）；LLM 预评级与人工评级共用同一词表；评级证据驱动（信源画像为演进方向，基于 verification_log 历史结局重估）。不采用百分制/星级：连续值难对齐、难口头沟通、LLM 输出不稳定。
 
+**Admiralty 分档（官方定义，NATO AJP-2.1）**——来源可靠性：A 完全可靠 / B 通常可靠 / C 较为可靠 / D 通常不可靠 / E 不可靠 / F 无法判断；信息可信度：1 已证实 / 2 很可能真 / 3 可能为真 / 4 存疑 / 5 不大可能 / 6 无法判断。
+
+**信源两轴——层级与来源可靠性不合并**：层级（level）看**出身**——L1 官方/主机厂一手、L2 权威/垂直媒体、L3 聚合站、L4 弱信号（结构性，注册时判定，基本不变）；可靠性（reliability）看**表现**——Admiralty 官方分档（证据驱动，随核实结局重估）。两轴正相关但独立：出身好≠表现好（L2 媒体可失信、L4 弱信号可被验证可信）。赋值只经两途：注册人按官方定义**人工初评**；核实历史结局（verification_log）驱动**画像重估**——不设并行赋值规则（如"实抓→B"）。若 level 长期无消费方，再议是否降级为派生标签。
+
 **排序函数**：`score = W_c × map(admiralty) × decay(now - 采集时间)`
 
 - `map(admiralty)`：可靠性 A–F 与可信度 1–6 分别映射到 1.0–0，**两者取小**（短板决定）；
@@ -330,7 +334,7 @@ score 只反映信息价值（可信 × 可靠 × 时效），不掺处理过程
 ### 6.4 人机同链与质量门
 
 - **inbox 汇聚语义**：处理链的唯一输入是 inbox 条目（raw 文本 + 附件引用 + 来源标记）；信源适配器与录入网关都只是 inbox 的生产者——两链在此汇成一链（ADR-009）；
-- **人工来源规则**：`source_type=manual`，Admiralty 来源可靠性默认 A/B（一手见闻），信息可信度照常由抽取与核实评定——"仍需事实核查"；
+- **人工来源规则**：`source_type=manual`，Admiralty 来源可靠性人工初评通常落 A/B（一手见闻按官方分档即完全/通常可靠），信息可信度照常由抽取与核实评定——"仍需事实核查"；
 - **录入即时可见**：录入网关落盘即返回，条目以 `pending` 态进 Web 列表，结构化异步完成——30 秒约束指人的操作时间；
 - **状态归属**：处理状态机挂 `inbox_item`（阶段状态：`pending` → `needs_manual` / `filtered_out` / `dead` / `done`）；`intel_item` 在通过质量门、挂入事件后才创建。列表与检索基于合并视图——进行中条目来自 inbox、已入库来自 intel，"处理状态"筛选作用于该合并视图，`needs_manual` 队列与事件核实队列同在核实页呈现；
 - **质量门**：主体抽成占位值 → `needs_manual`（抽取产物随 inbox 条目保留，占位字段供人工补全后继续走链）；schema 校验失败自动重问，持续失败降级 `needs_manual`，**降级不丢弃**；粗筛判无关行级标记 `filtered_out` 保留可审计。

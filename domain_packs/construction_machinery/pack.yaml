@@ -11,9 +11,10 @@ meta:
   version: 0.2.0
 
 # ---- 信源清单（实测锁定 9 源，信源摸底结论见 Architecture §3）----
-# reliability（Admiralty 来源可靠性 A–F）：
-#   B = 实抓验证可信；C = 纸面充分未实抓；D = 条件源（反爬/法务前置）；E = 待复核
-# level（架构 §6.2）：L1 官方/主机厂、L2 权威/垂直媒体、L3 聚合、L4 弱信号
+# reliability（Admiralty 来源可靠性 A–F，官方分档见 doc-2 §6.3 / doc-4 术语词表）：
+#   赋值只经两途——注册人按官方定义人工初评；核实历史结局（verification_log）驱动画像重估。
+#   现值为信源摸底期人工初评，待画像机制上线后重估。
+# level（信息层级，定义见 doc-2 §6.3）：L1 官方/主机厂、L2 权威/垂直媒体、L3 聚合、L4 弱信号
 # fetch_frequency：调度器（Backlog TASK-4.01.01）消费；当前仅落盘
 # enabled 门控（TASK-1.01.01 AC2「成功才允许启用」）：
 #   新增信源 enabled: false → 运行 `pih probe-source <id>` 试抓取 → 通过后由
