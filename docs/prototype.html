@@ -137,7 +137,7 @@
       A 日常监控 · B 录入<br>
       C 检索 · D 假设求证<br>
       E 信源 · F 核实 · G 反馈<br>
-      <span style="color:#94a3b8">F 已并入情报「待处理」</span>
+      <span style="color:#94a3b8">收件箱并入情报 tab；F 核实队列随核实层（未来）呈现</span>
     </div>
   </nav>
 
@@ -164,10 +164,10 @@
 
     <!-- ============ 情报·列表（含 待处理 视图） ============ -->
     <section class="page on" id="lib" data-title="情报 / 列表">
-      <div class="note">▶ 流 C 按需检索 · 北极星落点。「检索」= 按需消费（组合筛选）；「待处理」= 核实队列（流 F），同一列表骨架、不同默认筛选与排序。</div>
+      <div class="note">▶ 流 C 按需检索 · 北极星落点。「检索」= 已抽取成品按需消费（组合筛选）；「收件箱」= 采集处理状态视图（流 A 落盘：pending / 粗筛丢弃 / 待人工 / 抓取失败可审计，ADR-011 两视图同表分读）。</div>
       <div class="tabs">
         <div class="tab active" data-tab="all">检索</div>
-        <div class="tab" data-tab="todo">待处理 <span class="badge">3</span></div>
+        <div class="tab" data-tab="todo">收件箱 <span class="badge">3</span></div>
       </div>
 
       <!-- 检索 视图 -->
@@ -200,25 +200,20 @@
         <div class="legend">Admiralty：来源可靠性 A–F × 信息可信度 1–6（短板决定）。已证伪默认不出现。未挂事件条目排末尾。</div>
       </div>
 
-      <!-- 待处理 视图（原核实队列） -->
+      <!-- 收件箱 视图（采集处理状态 · ADR-011 单表两视图） -->
       <div class="view" id="v-todo">
-        <div class="mini" style="margin-bottom:12px">默认排序：置信度升序 + 采集时间升序（低置信、最老的优先）。终态（多源确认 / 已证伪）必须人工，自动跃迁全程写日志。</div>
-        <div class="wf"><div class="lbl">已具备升级条件（第二独立源命中）</div>
-          <div class="queue">
-            <div class="qcard"><div><div class="ttl">事件：徐工 XCR20 中标某矿</div><div class="mini">B2 · 2 源 · 采集 08-31</div></div><div class="row"><button class="btn" style="border-color:var(--ok);color:var(--ok)">确认</button><button class="btn warn">证伪</button></div></div>
-          </div>
+        <div class="mini" style="margin-bottom:12px">采集入库先落盘于此（pending）；粗筛丢弃（filtered_out）、待人工（needs_manual）、抓取失败（dead）留此可审计。排序：采集时间倒序。</div>
+        <div class="wf" style="padding:0">
+          <table class="wf-table">
+            <thead><tr><th>标题</th><th>信源</th><th>处理状态</th><th>失败/原因</th><th>采集时间</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr class="item" data-go="detail" data-item="6项工程机械行业专利荣获第26届中国专利奖"><td>6项工程机械行业专利荣获第26届中国专利奖</td><td>ccma</td><td><span class="tag muted">pending</span></td><td>—</td><td>09-03 08:12</td><td>—</td></tr>
+              <tr class="item" data-go="detail" data-item="今日股市大盘走势"><td>今日股市大盘走势</td><td>ccma</td><td><span class="tag">filtered_out</span></td><td>粗筛判定与领域不相关</td><td>09-03 08:12</td><td><button class="btn">重放</button></td></tr>
+              <tr class="item" data-go="detail" data-item="(抓取失败)"><td style="color:var(--muted)">(抓取失败)</td><td>ccma</td><td><span class="tag warn">dead</span></td><td>ConnectionError: timeout</td><td>09-03 08:11</td><td><button class="btn">重放</button></td></tr>
+            </tbody>
+          </table>
         </div>
-        <div class="wf"><div class="lbl">待人工（抽取失败 / 占位主体）</div>
-          <div class="queue">
-            <div class="qcard"><div><div class="ttl">某源称三一将退出小型挖机市场</div><div class="mini">E4 · 主体占位 · 待人工复核</div></div><div class="row"><button class="btn" data-go="detail">跳详情</button><button class="btn ghost">降级</button></div></div>
-          </div>
-        </div>
-        <div class="wf"><div class="lbl">低置信度情报</div>
-          <div class="queue">
-            <div class="qcard"><div><div class="ttl">行业媒体援引内部消息</div><div class="mini">C3 · 单源 · 08-25</div></div><button class="btn" data-go="detail">查看</button></div>
-          </div>
-          <div class="legend" style="color:var(--warn)">⚠ 积压提醒：2 条待核实超 7 天，已降权</div>
-        </div>
+        <div class="legend">收件箱 = 采集处理状态视图（漏报审计可筛 filtered_out）；已抽取成品在「检索」。事件核实队列（确认 / 证伪）随核实层（未来故事）另行呈现。</div>
       </div>
     </section>
 

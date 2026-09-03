@@ -109,10 +109,13 @@ ADR-011），抽取原地 UPDATE 升级结构化字段，不另建 inbox 表。f
 
 ### 采集入库与两视图（ADR-011）
 
-采集入库的条目先停在 `pending` 态，Web 分两视图读同表不同状态：
+采集入库的条目先停在 `pending` 态，Web「情报」页内 tab 分两视图读同表不同状态
+（`[检索]` / `[收件箱]`，原型 IA 对齐）：
 
-- **收件箱视图** `/inbox`：`pending` / `needs_manual` / `filtered_out` / `dead`——
-  采集验收面（新条目出现于此）与漏报审计（按 `process_status=filtered_out` 筛出粗筛丢弃的条目）。
+- **收件箱视图** `/inbox`（tab）：`pending` / `needs_manual` / `filtered_out` / `dead`——
+  采集验收面（新条目出现于此）与漏报审计（按 `process_status=filtered_out` 筛出粗筛丢弃的条目）；
+  非 pending 行带「重放」按钮（Web 版 `pih replay`：dead/filtered_out/needs_manual →
+  重置 pending 重入处理链，AC4）。
 - **检索视图** `/`：`extracted` 已抽取成品——消费列表，默认只看成品；
   `filtered_out` 不进检索（AC3 天然成立），`process_status` 显式给定可覆盖（如 needs_manual 复核队列）。
 
@@ -147,8 +150,8 @@ docker compose up -d web
 uv run uvicorn pih.consume.web:app --reload --port 8000
 
 # 4. 浏览器访问 http://127.0.0.1:8000
-#    检索视图 / —— 已抽取成品列表 + 筛选 form + 下一页游标（默认 extracted）
-#    收件箱视图 /inbox —— 采集入库 pending/失败/粗筛丢弃条目（采集验收 + 漏报审计）
+#    情报页 / —— 页内 tab：[检索]（默认 extracted 成品 + 筛选 + 下一页游标）
+#                 [收件箱]（/inbox —— 采集入库 pending/失败/粗筛丢弃 + 重放按钮）
 #    点标题进入 /intel/{id} 详情页（事实/推断分区 + 原文快照与原始链接双入口）
 #    导航「信源」进入 /sources —— 信源清单（六字段）+ 页内试抓
 

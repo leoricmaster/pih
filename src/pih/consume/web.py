@@ -41,7 +41,7 @@ from pih.process.event import STATUS_LABELS, STATUS_ORDER, EventService
 from pih.store.db import close_pool, get_pool
 from pih.store.event_repository import EventRepository
 from pih.store.feedback import FEEDBACK_TYPES, FeedbackRepository
-from pih.store.repository import IntelRepository
+from pih.store.repository import STATUS_PENDING, IntelRepository
 
 _BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(_BASE / "templates"))
@@ -227,6 +227,21 @@ def inbox_page(
             "source_id": source_id,
         },
     )
+
+
+@app.post("/inbox/{intel_id}/replay")
+def inbox_replay(intel_id: int, request: Request) -> RedirectResponse:
+    """AC4 重放上 Web：dead/filtered_out/needs_manual → 重置 pending 重入处理链。
+
+    与 CLI `pih replay` 同语义（mark_status pending）。POST 与 Web 同信任域
+    （ADR-006 内网默认开放，同 /feedback 口径）；重放后 303 回收件箱。
+    """
+    repo = IntelRepository(request.app.state.pool)
+    if repo.get(intel_id) is None:
+        raise HTTPException(status_code=404, detail=f"intel_item {intel_id} not found")
+    repo.mark_status(intel_id, STATUS_PENDING)
+    log_query("web", {"replay": intel_id}, 1)
+    return RedirectResponse("/inbox", status_code=303)
 
 
 @app.get("/sources", response_class=HTMLResponse)

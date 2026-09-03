@@ -3,7 +3,7 @@ id: doc-2
 title: 架构设计 (Architecture)
 type: specification
 created_date: '2026-09-01 08:38'
-updated_date: '2026-09-03 08:10'
+updated_date: '2026-09-03 10:09'
 ---
 # 架构设计
 
@@ -183,6 +183,19 @@ flowchart TB
 
 ## 5. 核心数据流
 
+**端到端管线统览**（单点全景：主链时序 §5.1/§5.2 · 事件核实状态机 §6.1 · 处理状态与两视图 §6.4）：
+
+```text
+采集 ──► 粗筛 ──► 抽取/校验 ──► 核实（聚类挂事件·状态机挂事件层 §6.1）──► 消费
+
+process_status 状态机（挂 intel_item·ADR-011 单表两视图）：
+  pending ──┬─► dead          ← 采集层抓取失败（死信）
+            ├─► filtered_out  ← 粗筛判无关（留档可审计）
+            ├─► needs_manual  ← 占位主体 / 校验失败（人工补全）
+            └─► extracted     ← 抽取成功（进检索视图）
+两视图分读同表：收件箱视图 = pending / needs_manual / filtered_out / dead；检索视图 = extracted
+```
+
 ### 5.1 互联网情报主链路
 
 ```mermaid
@@ -336,7 +349,8 @@ score 只反映信息价值（可信 × 可靠 × 时效），不掺处理过程
 - **inbox 汇聚语义**：处理链的唯一输入是 inbox 条目（raw 文本 + 附件引用 + 来源标记）；信源适配器与录入网关都只是 inbox 的生产者——两链在此汇成一链（ADR-009）；
 - **人工来源规则**：`source_type=manual`，Admiralty 来源可靠性人工初评通常落 A/B（一手见闻按官方分档即完全/通常可靠），信息可信度照常由抽取与核实评定——"仍需事实核查"；
 - **录入即时可见**：录入网关落盘即返回，条目以 `pending` 态进 Web 列表，结构化异步完成——30 秒约束指人的操作时间；
-- **状态归属（ADR-011：单表两视图）**：处理状态机挂 `intel_item`（`pending` → `needs_manual` / `filtered_out` / `dead` / `done` / `extracted`）；采集即落 `intel_item` 的 `pending` 行，抽取原地 UPDATE 升级结构化字段，**不复制 raw、不另建 inbox 表**。`inbox` 为 ADR-009 的逻辑汇聚点——即 `intel_item` 在抽取前的各处理状态（`source_type` 区分采集/人工）；`dead` 即死信（失败终态标记，非独立表）。列表分两视图读同表不同状态：**收件箱视图**（`pending` / `needs_manual` / `filtered_out` / `dead`，采集验收面与漏报审计）与**检索视图**（`extracted`，消费成品）；`needs_manual` 队列与事件核实队列同在核实页呈现；
+- **状态归属（ADR-011：单表两视图）**：处理状态机挂 `intel_item`（`pending` → `needs_manual` / `filtered_out` / `dead` / `extracted`）；采集即落 `intel_item` 的 `pending` 行，抽取原地 UPDATE 升级结构化字段，**不复制 raw、不另建 inbox 表**。`inbox` 为 ADR-009 的逻辑汇聚点——即 `intel_item` 在抽取前的各处理状态（`source_type` 区分采集/人工）；`dead` 即死信（失败终态标记，非独立表）。列表分两视图读同表不同状态：**收件箱视图**（`pending` / `needs_manual` / `filtered_out` / `dead`，采集验收面与漏报审计）与**检索视图**（`extracted`，消费成品）；`needs_manual` 队列与事件核实队列同在核实页呈现；
+- **`process_error` 归属**：失败原因列随状态由各写手落值（收件箱视图/详情页展示）——`dead` ← 采集层捕获的抓取异常（`collect/run.py` `record_failure`）；`filtered_out` ← 粗筛返回的固定原因串（`process/prefilter.py`）；`needs_manual` ← 抽取/校验失败原因（处理图 Runner 落库）；`pending` / `extracted` ← 无值；
 - **质量门**：主体抽成占位值 → `needs_manual`（抽取产物随条目保留，占位字段供人工补全后继续走链）；schema 校验失败自动重问，持续失败降级 `needs_manual`，**降级不丢弃**；粗筛判无关行级标记 `filtered_out` 保留可审计（留在收件箱视图，不进检索视图）。
 
 ### 6.5 领域包机制

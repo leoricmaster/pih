@@ -30,12 +30,19 @@ class _FakeRepo:
     def __init__(self, pool=None):
         self.calls = []
         self.items: list[_FakeRecord] = []
+        self.status_calls: list[tuple] = []
 
     def list_inbox(self, *, source_id=None, process_status=None, limit=100):
         self.calls.append(
             {"source_id": source_id, "process_status": process_status, "limit": limit}
         )
         return self.items
+
+    def get(self, intel_id):
+        return next((r for r in self.items if r.id == intel_id), None)
+
+    def mark_status(self, intel_id, status, error=None):
+        self.status_calls.append((intel_id, status))
 
 
 @pytest.fixture
@@ -96,9 +103,46 @@ def test_inbox_empty_shows_hint(client, fake):
     assert "收件箱为空" in r.text
 
 
-def test_inbox_nav_link_present(client, fake):
-    """侧边栏收件箱链接在。"""
+def test_inbox_tab_bar_present(client, fake):
+    """IA 对齐原型 tab 模式：情报页内 [检索]/[收件箱] tab 栏，收件箱页本 tab 高亮。"""
     fake.items = []
     r = client.get("/inbox")
-    assert 'href="/inbox"' in r.text
-    assert "收件箱" in r.text
+    assert 'class="tab active" href="/inbox"' in r.text
+    assert 'class="tab" href="/"' in r.text
+    assert "检索" in r.text
+
+
+def test_inbox_no_source_type_column(client, fake):
+    """「来源」列已删——恒 auto（manual 录入未实现）无信息量。"""
+    fake.items = [_FakeRecord(id=7)]
+    r = client.get("/inbox")
+    assert "<th>来源</th>" not in r.text
+    assert ">auto<" not in r.text
+
+
+def test_inbox_replay_button_only_for_non_pending(client, fake):
+    """重放按钮只出现在非 pending 行（pending 已在处理链上，无需重放）。"""
+    fake.items = [
+        _FakeRecord(id=7, process_status="pending"),
+        _FakeRecord(id=9, process_status="dead"),
+    ]
+    r = client.get("/inbox")
+    assert "/inbox/9/replay" in r.text
+    assert "/inbox/7/replay" not in r.text
+
+
+def test_inbox_replay_resets_to_pending(client, fake):
+    """AC4 重放上 Web：POST /inbox/{id}/replay → mark_status(id, pending)，303 回收件箱。"""
+    fake.items = [_FakeRecord(id=9, process_status="dead")]
+    r = client.post("/inbox/9/replay", follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/inbox"
+    assert fake.status_calls == [(9, "pending")]
+
+
+def test_inbox_replay_unknown_id_404(client, fake):
+    """重放不存在的条目 → 404，不误写状态。"""
+    fake.items = []
+    r = client.post("/inbox/99/replay")
+    assert r.status_code == 404
+    assert fake.status_calls == []
