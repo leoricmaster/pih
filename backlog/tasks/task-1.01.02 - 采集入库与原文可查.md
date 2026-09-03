@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 07:17'
+updated_date: '2026-09-03 07:26'
 labels:
   - web
 milestone: m-0
@@ -65,3 +65,17 @@ ordinal: 16000
 8. 文档同步：README 采集入库章节 + 测试分层更新；原型列表/详情节对照（合并视图）；事实源偏差闭环（AC2 收窄、intel_item 兼任 inbox 修正入 doc-2 §6.4/§7 或 ADR）
 9. finalization：逐 AC 客观证据才勾选（测试名/命令+输出）；DoD 逐条核对；final-summary；五问材料包（doc-5 §5）；置 Done
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+迁移 0002 + InboxRepository + collect_source 落 inbox 完成（TDD，slice 2/3）：
+
+迁移 0002 建 inbox_item（source_id FK / source_type / snapshot_id NOT NULL 守卫 / content_sha1 UNIQUE 精确幂等 / process_status 默认 pending / process_error / 三索引），含 downgrade（drop inbox，intel 既有数据不动）。契约测试 6 例先红（模块/表缺）后绿锁表结构；21 passed。
+
+InboxRepository（store/inbox.py）：save（冲突→SKIPPED，异常→FAILED 不抛单条不阻塞 D8）/ save_batch / record_failure（fetch 失败落死信行，状态 dead、process_error 记因、snapshot_id 占位满足 NOT NULL、sha1=url+reason 幂等）/ get / list_pending（先老后新）/ mark_status（filtered_out/dead/重置 pending 重放）。unit 7 例先红后绿。
+
+collect_source 重构落库目标 intel_item→inbox_item：fetch 异常捕获调 record_failure 落死信（AC4 失败原因可查可重放），不阻断其余条目；fetch_detail 返回 None（robots 拒绝/无快照）不落行（无快照不入库）。CLI _cmd_collect 切 InboxRepository。unit collect 10 例（含 3 失败场景：失败落死信不阻断/无 repo 不记录/None 跳过不落死信）。
+
+回归：unit 315 passed、ruff 干净。与计划偏差：save 吞异常返回 FAILED 而非抛出（与 IntelRepository.save 抛出由 batch 捕获不同）——inbox 调用方是采集循环，直接拿 FAILED 计入统计更直白，已注释说明。
+<!-- SECTION:NOTES:END -->
