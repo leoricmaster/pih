@@ -34,6 +34,9 @@ logger = logging.getLogger("pih.work")
 # 退避序列（秒）——指数 2/4/8（架构 §8 重试 ×3）
 DEFAULT_BACKOFF: tuple[int, ...] = (2, 4, 8)
 
+# 连续失败告警阈值（恰达触发一次站内信，TASK-4.02.01 D10；doc-2 §8 连续 3 次）
+ALERT_AFTER = 3
+
 # 启动扫错峰：每源间隔（秒），避免多源齐射
 STARTUP_STAGGER_SECONDS = 45
 
@@ -77,8 +80,13 @@ def run_source_job(
     backoff: tuple[int, ...] = DEFAULT_BACKOFF,
     max_items: int = DEFAULT_MAX_ITEMS,
     run_type: str = "scheduled",
+    notify: Callable[[str, str], None] | None = None,
 ) -> JobResult:
-    """单源一轮采集：失败退避重试（首试 + len(backoff) 次），终态回写健康与留痕。"""
+    """单源一轮采集：失败退避重试（首试 + len(backoff) 次），终态回写健康与留痕。
+
+    notify：连续失败恰达 ALERT_AFTER 时回调一次（title, body）——站内信告警
+    钩子（TASK-4.02.01 D17）；持续失败不重复告警（episode 语义 D10）。
+    """
     t0 = time.monotonic()
     attempts = 0
     last_exc: Exception | None = None
@@ -99,11 +107,16 @@ def run_source_job(
     duration_ms = int((time.monotonic() - t0) * 1000)
     if last_exc is not None:
         reason = _fmt_exc(last_exc)
-        health.record_failure(source.id, reason)
+        count = health.record_failure(source.id, reason)
         runs.record_run(
             source_id=source.id, run_type=run_type, duration_ms=duration_ms,
             ok=False, error=reason,
         )
+        if notify is not None and count == ALERT_AFTER:
+            notify(
+                f"信源异常：{source.name} 连续失败 {count} 次",
+                reason,
+            )
         logger.warning(
             "source=%s ok=false attempts=%d error=%s", source.id, attempts, reason
         )

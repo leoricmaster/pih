@@ -32,7 +32,8 @@ class SourceHealthRepository:
                 (source_id,),
             )
 
-    def record_failure(self, source_id: str, reason: str) -> None:
+    def record_failure(self, source_id: str, reason: str) -> int:
+        """失败 +1 并返回新的连续失败计数（告警阈值判定用，TASK-4.02.01 D17）。"""
         with self._pool.connection() as conn, conn.cursor() as cur:
             cur.execute(
                 """
@@ -41,9 +42,12 @@ class SourceHealthRepository:
                     last_failure_at = now(),
                     last_failure_reason = %s
                 WHERE id = %s
+                RETURNING consecutive_failures
                 """,
                 (reason, source_id),
             )
+            row = cur.fetchone()
+        return row[0] if row else 0
 
     def get_health(self, source_id: str) -> dict[str, Any] | None:
         with self._pool.connection() as conn, conn.cursor(
@@ -59,3 +63,17 @@ class SourceHealthRepository:
             )
             row = cur.fetchone()
         return dict(row) if row else None
+
+    def list_health(self) -> dict[str, dict[str, Any]]:
+        """全部信源健康行（信源页一次取全，TASK-4.02.01 D20）。"""
+        with self._pool.connection() as conn, conn.cursor(
+            row_factory=dict_row
+        ) as cur:
+            cur.execute(
+                """
+                SELECT id AS source_id, consecutive_failures, last_failure_at,
+                       last_failure_reason, last_success_at
+                FROM source
+                """
+            )
+            return {row["source_id"]: dict(row) for row in cur.fetchall()}

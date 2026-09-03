@@ -42,7 +42,9 @@ from pih.process.event import STATUS_LABELS, STATUS_ORDER, EventService
 from pih.store.db import close_pool, get_pool
 from pih.store.event_repository import EventRepository
 from pih.store.feedback import FEEDBACK_TYPES, FeedbackRepository
+from pih.store.notification import NotificationRepository
 from pih.store.repository import STATUS_NEEDS_MANUAL, STATUS_PENDING, IntelRepository
+from pih.store.source_health import SourceHealthRepository
 
 _BASE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(_BASE / "templates"))
@@ -117,6 +119,20 @@ def _event_svc(request: Request) -> EventService:
     )
 
 
+def _render(request: Request, name: str, context: dict):
+    """统一渲染出口（TASK-4.02.01 D19）——每页注入铃铛上下文
+    （未读数 + 最近未读，topbar 下拉用）；PG 异常降级为空铃铛不阻塞页面。"""
+    bell: dict = {"bell_count": 0, "bell_recent": []}
+    try:
+        notifications = NotificationRepository(request.app.state.pool)
+        bell["bell_count"] = notifications.unread_count()
+        bell["bell_recent"] = notifications.list_unread(5)
+    except Exception:  # noqa: BLE001 铃铛降级不炸页面（与 MinIO 降级同口径）
+        pass
+    bell.update(context)
+    return templates.TemplateResponse(request, name, bell)
+
+
 def _build_next_url(filters: IntelFilters, next_before: str | None) -> str | None:
     """拼下一页 URL——保留当前筛选非空参数 + before=next_before。"""
     if next_before is None:
@@ -171,7 +187,7 @@ def list_page(
     result = _svc(request).list(filters)
     log_query("web", filters.nonempty(), len(result.items))
     filter_subjects, filter_event_types, filter_tags = load_filter_vocab()
-    return templates.TemplateResponse(
+    return _render(
         request,
         "list.html",
         {
@@ -206,7 +222,7 @@ def detail_page(
     pack_subjects, pack_event_types = _load_pack_vocab()
     # 事件状态与跃迁历史实查（已随 event 表上线激活）
     event_with_log = _event_svc(request).get_event_with_log(rec.event_id)
-    return templates.TemplateResponse(
+    return _render(
         request,
         "detail.html",
         {
@@ -267,7 +283,7 @@ def verify_page(request: Request) -> HTMLResponse:
         ),
         "status_labels": STATUS_LABELS,
     }
-    return templates.TemplateResponse(request, "verify.html", context)
+    return _render(request, "verify.html", context)
 
 
 @app.post("/verify/{event_id}/confirm")
@@ -301,6 +317,26 @@ def verify_refute(
     return RedirectResponse("/verify", status_code=303)
 
 
+@app.get("/notifications", response_class=HTMLResponse)
+def notifications_page(request: Request) -> HTMLResponse:
+    """站内信历史页（TASK-4.02.01 AC2）——仅经铃铛「查看全部」可达（原型 IA）。"""
+    repo = NotificationRepository(request.app.state.pool)
+    recent = repo.list_recent(50)
+    unread = [n for n in recent if n["read_at"] is None]
+    return _render(
+        request,
+        "notifications.html",
+        {"unread": unread, "history": recent},
+    )
+
+
+@app.post("/notifications/{notification_id}/read")
+def notification_mark_read(notification_id: int, request: Request) -> RedirectResponse:
+    """标记已读（AC2）——303 回通知页（与 /inbox replay 同模式，内网信任域）。"""
+    NotificationRepository(request.app.state.pool).mark_read(notification_id)
+    return RedirectResponse("/notifications", status_code=303)
+
+
 @app.get("/inbox", response_class=HTMLResponse)
 def inbox_page(
     request: Request,
@@ -317,7 +353,7 @@ def inbox_page(
     items = repo.list_inbox(
         source_id=source_id, process_status=process_status, limit=100
     )
-    return templates.TemplateResponse(
+    return _render(
         request,
         "inbox.html",
         {
@@ -345,12 +381,22 @@ def inbox_replay(intel_id: int, request: Request) -> RedirectResponse:
 
 @app.get("/sources", response_class=HTMLResponse)
 def sources_page(request: Request) -> HTMLResponse:
-    """信源页（TASK-1.01.01 AC2）——信源清单可视 + 配置错误诊断面（错误态不半截）。"""
+    """信源页（TASK-1.01.01 AC2）——信源清单可视 + 配置错误诊断面（错误态不半截）。
+
+    健康列（TASK-4.02.01 D20）读 DB source 健康行：≥3 异常 / 1–2 失败 N 次 /
+    0 且采过 正常 / 0 且从未采 —。DB 不可达降级为空 map（列显 —）。
+    """
     sources, issues, error = load_sources_view()
     adapter_ready_ids = {
         s["id"] for s in sources or [] if has_adapter(SourceConfig.from_dict(s))
     }
-    return templates.TemplateResponse(
+    try:
+        health_by_id = SourceHealthRepository(
+            request.app.state.pool
+        ).list_health()
+    except Exception:  # noqa: BLE001 健康列降级不阻塞清单
+        health_by_id = {}
+    return _render(
         request,
         "sources.html",
         {
@@ -358,6 +404,7 @@ def sources_page(request: Request) -> HTMLResponse:
             "issues": issues,
             "error": error,
             "adapter_ready_ids": adapter_ready_ids,
+            "health_by_id": health_by_id,
         },
     )
 
@@ -501,7 +548,7 @@ def sources_probe(source_id: str, request: Request) -> HTMLResponse:
     probe_summary = (
         _probe_summary(outcome.report) if outcome.report and outcome.report.success else None
     )
-    return templates.TemplateResponse(
+    return _render(
         request,
         "sources.html",
         {
@@ -605,7 +652,7 @@ def submit_feedback(
 def feedback_page(request: Request) -> HTMLResponse:
     """反馈聚合视图（TASK-4.03.02）——按信源×类型计数 + 明细 + 导出入口。"""
     repo = FeedbackRepository(request.app.state.pool)
-    return templates.TemplateResponse(
+    return _render(
         request,
         "feedback.html",
         {

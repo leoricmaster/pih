@@ -65,16 +65,24 @@
 {% else %}
 <table class="source-list">
   <thead>
-    <tr><th>名称</th><th>类型</th><th>层级</th><th>可靠性</th><th>频率</th><th>启用</th><th></th></tr>
+    <tr><th>名称</th><th>类型</th><th>层级</th><th>可靠性</th><th>频率</th><th>健康</th><th>启用</th><th></th></tr>
   </thead>
   <tbody>
     {% for s in sources %}
+    {% set h = (health_by_id or {}).get(s.id) %}
     <tr>
       <td>{{ s.name }} <span class="src-id">{{ s.id }}</span></td>
       <td>{{ TYPE_LABELS.get(s.type, s.type) }}{% if s.id not in (adapter_ready_ids or ()) %} <span class="tag muted">未接入</span>{% endif %}</td>
       <td>{{ s.level }}</td>
       <td>{{ s.reliability }}</td>
       <td>{{ FREQ_LABELS.get(s.fetch_frequency, s.fetch_frequency) }}</td>
+      <td>
+        {% if not h %}—
+        {% elif h.consecutive_failures >= 3 %}<span class="tag warn" title="{{ h.last_failure_reason or '' }}">异常（连续 {{ h.consecutive_failures }} 次）</span>
+        {% elif h.consecutive_failures > 0 %}<span class="tag warn">失败 {{ h.consecutive_failures }} 次</span>
+        {% elif h.last_success_at %}<span class="tag ok">正常</span>
+        {% else %}—{% endif %}
+      </td>
       <td><span class="tag {{ 'ok' if s.enabled else 'muted' }}">{{ '启用' if s.enabled else '停用' }}</span></td>
       <td>
         <form method="post" action="/sources/{{ s.id }}/probe">

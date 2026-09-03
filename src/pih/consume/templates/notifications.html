@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block nav_active %}{% endblock %}
+{% block title %}站内信 · PIH{% endblock %}
+{% block content %}
+
+<header class="page-head">
+  <h1>站内信</h1>
+  <p class="mini">信源健康告警等运营通知（未读置顶；外部渠道企微/邮件为可配置扩展）。</p>
+</header>
+
+<section class="block">
+  <h2>未读</h2>
+  {% if unread %}
+  <div class="queue">
+    {% for n in unread %}
+    <div class="qcard warn">
+      <div>
+        <div class="ttl">{{ n.title }}</div>
+        <div class="mini">{{ n.body }} · {{ n.created_at.strftime('%Y-%m-%d %H:%M') if n.created_at else '' }}</div>
+      </div>
+      <form method="post" action="/notifications/{{ n.id }}/read">
+        <button type="submit">标记已读</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="mini">（无未读通知）</p>
+  {% endif %}
+</section>
+
+<section class="block">
+  <h2>历史</h2>
+  {% if history %}
+  <table class="intel-list">
+    <thead><tr><th>通知</th><th>内容</th><th>时间</th><th>状态</th></tr></thead>
+    <tbody>
+      {% for n in history %}
+      <tr>
+        <td>{{ n.title }}</td>
+        <td class="ts">{{ n.body }}</td>
+        <td class="ts">{{ n.created_at.strftime('%Y-%m-%d %H:%M') if n.created_at else '—' }}</td>
+        <td>{% if n.read_at %}<span class="tag muted">已读</span>{% else %}<span class="tag warn">未读</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="mini">（暂无通知）</p>
+  {% endif %}
+</section>
+
+{% endblock %}

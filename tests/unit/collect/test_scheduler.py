@@ -134,6 +134,57 @@ class TestRunSourceJob:
         assert health.successes == ["ccma"]
 
 
+class TestAlertHook:
+    """TASK-4.02.01 D10/D17：恰达连续失败 3 次触发一次站内信告警。"""
+
+    def _run_failing_jobs(self, times: int, notify) -> None:
+        class _CountingHealth(_FakeHealth):
+            def record_failure(self, sid, reason):
+                self.failures.append((sid, reason))
+                return len(self.failures)  # 模拟 RETURNING 跨轮递增计数
+
+        h = _CountingHealth()
+        collect = MagicMock(side_effect=ConnectionError("断"))
+        for _ in range(times):
+            run_source_job(
+                _src(), collect=collect, health=h, runs=_FakeRuns(),
+                sleep=lambda s: None, backoff=(0, 0, 0), notify=notify,
+            )
+
+    def test_alert_fires_exactly_at_threshold(self):
+        alerts: list[tuple[str, str]] = []
+        self._run_failing_jobs(3, lambda t, b: alerts.append((t, b)))
+        assert len(alerts) == 1
+        title, body = alerts[0]
+        assert "测试源" in title and "连续失败 3 次" in title  # 含信源名（AC1）
+        assert "断" in body  # 含失败原因（AC1）
+
+    def test_fourth_failure_no_repeat_alert(self):
+        """episode 语义（D10）：持续失败不重复告警。"""
+        alerts: list[tuple[str, str]] = []
+        self._run_failing_jobs(4, lambda t, b: alerts.append((t, b)))
+        assert len(alerts) == 1
+
+    def test_below_threshold_no_alert(self):
+        alerts: list[tuple[str, str]] = []
+        self._run_failing_jobs(2, lambda t, b: alerts.append((t, b)))
+        assert alerts == []
+
+    def test_no_notify_no_crash(self):
+        self._run_failing_jobs(3, None)  # 未接通知（如 CLI 手动）不炸
+
+    def test_success_path_never_alerts(self):
+        alerts: list[tuple[str, str]] = []
+        health, runs, _ = _FakeHealth(), _FakeRuns(), []
+        run_source_job(
+            _src(),
+            collect=MagicMock(return_value=([], [])),
+            health=health, runs=runs, sleep=lambda s: None,
+            notify=lambda t, b: alerts.append((t, b)),
+        )
+        assert alerts == []
+
+
 class TestConfigureScheduler:
     def test_registers_startup_sweep_and_frequency_jobs(self):
         from apscheduler.triggers.cron import CronTrigger
@@ -177,5 +228,7 @@ class TestConfigureScheduler:
             j.args[1].run_date
             for jid, j in sorted(jobs.items()) if jid.startswith("startup-")
         ]
-        deltas = [(b - a).total_seconds() for a, b in zip(starts, starts[1:], strict=True)]
+        deltas = [
+            (b - a).total_seconds() for a, b in zip(starts, starts[1:], strict=False)
+        ]
         assert all(d == 45 for d in deltas)

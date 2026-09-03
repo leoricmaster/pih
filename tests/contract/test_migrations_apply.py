@@ -339,6 +339,43 @@ def test_source_health_downgrade_reversible():
     assert keep, "source.reliability 应仍在"
 
 
+def test_notification_table_exists():
+    """TASK-4.02.01：站内信表（未读/已读，type 枚举开放）。"""
+    rows = {
+        r[0]
+        for r in _q(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'notification'"
+        )
+    }
+    expected = {"id", "type", "source_id", "title", "body", "read_at", "created_at"}
+    assert expected <= rows, f"notification 缺列：{expected - rows}"
+    # read_at NULL=未读
+    nullable = {
+        r[0]: r[1]
+        for r in _q(
+            "SELECT column_name, is_nullable FROM information_schema.columns "
+            "WHERE table_name = 'notification'"
+        )
+    }
+    assert nullable["read_at"] == "YES"
+    assert nullable["title"] == "NO"
+    idx = _q("SELECT indexname FROM pg_indexes WHERE tablename = 'notification'")
+    assert "idx_notification_unread" in {r[0] for r in idx}
+
+
+def test_notification_downgrade_reversible():
+    """downgrade 0003：notification 表可逆移除（source 健康列仍在）。"""
+    _run(["downgrade", "0003"])
+    tables = _q("SELECT tablename FROM pg_tables WHERE tablename = 'notification'")
+    assert tables == []
+    keep = _q(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'source' AND column_name = 'consecutive_failures'"
+    )
+    assert keep
+
+
 def test_intel_item_source_type_column():
     """ADR-011：intel_item 加 source_type 列（inbox 逻辑汇聚的物理载体）。"""
     rows = _q(

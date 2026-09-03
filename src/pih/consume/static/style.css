@@ -182,3 +182,25 @@ a.fb-link:hover { text-decoration: underline; }
                          background: #fff; font-size: 0.85rem; }
 .verify-actions button:hover { background: var(--fill); }
 .verify-actions button.danger { color: #b91c1c; border-color: #b91c1c; }
+
+/* 顶栏铃铛与站内信（TASK-4.02.01，原型 topbar/下拉/历史页） */
+.topbar { display: flex; align-items: center; justify-content: flex-end;
+          padding: 0 0 0.8rem; border-bottom: 1px solid var(--line);
+          margin-bottom: 1rem; position: relative; }
+.topbar-spacer { flex: 1; }
+.bell summary { cursor: pointer; list-style: none; font-size: 1.05rem;
+                position: relative; user-select: none; }
+.bell summary::-webkit-details-marker { display: none; }
+.bell .dot { position: absolute; top: -6px; right: -12px; background: #b45309;
+             color: #fff; border-radius: 9px; font-size: 0.65rem;
+             padding: 0 5px; line-height: 13px; font-weight: 600; }
+.notifdrop { position: absolute; top: 1.8rem; right: 0; width: 320px;
+             background: #fff; border: 1px solid var(--line); border-radius: 8px;
+             box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 50; }
+.notifdrop .h { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--line);
+                font-weight: 600; font-size: 0.85rem; display: flex;
+                justify-content: space-between; }
+.notifdrop .n { padding: 0.6rem 0.9rem; border-bottom: 1px solid #eef2f7; }
+.notifdrop .n .ttl { font-size: 0.85rem; font-weight: 600; }
+.notifdrop .all { display: block; padding: 0.55rem 0.9rem; text-align: center;
+                  color: var(--accent); font-size: 0.85rem; text-decoration: none; }

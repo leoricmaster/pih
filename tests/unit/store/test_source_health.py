@@ -38,12 +38,28 @@ class TestSourceHealthRepository:
         from pih.store.source_health import SourceHealthRepository
 
         m = _MockConn()
-        SourceHealthRepository(m.pool).record_failure("ccma", "ConnectError: x")
+        m.cursor_obj.fetchone.return_value = (3,)
+        count = SourceHealthRepository(m.pool).record_failure("ccma", "ConnectError: x")
         sql = m.cursor_obj.execute.call_args.args[0]
         assert "consecutive_failures = consecutive_failures + 1" in sql
         assert "last_failure_reason = %s" in sql
+        # RETURNING 新计数（告警阈值判定用，TASK-4.02.01 D17）
+        assert "RETURNING consecutive_failures" in sql
+        assert count == 3
         # 占位符顺序：reason 在前（SET），id 在后（WHERE）
         assert m.cursor_obj.execute.call_args.args[1] == ("ConnectError: x", "ccma")
+
+    def test_list_health_maps_by_source(self):
+        from pih.store.source_health import SourceHealthRepository
+
+        m = _MockConn()
+        m.cursor_obj.fetchall.return_value = [
+            {"source_id": "ccma", "consecutive_failures": 0,
+             "last_failure_at": None, "last_failure_reason": None,
+             "last_success_at": None},
+        ]
+        by_id = SourceHealthRepository(m.pool).list_health()
+        assert set(by_id) == {"ccma"}
 
     def test_get_health_reads_row(self):
         from pih.store.source_health import SourceHealthRepository

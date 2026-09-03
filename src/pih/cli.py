@@ -597,6 +597,7 @@ def _cmd_work(args: argparse.Namespace) -> int:
     from apscheduler.schedulers.blocking import BlockingScheduler
 
     from pih.collect.scheduler import configure_scheduler, run_source_job
+    from pih.store.notification import NotificationRepository
     from pih.store.pipeline_run import PipelineRunRepository
     from pih.store.source_health import SourceHealthRepository
 
@@ -614,7 +615,14 @@ def _cmd_work(args: argparse.Namespace) -> int:
     repo = IntelRepository(pool)
     health = SourceHealthRepository(pool)
     runs = PipelineRunRepository(pool)
+    notifications = NotificationRepository(pool)
     http = HttpClient(trust_env=True)
+
+    def _notify(title: str, body: str) -> None:
+        """站内信告警钩子（TASK-4.02.01）——type=source_health。"""
+        notifications.create(
+            type="source_health", source_id=None, title=title, body=body
+        )
 
     def _job(source_id: str, run_type: str = "scheduled") -> None:
         src = by_id.get(source_id)
@@ -629,6 +637,7 @@ def _cmd_work(args: argparse.Namespace) -> int:
             runs=runs,
             max_items=args.max_items,
             run_type=run_type,
+            notify=_notify,
         )
 
     try:
@@ -643,6 +652,7 @@ def _cmd_work(args: argparse.Namespace) -> int:
                 runs=runs,
                 max_items=args.max_items,
                 run_type="manual",
+                notify=_notify,
             )
             if result.ok:
                 print(

@@ -29,6 +29,26 @@
     </div>
   </nav>
   <main class="content">
+    <div class="topbar">
+      <div class="topbar-spacer"></div>
+      <details class="bell">
+        <summary title="站内信通知">🔔{% if bell_count is defined and bell_count > 0 %}<span class="dot">{{ bell_count }}</span>{% endif %}</summary>
+        <div class="notifdrop">
+          <div class="h"><span>通知</span><span class="mini">{% if bell_count is defined %}{{ bell_count }} 条未读{% endif %}</span></div>
+          {% if bell_recent is defined and bell_recent %}
+          {% for n in bell_recent %}
+          <div class="n">
+            <div class="ttl">{{ n.title }}</div>
+            <div class="mini">{{ n.body }} · {{ n.created_at.strftime('%m-%d %H:%M') if n.created_at else '' }}</div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="n"><div class="mini">（无未读通知）</div></div>
+          {% endif %}
+          <a class="all" href="/notifications">查看全部历史 ›</a>
+        </div>
+      </details>
+    </div>
     {% block content %}{% endblock %}
   </main>
 </div>

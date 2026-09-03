@@ -108,6 +108,90 @@ class TestListRender:
         assert "未挂事件" in html
 
 
+class TestNotificationsRender:
+    """TASK-4.02.01：站内信页未读/历史分组 + 标记已读表单。"""
+
+    def test_notifications_page(self):
+        row = {
+            "id": 3, "type": "source_health", "source_id": "lmjx",
+            "title": "信源异常：路面机械网 连续失败 3 次",
+            "body": "ConnectError: WAF 拦截", "read_at": None,
+            "created_at": datetime(2026, 9, 3, 9, 0),
+        }
+        read_row = dict(row, id=4, read_at=datetime(2026, 9, 3, 10, 0))
+        html = _render(
+            "notifications.html",
+            {"unread": [row], "history": [row, read_row]},
+        )
+        assert "未读" in html and "历史" in html
+        assert "路面机械网" in html and "WAF 拦截" in html
+        assert 'action="/notifications/3/read"' in html
+        assert "已读" in html
+
+    def test_bell_dropdown_in_base(self):
+        """顶栏铃铛（D18 原生 details 下拉 + 未读角标 + 查看全部入口）。"""
+        recent = [{
+            "id": 1, "type": "source_health", "source_id": "lmjx",
+            "title": "信源异常：X 连续失败 3 次", "body": "r",
+            "read_at": None, "created_at": datetime(2026, 9, 3, 9, 0),
+        }]
+        html = _render(
+            "notifications.html",
+            {"unread": recent, "history": recent,
+             "bell_count": 1, "bell_recent": recent},
+        )
+        assert "🔔" in html
+        assert '<span class="dot">1</span>' in html
+        assert "查看全部历史" in html
+
+
+class TestSourcesHealthColumn:
+    """TASK-4.02.01 D20：信源页健康列四态。"""
+
+    def _ctx(self, health_by_id):
+        sources = [
+            {"id": "ok_src", "name": "正常源", "type": "html", "url": "http://a/",
+             "list_url": "http://a/l", "reliability": "B", "level": "L2",
+             "fetch_frequency": "daily", "enabled": True},
+            {"id": "bad_src", "name": "异常源", "type": "html", "url": "http://b/",
+             "list_url": "http://b/l", "reliability": "B", "level": "L2",
+             "fetch_frequency": "daily", "enabled": True},
+            {"id": "flaky_src", "name": "波动源", "type": "html", "url": "http://c/",
+             "list_url": "http://c/l", "reliability": "B", "level": "L2",
+             "fetch_frequency": "daily", "enabled": True},
+            {"id": "new_src", "name": "新源", "type": "html", "url": "http://d/",
+             "list_url": "http://d/l", "reliability": "B", "level": "L2",
+             "fetch_frequency": "daily", "enabled": True},
+        ]
+        return {
+            "sources": sources, "issues": [], "error": None,
+            "adapter_ready_ids": {"ok_src", "bad_src", "flaky_src", "new_src"},
+            "health_by_id": health_by_id,
+        }
+
+    def test_health_states_render(self):
+        html = _render(
+            "sources.html",
+            self._ctx({
+                "ok_src": {"consecutive_failures": 0,
+                           "last_success_at": datetime(2026, 9, 3),
+                           "last_failure_reason": None},
+                "bad_src": {"consecutive_failures": 3,
+                            "last_success_at": None,
+                            "last_failure_reason": "ConnectError: WAF"},
+                "flaky_src": {"consecutive_failures": 2,
+                              "last_success_at": None,
+                              "last_failure_reason": None},
+            }),
+        )
+        assert ">正常<" in html
+        assert "异常（连续 3 次）" in html
+        assert 'title="ConnectError: WAF"' in html  # 原因悬浮可见
+        assert "失败 2 次" in html
+        # new_src 无健康行 → —
+        assert "—" in html
+
+
 class TestVerifyPageRender:
     """TASK-2.02.02：核实页四区 + 确认/证伪表单契约。"""
 

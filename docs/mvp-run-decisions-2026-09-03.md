@@ -109,7 +109,8 @@ TASK-1.02.01 结构化抽取与详情分区   ← 枢纽：2.01/2.02.01/2.02.02 
 | TASK-2.01.01 | ✅ Done | docs/design/TASK-2.01.01-design.md | notes：AC1 integration 组合用例+≥档正反+contract 表单+unit time_range 4例+live；AC2 integration empty+live 空态 | 附带修复存量 bug：tags @> 缺 ::jsonb cast；admiralty 语义变更为 ≥ 档（D4 落地） |
 | TASK-2.02.01 | 未开始 | docs/design/TASK-2.02.01-design.md | — | — |
 | TASK-2.02.02 | ✅ Done | docs/design/TASK-2.02.02-design.md | notes：AC1 四区 integration+unit+contract；AC2 confirm 终态 log 行断言；AC3 refute 理由入库+D7 默认隐藏+显式可查；AC4 滞留排序 integration | 新增 /verify 页（D5 落地）；原型反向更新核实节；D7 行为变更=检索默认排除已证伪 |
-| TASK-4.01.01 | 未开始 | docs/design/TASK-4.01.01-design.md | — | — |
+| TASK-4.02.01 | 未开始 | → docs/design/TASK-4.02.01-design.md | — | — |
+| TASK-4.01.01 | ✅ Done | docs/design/TASK-4.01.01-design.md | notes：AC1 configure_scheduler unit+worker_e2e integration+live --once（0新增/3跳过+Web /inbox 3 pending）+过夜常驻；AC2 退避三路 unit+失败路径健康计数 integration | apscheduler==3.11.3 锁版；修 2 处 mock 掩盖真 bug；compose worker 挂 profile |
 | TASK-4.02.01 | 未开始 | docs/design/TASK-4.02.01-design.md | — | — |
 
 全量回归基线与增量：unit 343 →（每故事后更新）；contract 57 →（同）；integration → 收尾统一跑；ruff 干净。
