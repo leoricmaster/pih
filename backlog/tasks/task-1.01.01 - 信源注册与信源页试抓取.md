@@ -1,11 +1,11 @@
 ---
 id: TASK-1.01.01
 title: 信源注册与信源页试抓取
-status: In Progress
+status: Done
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 13:20'
+updated_date: '2026-09-03 05:40'
 labels:
   - web
 milestone: m-0
@@ -42,7 +42,7 @@ ordinal: 15000
 - [x] #1 验收面字段与事实源（领域包 schema / 原型 IA / doc-2）逐项核对一致；偏差先修订事实源或记 ADR，不在代码里私自偏移
 - [x] #2 无新增未论证的自部署组件；核心代码不出现行业知识硬编码（违反即返工）
 - [x] #3 AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
-- [ ] #4 CI 有增量测试且变绿；覆盖正常路径与关键失败路径
+- [x] #4 CI 有增量测试且变绿；覆盖正常路径与关键失败路径
 - [x] #5 无回归（现有测试不破）
 - [x] #6 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
 - [x] #7 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
@@ -90,10 +90,12 @@ finalization（计划步 10/11）：术语表 doc-4（17 词条指针型）+ 交
 验收反馈修复（三轮，统一含义 + 信源页呈现深化 R1–R6，用户逐项裁定后落地）。前置裁定：层级/可靠性两轴不合并（出身 vs 表现，消费方与标准对齐各异）；赋值口径层删除——只经两途：注册人按官方定义人工初评 + 画像重估（verification_log），无并行规则（「实抓→B」类阶梯废除）；类型词不带状态备注（易过时），适配器接入状态属运行时查注册表渲染。统一含义落地（事实源优先）：doc-2 §6.3 补 Admiralty A–F 官方分档 + 两轴不合并段（含重访条件：level 长期无消费方再议降级）+ §6.4 人工初评落 A/B 口径 + §4/§5 图与表补「变更监控」；doc-4 重写为统一词表（词条=特殊含义/易混淆 + 「呈现」行=UI 标签基线）；schema 层级引用漂移修正（§6.2→§6.3）。R1–R3 清单面：labels.py（类型/频率呈现词 + 字段图例，漂移守卫 test_labels 锁 key 集与 schema 枚举一致）+ sources.html 字段说明折叠图例/呈现词列/未接入徽标/启用停用标签 + 原型清单面同步。R4–R6 报告面（TDD 8 红先行）：ProbeReport.list_count 结构化计数（web 不再解析 note）；_probe_view 用户文案——「robots 合规检查/允许抓取/站点未提供有效 robots 声明…按无限制处理/列表页可达，找到 N 条待抓内容/已抓取 x/y 条正文；示例：『title』/N 份原文快照已存档」；_probe_warns 改「该站点未提供有效 robots 声明，已按无限制处理——请确认可接受」；结论行 R6——通过「启用本信源：在信源配置文件中将 enabled 改为 true 并提交（人工操作，留版本记录）」、失败补「详细排查材料见服务日志（pih.probe）」；R5 报告附 presigned 查看原文链接（MinIO 不可达降级省略，存档事实仍在）。原型报告块与 README 同步。证据：unit+contract 434 passed、ruff 干净；live :8000 实弹 ccma——四段新文案 + 「找到 51 条待抓内容」+ 查看原文链接 curl 200 text/html 25888B（presigned 实开验证；首验 400 系提取未还原 &amp; 实体的假象）。停用断言修正：锁 <span class="tag ok">启用</span> 而非裸文本（表头 <th>启用</th> 误伤）
 三轮后续裁定（2026-09-03）：(a) 可靠性冷启动按事实与逻辑——无画像即如实无画像，初评以层级等已知信息为参考；画像体系结合人类反馈故事提前 → 已建 TASK-4.03.3「信源画像与可靠性闭环重估」（裁定原文与 F 权重遗留输入录于该单）。(b) 报告面新三问（robots 合规检查的必要性/列表·详情·快照分段时间对用户的意义/试抓结果顶部呈现是否合适）已客观答复，处置（R7 报告信息架构：成功路径收敛为结论+产出摘要+快照链接，失败路径保留四段诊断）待用户裁决后落地
 R7 报告信息架构重排（三轮新三问裁定「采纳建议」：robots 检查留管线不留成功呈现、分段成功态对用户无边际信息、顶部位置对但体量错）：成功路径收敛为结论行（含告警并列）+ 产出摘要一句（web._probe_summary：抓到 N 条正文，M 份原文已存档，示例：『title』——「真抓到了」的用户可感证据）+ presigned 查看原文链接；失败路径保留四段诊断（robot 合规检查/列表页/详情/快照——分段在失败归因时才挣得呈现位置）；未执行降级不变。管线与全量四段信息不丢：pih.probe 日志保持，CLI 不动。渐进披露原则：正常给结论，异常给诊断。证据：TestProbeSummary 2 例 + test_success_renders_summary_not_pipeline_segments（成功负控：probe-segs/robots 合规检查/列表页可达 零命中）+ 失败路径断言扩展（robots 合规检查/试抓未通过/服务日志）——3 红先行；unit+contract 359 passed、integration 77 passed、ruff 干净；live :8000 ccma 实弹（成功路径新形状全命中、四段 0 命中）+ xcmg 未执行降级行。原型报告块与 README 同步
+
+收尾：人类验收通过（三轮呈现深化全采纳）→ push f9a1da7..389697a（20 提交）→ Actions 首跑变绿（run 33719609897，ruff+unit+contract 359 passed 于 GitHub 环境）→ DoD#4 勾选 9/9
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-信源注册与信源页试抓取交付（标杆）：AC1 缺字段拒绝含字段名+行号不半截（ValidationIssue.line + yaml.compose 回填，26 单测）；AC2 /sources 六字段清单直读领域包（契约 6+单测 3+integration 真包 9 源一一对应）；AC3 页内试抓四段三态报告 + pih.probe JSON 日志（单测 12+采集层 6+integration 3，先红后绿，顺带修复 web 适配器注册表未初始化与裸 get_adapter 两处接线 bug）；AC4 试抓仅作启用依据、工具零 YAML 写路径、enabled 门控 SourceDisabledError 有测；AC5 页面与采集同源直读 pack 零代码生效。基建沉淀：ci.yml（ruff+unit+contract，PG service container）、doc-4 术语表、doc-5 交付包 checklist、CLAUDE.md 指针。回归 unit+contract 331 passed + integration 3 passed + ruff 干净；DoD#4（CI 实跑变绿）待 push 后确认
+信源注册与信源页试抓取交付（标杆故事，三轮人类验收后 Done）。AC1 缺字段拒绝含字段名+行号不半截（ValidationIssue.line + yaml.compose 回填）；AC2 /sources 六字段清单直读领域包，呈现词走 doc-4 基线（labels.py+漂移守卫）+字段图例+未接入徽标；AC3 试抓报告信息架构按用户决策分层（R7：成功=结论+产出摘要+presigned 查看原文，失败=四段诊断，未执行降级）+ pih.probe JSON 日志承载工程面全量信息；AC4 试抓仅作启用依据、工具零 YAML 写路径、enabled 门控 SourceDisabledError 有测；AC5 页面与采集同源直读 pack 零代码生效。验收循环内闭环修复：告警聚合、侧边栏还原、robots 排查分层（dump 只留日志）、客户界面去实现者术语、统一含义三事实源补齐（doc-2 Admiralty 分档/两轴不合并、doc-4 词表升格、schema 引用漂移）。基建沉淀：ci.yml、doc-4、doc-5、CLAUDE.md 指针、TASK-4.03.3 画像故事（裁定提前）。证据：本地 unit+contract 359 / integration 77 / ruff 干净 / live :8000 三态实弹；GitHub Actions 首跑变绿（run 33719609897，push f9a1da7..389697a）
 <!-- SECTION:FINAL_SUMMARY:END -->
