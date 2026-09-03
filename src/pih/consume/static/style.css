@@ -160,3 +160,6 @@ a.fb-link:hover { text-decoration: underline; }
 .more-filters { width: 100%; margin-top: 0.4rem; }
 .more-filters summary { cursor: pointer; font-size: 0.8rem; color: var(--muted); }
 .more-filters .more-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.4rem; }
+
+/* 未挂事件（TASK-2.02.01 AC1）：与状态徽章区分的弱化文案 */
+.no-event { color: var(--muted); font-size: 0.85rem; }

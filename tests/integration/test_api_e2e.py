@@ -53,9 +53,8 @@ class TestAC1ListFilters:
             # 列表表头列齐全
             for col in ("标题", "主体", "事件类型", "置信度", "采集时间", "所属事件核实状态"):
                 assert col in html
-            # 事件核实状态：未挂事件行显示 —，挂事件显示中文标签；
-            # seed 数据未挂事件，应见 —
-            assert "—" in html
+            # 事件核实状态：未挂事件行显示「未挂事件」（TASK-2.02.01 AC1）
+            assert "未挂事件" in html
             # 筛选结果只含三一+新品发布（factory 循环：60 条里 12 条三一，其中 ~2 条新品发布）
             # 至少有 1 条命中
             assert "/intel/" in html

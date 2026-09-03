@@ -99,6 +99,14 @@ class TestListRender:
         assert "徐工 XE470" in html
         assert "B2" in html
 
+    def test_unattached_event_shows_label(self):
+        """TASK-2.02.01 AC1：未挂事件条目事件列显示「未挂事件」（非 —）。"""
+        html = _render(
+            "list.html",
+            _list_ctx(items=[_make_record(id=9, event_id=None, event_status=None)]),
+        )
+        assert "未挂事件" in html
+
 
 class TestFilterFormIA:
     """TASK-2.01.01 D2/D3/D4：主行五要素（词表下拉）+ 时间预设 + 更多筛选折叠 + 清空。"""
@@ -160,13 +168,13 @@ class TestFilterFormIA:
         assert 'href="/?before=2026-08-27T14%3A30%3A00"' in html
 
     def test_event_status_column_renders_label_or_dash(self):
-        """事件状态列——挂事件显示中文标签，未挂显示 —。"""
+        """事件状态列——挂事件显示中文标签，未挂显示「未挂事件」（TASK-2.02.01 AC1）。"""
         rec_with_event = _make_record(id=1, event_status="single_source")
         rec_no_event = _make_record(id=2, event_status=None)
         html = _render("list.html", _list_ctx(items=[rec_with_event, rec_no_event]))
         assert "单源确认" in html  # status_labels[single_source]
-        # 未挂事件的行该列显示 —（— 在 HTML 里是 &mdash; 的字面字符）
-        assert "—" in html
+        # 未挂事件的行该列显示「未挂事件」
+        assert "未挂事件" in html
 
     def test_event_status_filter_dropdown_present(self):
         """筛选 form 含事件状态下拉（pending/single_source/confirmed/refuted/expired）。"""

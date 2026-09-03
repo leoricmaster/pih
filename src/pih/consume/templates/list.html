@@ -95,7 +95,7 @@
       <td>{{ r.admiralty_code or '—' }}</td>
       <td><span class="status-badge status-{{ r.process_status or 'pending' }}">{{ r.process_status or 'pending' }}</span></td>
       <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
-      <td>{% if r.event_status %}<span class="status-badge event-{{ r.event_status }}">{{ status_labels[r.event_status] }}</span>{% else %}—{% endif %}</td>
+      <td>{% if r.event_status %}<span class="status-badge event-{{ r.event_status }}">{{ status_labels[r.event_status] }}</span>{% else %}<span class="no-event">未挂事件</span>{% endif %}</td>
       <td><a class="fb-link" href="/intel/{{ r.id }}#feedback" title="对这条情报标记反馈">反馈</a></td>
     </tr>
     {% endfor %}
