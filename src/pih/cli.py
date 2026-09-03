@@ -150,6 +150,18 @@ def _build_parser() -> argparse.ArgumentParser:
         "--to", default="pending", help="重置目标状态（默认 pending 重入处理链）"
     )
 
+    # ---- 无人值守采集（TASK-4.01.01）----
+    wp = sub.add_parser(
+        "work",
+        help="worker 常驻进程：APScheduler 按信源频率自动采集（启动即全源扫一轮）",
+    )
+    wp.add_argument(
+        "--once", default=None, metavar="SOURCE_ID",
+        help="单源立即跑一轮采集后退出（运维手动触发 / 集成测试用）",
+    )
+    wp.add_argument("--max-items", type=int, default=10, help="单轮每源采集上限（默认 10）")
+    wp.add_argument("--pack", default=None, help="领域包 YAML 路径（默认同 probe-source）")
+
     return parser
 
 
@@ -577,6 +589,89 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         close_pool()
 
 
+def _cmd_work(args: argparse.Namespace) -> int:
+    """worker 进程（TASK-4.01.01）：APScheduler 按频率采集 + 启动扫。
+
+    --once SOURCE_ID：单源同步跑一轮退出（run_type=manual，运维/集成测试）。
+    """
+    from apscheduler.schedulers.blocking import BlockingScheduler
+
+    from pih.collect.scheduler import configure_scheduler, run_source_job
+    from pih.store.pipeline_run import PipelineRunRepository
+    from pih.store.source_health import SourceHealthRepository
+
+    sources, domain_id = _load_pack(args.pack)
+    by_id = {s.id: s for s in sources}
+    if args.once and args.once not in by_id:
+        print(f"未知信源 id：{args.once}（可用：{', '.join(by_id)}）", file=sys.stderr)
+        return EXIT_USAGE
+
+    snapshots = _make_snapshot_store(no_snapshot=False)
+    if snapshots is None:
+        return EXIT_USAGE
+    pool = get_pool()
+    sync_sources(sources, domain_id, pool)
+    repo = IntelRepository(pool)
+    health = SourceHealthRepository(pool)
+    runs = PipelineRunRepository(pool)
+    http = HttpClient(trust_env=True)
+
+    def _job(source_id: str, run_type: str = "scheduled") -> None:
+        src = by_id.get(source_id)
+        if src is None:
+            return
+        run_source_job(
+            src,
+            collect=lambda s, max_items: collect_source(
+                s, http, snapshots, max_items=max_items, repository=repo
+            ),
+            health=health,
+            runs=runs,
+            max_items=args.max_items,
+            run_type=run_type,
+        )
+
+    try:
+        if args.once:
+            src = by_id[args.once]
+            result = run_source_job(
+                src,
+                collect=lambda s, max_items: collect_source(
+                    s, http, snapshots, max_items=max_items, repository=repo
+                ),
+                health=health,
+                runs=runs,
+                max_items=args.max_items,
+                run_type="manual",
+            )
+            if result.ok:
+                print(
+                    f"✓ 采集完成（尝试 {result.attempts} 轮）："
+                    f"入库 {result.items_new} 新增 / {result.items_skipped} 幂等跳过 / "
+                    f"{result.items_failed} 失败"
+                )
+            else:
+                print(f"✗ 采集失败（尝试 {result.attempts} 轮）：{result.error}",
+                      file=sys.stderr)
+            return EXIT_OK if result.ok else EXIT_FAILED
+        sched = BlockingScheduler()
+        configure_scheduler(sched, sources, _job)
+        enabled = [s.id for s in sources if s.enabled]
+        print(
+            f"== pih work 调度启动（启用信源 {len(enabled)}："
+            f"{', '.join(enabled)}）==\n"
+            "   启动扫 stagger 45s/源；daily 07:30 / weekly 周一 07:30 / hourly 间隔触发；\n"
+            "   Ctrl+C 退出。日志：pih.work（JSON lines）。"
+        )
+        sched.start()
+        return EXIT_OK
+    except (KeyboardInterrupt, SystemExit):
+        print("\nworker 已退出")
+        return EXIT_OK
+    finally:
+        close_pool()
+
+
 def _print_record_detail(rec) -> None:
     """单条详情打印。"""
     print(f"== 情报 #{rec.id} ==")
@@ -624,6 +719,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_cluster(args)
         if args.command == "replay":
             return _cmd_replay(args)
+        if args.command == "work":
+            return _cmd_work(args)
         return _cmd_collect(args)
     except LoadError as exc:
         print(f"领域包加载失败：{exc}", file=sys.stderr)

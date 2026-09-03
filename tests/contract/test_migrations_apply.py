@@ -283,6 +283,62 @@ def test_verification_log_table_and_fk():
     assert "idx_vlog_event" in {r[0] for r in idx}
 
 
+def test_source_health_columns_exist():
+    """TASK-4.01.01 D9：source 健康统计列（连续失败计数/最近成败时间与原因）。"""
+    rows = {
+        r[0]: (r[1], r[2])
+        for r in _q(
+            "SELECT column_name, column_default, is_nullable "
+            "FROM information_schema.columns WHERE table_name = 'source'"
+        )
+    }
+    assert "consecutive_failures" in rows, "consecutive_failures 列不存在"
+    assert (rows["consecutive_failures"][0] or "").strip("'") == "0"
+    assert rows["consecutive_failures"][1] == "NO"
+    for col in ("last_failure_at", "last_failure_reason", "last_success_at"):
+        assert col in rows, f"{col} 列不存在"
+        assert rows[col][1] == "YES"
+
+
+def test_pipeline_run_table_exists_with_columns():
+    """TASK-4.01.01 D16：pipeline_run 每次调度运行留痕（吞吐/失败/时长/token 预留）。"""
+    rows = {
+        r[0]
+        for r in _q(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'pipeline_run'"
+        )
+    }
+    expected = {
+        "id", "source_id", "run_type", "started_at", "duration_ms", "ok",
+        "items_new", "items_skipped", "items_failed", "error",
+        "prompt_tokens", "completion_tokens", "created_at",
+    }
+    missing = expected - rows
+    assert not missing, f"pipeline_run 缺列：{missing}"
+    idx = _q("SELECT indexname FROM pg_indexes WHERE tablename = 'pipeline_run'")
+    assert "idx_pipeline_run_source_time" in {r[0] for r in idx}
+
+
+def test_source_health_downgrade_reversible():
+    """downgrade 0002：健康列与 pipeline_run 表可逆移除（source 既有列不动）。"""
+    _run(["downgrade", "0002"])
+    rows = _q(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'source' AND column_name = 'consecutive_failures'"
+    )
+    assert rows == [], "downgrade 后 consecutive_failures 应消失"
+    tables = _q(
+        "SELECT tablename FROM pg_tables WHERE tablename = 'pipeline_run'"
+    )
+    assert tables == [], "downgrade 后 pipeline_run 表应消失"
+    keep = _q(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'source' AND column_name = 'reliability'"
+    )
+    assert keep, "source.reliability 应仍在"
+
+
 def test_intel_item_source_type_column():
     """ADR-011：intel_item 加 source_type 列（inbox 逻辑汇聚的物理载体）。"""
     rows = _q(

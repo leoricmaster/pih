@@ -89,6 +89,8 @@ uv run pih collect ccma --no-ingest      # 不落库，仅 stdout 摘要
 uv run pih process --source-id=ccma --limit=5   # 批处理：粗筛→抽取→校验，写回结构化字段
 uv run pih process --prefilter-only --source-id=ccma  # 仅粗筛（关键词+小模型，不耦合大模型配置）
 uv run pih replay 42                     # 重放失败条目：dead/needs_manual → 重置 pending 重入链（AC4）
+uv run pih work                          # worker 常驻：APScheduler 按信源频率自动采集（TASK-4.01.01）
+uv run pih work --once ccma              # 单源立即跑一轮采集后退出（运维手动触发）
 uv run pih query --source-id=ccma --limit=10   # 查询库中按信源最近入库（含 pending，不分状态）
 uv run pih query --event-type=新品发布          # 按事件类型筛选（结构化）
 uv run pih query --subject=三一 --tag=电动化    # 按主体/标签筛选（JSONB containment）
@@ -129,6 +131,21 @@ Y / 待人工 Z / 失败 W`）+ token 用量。抽取成功条目带 Admiralty �
 行级标记 `filtered_out` 保留可审计，校验失败降级 `needs_manual` 不丢弃（架构 §8）。
 
 退出码：0 成功 / 1 抓取失败或门控拒绝 / 2 用法或环境错误。
+
+### 无人值守采集（TASK-4.01.01）
+
+`pih work`（或 `docker compose --profile worker up -d`——worker 服务挂 profile，
+`docker compose up -d` 不启动，避免本地起服即触发真实采集）：
+
+- **启动扫**：worker 拉起即对全部启用源做一轮 stagger 采集（每源错峰 45s）——
+  重启即补跑，幂等靠 `content_sha1` 吸收（重复抓取零新增行）；
+- **频率触发**：hourly=间隔 1h（含抖动）；daily=每日 07:30；weekly=周一 07:30
+  （CronTrigger 错过即跳过，不做追赶风暴，架构 §8）；
+- **失败退避**：job 级异常按 2s/4s/8s 指数退避重试 3 次，耗尽计入信源健康统计
+  （`source.consecutive_failures`，连续 3 次触发站内信告警 → TASK-4.02.01）；
+  条目级 fetch 失败落死信行计入 `items_failed`，不算信源失败；
+- **运行留痕**：每次调度写 `pipeline_run`（吞吐/失败/时长；token 列预留处理接力），
+  结构化日志 `pih.work`（JSON lines）。
 
 ## 消费层 Web/API（ADR-006）
 

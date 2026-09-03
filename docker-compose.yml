@@ -59,6 +59,31 @@ services:
       - ./domain_packs:/app/domain_packs:ro
     command: sleep infinity
 
+  # worker（TASK-4.01.01，ADR-008 单镜像双角色）：APScheduler 无人值守采集
+  # profile 隔离：`docker compose up -d` 不启动（避免本地起服即触发真实采集）；
+  # 生产/常驻形态 `docker compose --profile worker up -d`
+  worker:
+    profiles: ["worker"]
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file:
+      - path: .env.defaults
+        required: true
+      - path: .env
+        required: false
+    environment:
+      PG_DSN: postgresql://pih:pih@postgres:5432/${POSTGRES_DB:-pih}
+      MINIO_ENDPOINT: minio:9000
+    volumes:
+      - ./src:/app/src:ro
+      - ./domain_packs:/app/domain_packs:ro
+    command: pih work
+    restart: unless-stopped
+
   web:
     build: .
     depends_on:
