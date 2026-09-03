@@ -25,7 +25,7 @@
   </div>
   {% if probe_success %}
     {% if probe_warns %}
-    <div class="probe-verdict warn">试抓通过（含 {{ probe_warns|length }} 项告警：{{ probe_warns|join("；") }}）——建议人工复核后再在 YAML 置 enabled（人工修改，Git 留痕）。</div>
+    <div class="probe-verdict warn">试抓通过（含 {{ probe_warns|length }} 项告警：{{ probe_warns|join("；") }}）——确认无碍后再在 YAML 置 enabled（人工修改，Git 留痕）。</div>
     {% else %}
     <div class="probe-verdict ok">试抓通过：可在领域包 YAML 中将该信源 enabled 置 true（人工修改，Git 留痕）。</div>
     {% endif %}
