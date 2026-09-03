@@ -27,7 +27,7 @@ INSERT_SQL = """
     INSERT INTO intel_item
         (source_id, source_type, url, title, list_url, fetched_at, http_status,
          content_type, encoding, snapshot_id, content_sha1, raw_html)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ON CONFLICT (content_sha1) DO NOTHING
     RETURNING id
 """

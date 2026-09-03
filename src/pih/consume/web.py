@@ -202,6 +202,33 @@ def detail_page(
     )
 
 
+@app.get("/inbox", response_class=HTMLResponse)
+def inbox_page(
+    request: Request,
+    process_status: str | None = Query(None),
+    source_id: str | None = Query(None),
+) -> HTMLResponse:
+    """收件箱视图（ADR-011 两视图之一）——采集先落盘的 pending/失败/粗筛丢弃条目。
+
+    读 intel_item 非 extracted 状态子集：pending（新采集，AC1 验收面）、
+    needs_manual、filtered_out（漏报审计，AC3）、dead（失败终态，AC4）。
+    process_status 显式给定时筛单态。检索成品走 `/`（检索视图）。
+    """
+    repo = IntelRepository(request.app.state.pool)
+    items = repo.list_inbox(
+        source_id=source_id, process_status=process_status, limit=100
+    )
+    return templates.TemplateResponse(
+        request,
+        "inbox.html",
+        {
+            "items": items,
+            "process_status": process_status,
+            "source_id": source_id,
+        },
+    )
+
+
 @app.get("/sources", response_class=HTMLResponse)
 def sources_page(request: Request) -> HTMLResponse:
     """信源页（TASK-1.01.01 AC2）——信源清单可视 + 配置错误诊断面（错误态不半截）。"""

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block nav_active %}inbox{% endblock %}
+{% block title %}收件箱 · PIH{% endblock %}
+{% block content %}
+
+<div class="wf">
+  <div class="lbl">收件箱（采集先落盘 · 处理状态视图）</div>
+  <div class="note">采集入库即落此处的 pending 条目；粗筛判不相关的 filtered_out、抽取失败的 needs_manual、抓取失败的 dead 亦留此可审计。已抽取成品请到「情报」检索。</div>
+  <form class="filters" method="get" action="/inbox">
+    <label>处理状态
+      <select name="process_status">
+        <option value="">全部（非已抽取）</option>
+        {% for s in ('pending', 'needs_manual', 'filtered_out', 'dead') %}
+        <option value="{{ s }}" {% if process_status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>信源<input type="text" name="source_id" value="{{ source_id or '' }}"></label>
+    <button type="submit">筛选</button>
+    <a class="reset" href="/inbox">重置</a>
+  </form>
+</div>
+
+{% if items %}
+<table class="intel-list">
+  <thead>
+    <tr>
+      <th>标题</th>
+      <th>信源</th>
+      <th>来源</th>
+      <th>处理状态</th>
+      <th>失败/原因</th>
+      <th>采集时间</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in items %}
+    <tr>
+      <td class="title"><a href="/intel/{{ r.id }}">{{ r.title }}</a></td>
+      <td>{{ r.source_id }}</td>
+      <td>{{ r.source_type }}</td>
+      <td><span class="status-badge status-{{ r.process_status or 'pending' }}">{{ r.process_status or 'pending' }}</span></td>
+      <td>{{ r.process_error or '—' }}</td>
+      <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">
+  <p>收件箱为空——无新采集或待处理条目。</p>
+</div>
+{% endif %}
+
+{% endblock %}

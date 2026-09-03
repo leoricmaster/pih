@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 08:18'
+updated_date: '2026-09-03 08:32'
 labels:
   - web
 milestone: m-0
@@ -96,4 +96,12 @@ run_prefilter_batch 编排缝（process/run.py）：inbox pending → prefilter 
 代码重构：迁移 0002 改为 ALTER intel_item ADD source_type（NOT NULL default auto）+ 索引，含 downgrade；删 InboxRepository（store/inbox.py）；IntelRepository 增 source_type(save/save_batch)、record_failure（落 dead 行）、list_inbox（收件箱视图读非 extracted）、mark_status（filtered_out/dead/重放 pending）；collect_source 改回写 intel_item（保留 fetch 失败落死信）；run_prefilter_batch + CLI --prefilter-only 改指 IntelRepository；粗筛解耦模块（prefilter.py）保留不变。
 
 证据：契约迁移测试改锁 source_type 列/索引/downgrade 可逆（18 passed）；unit test_inbox 重写为 IntelRepository 采集入库方法测试（source_type save 2 + record_failure 1 + list_inbox 3 + mark_status 2）；回归 unit 329 / contract 57 / ruff 干净。
+
+slice 6 两视图完成（TDD）：ADR-011 落地——QueryService.list 默认 process_status=extracted（检索视图=成品，显式覆盖留 needs_manual 复核队列可达；Web/API 同源 ADR-006 共默认）；新增 /inbox 收件箱视图路由（IntelRepository.list_inbox 读非 extracted：pending/needs_manual/filtered_out/dead）+ inbox.html 模板 + base.html 导航「收件箱」。
+
+AC1 验收面厘清：采集入库的 pending 条目出现在 /inbox（Web）+ pih query --source-id（CLI，list_by_source 不分状态，含 pending）。/检索视图默认 extracted（消费成品），filtered_out 不进检索（AC3 天然成立，不进消费列表）。漏报审计：/inbox 按 process_status=filtered_out 筛出（AC3 后半）。
+
+修复集成回归：INSERT_SQL 占位符数错（13 vs 12 列，加 source_type 时手误）致采集 3 条全 FAILED——integration 真库抓到（单测 mock 不触 SQL 故未现），已修正为 12 占位符。
+
+证据：unit test_inbox_page 6 例（pending 渲染/status 透传/filtered_out 可见/dead 带原因/空提示/导航）+ test_query_service 增 2 例（默认 extracted / 显式覆盖）；回归 unit 394 / contract / integration end_to_end+process_e2e 13 passed / ruff 干净。
 <!-- SECTION:NOTES:END -->

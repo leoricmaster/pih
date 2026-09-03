@@ -98,6 +98,28 @@ class TestListPassesFilters:
         _, kwargs = repo.list_by_filter.call_args
         assert kwargs["limit"] == 50
 
+    def test_defaults_process_status_to_extracted(self):
+        """ADR-011 检索视图：process_status 未给定时默认 extracted（成品）。"""
+        repo = MagicMock()
+        repo.list_by_filter.return_value = []
+        svc = QueryService(repo)
+
+        svc.list(IntelFilters())  # process_status=None
+
+        _, kwargs = repo.list_by_filter.call_args
+        assert kwargs["process_status"] == "extracted"
+
+    def test_explicit_status_overrides_default(self):
+        """显式 process_status 覆盖默认（needs_manual 复核队列可达，TASK-1.02.01 AC3）。"""
+        repo = MagicMock()
+        repo.list_by_filter.return_value = []
+        svc = QueryService(repo)
+
+        svc.list(IntelFilters(process_status="needs_manual"))
+
+        _, kwargs = repo.list_by_filter.call_args
+        assert kwargs["process_status"] == "needs_manual"
+
 
 class TestNextBeforeCursor:
     def test_full_page_emits_next_before(self):
