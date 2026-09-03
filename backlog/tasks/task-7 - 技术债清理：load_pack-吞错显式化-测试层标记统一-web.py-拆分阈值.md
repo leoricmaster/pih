@@ -4,9 +4,11 @@ title: 技术债清理：load_pack 吞错显式化 + 测试层标记统一 + web
 status: To Do
 assignee: []
 created_date: '2026-09-03 02:36'
+updated_date: '2026-09-03 10:50'
 labels:
   - tech-debt
 dependencies: []
+parent_task_id: TASK-8
 priority: low
 type: chore
 ordinal: 30000

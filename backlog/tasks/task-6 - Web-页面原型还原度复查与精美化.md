@@ -4,11 +4,12 @@ title: Web 页面原型还原度复查与精美化
 status: To Do
 assignee: []
 created_date: '2026-09-03 02:36'
-updated_date: '2026-09-03 05:40'
+updated_date: '2026-09-03 10:50'
 labels:
   - web
   - ui
 dependencies: []
+parent_task_id: TASK-2
 priority: medium
 type: bug
 ordinal: 29000

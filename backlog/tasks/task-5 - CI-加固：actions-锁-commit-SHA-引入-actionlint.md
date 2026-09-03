@@ -4,10 +4,12 @@ title: CI 加固：actions 锁 commit SHA + 引入 actionlint
 status: To Do
 assignee: []
 created_date: '2026-09-03 02:36'
+updated_date: '2026-09-03 10:50'
 labels:
   - infra
   - ci
 dependencies: []
+parent_task_id: TASK-8
 priority: low
 type: chore
 ordinal: 28000

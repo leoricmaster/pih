@@ -1,11 +1,11 @@
 ---
 id: TASK-1.01.02
 title: 采集入库与原文可查
-status: In Progress
+status: Done
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 10:30'
+updated_date: '2026-09-03 10:48'
 labels:
   - web
 milestone: m-0
@@ -42,7 +42,7 @@ ordinal: 16000
 - [x] #1 验收面字段与事实源（领域包 schema / 原型 IA / doc-2）逐项核对一致；偏差先修订事实源或记 ADR，不在代码里私自偏移
 - [x] #2 无新增未论证的自部署组件；核心代码不出现行业知识硬编码（违反即返工）
 - [x] #3 AC 全满足，每条有可复现证据（测试名 / 命令 / 截图），实际运行通过——非臆测的「应能通过」推断
-- [ ] #4 CI 有增量测试且变绿；覆盖正常路径与关键失败路径
+- [x] #4 CI 有增量测试且变绿；覆盖正常路径与关键失败路径
 - [x] #5 无回归（现有测试不破）
 - [x] #6 触碰的架构 / ADR / NFR / 运营手册同步更新，day0 文档改动进正文不留批注
 - [x] #7 结构化日志与运行留痕按 doc-2 §8 落地；迁移 / 配置变更可回滚（1 人可恢复）
@@ -156,4 +156,6 @@ AC2 范围裁定（DoD#1 事实源对齐）：AC2 原文「内容相似度超阈
 架构事实源同步（DoD#1）：doc-2 §6.4/§7/§5.4/§1/§10 修订 + ADR-011 accepted（inbox 逻辑汇聚而非独立表，intel_item 单表承载处理状态机，采集落 pending 抽取原地升级不复制 raw）。裁决 C 由用户在评审中拍板（质疑两表合并视图→一实体两页面）。回退了此前的 inbox_item 独立表迁移与 InboxRepository（slice 2/3 初版），保留粗筛解耦（slice 5）改指 IntelRepository。
 
 证据：unit 339 / contract 57 / integration 77 / ruff 干净；live :8001 实弹——pih collect ccma 入库 2 新增、重采 0 新增/2 跳过、pih query 见 pending 行、--prefilter-only 关键词命中保留；/inbox 200 显示 2 条 pending（标题/信源/采集时间）、/ 检索默认 extracted「无结果」（AC3 天然）、/intel/2 详情原文快照+原始链接。DoD 8/9 勾选，#4（CI 变绿）留待 push 后 GitHub Actions 首跑确认（本地已等价演练全绿，未 push 依项目惯例停在人类验收后）。
+
+DoD#4 达成：push ea327c6 后 GitHub Actions 首跑变绿（run 33745297956，success，2026-09-03）。DoD 9/9。
 <!-- SECTION:FINAL_SUMMARY:END -->
