@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-02 11:26'
+updated_date: '2026-09-03 10:30'
 labels:
   - web
 milestone: m-0
@@ -81,6 +81,8 @@ CI 骨架完成（计划步 7）：.github/workflows/ci.yml——push(main)/PR �
 integration 层 + 接线修复（计划步 6 收尾）：tests/integration/test_sources_page_e2e.py 3 例先红后绿，暴露单测 monkeypatch 盲区——(a) web 进程适配器注册表为空（web.py 未 import collect.adapters，真实试抓全「适配器未接入」）；(b) 裸 get_adapter(src) 缺 http/snapshots 必参。修复：web.py import adapters 注册 + base.has_adapter 纯查表谓词（预检不实例化，先于 MinIO 判定）。外网抓取在 probe_source 缝打桩（真实站点属 live 层）；真 MinIO 构建出 SnapshotStore、api 型源（xcmg）无适配器不 500 均有回归锁。文档同步（计划步 8）：README 补测试分层表（含「CI 可运行集单调增长」不变式与 LLM 空 key 跳过）+ 信源页章节。证据：integration 3 passed（compose 起 postgres+minio）；unit+contract 331 passed；ruff 干净
 
 finalization（计划步 10/11）：术语表 doc-4（17 词条指针型）+ 交付包 checklist doc-5（标杆蒸馏）落地，CLAUDE.md 加指针（读故事先看 doc-5、术语歧义先查 doc-4、notes 追加实践）。AC 逐条客观验证后勾选——AC1：test_loader/validator 26 passed + 缺字段实测报「sources[0].reliability 必选字段缺失（第 N 行）」且 load_sources_view 返回 (None, issues, None) 不半截；AC2：contract 6 + unit 3 + integration 真包 9 源一一对应；AC3：unit 12（四段渲染/robots→未达×3/pih.probe 日志）+ collect probe 6（robots 早退不发起后续请求）+ integration 3；AC4：单测锁「试抓通过→enabled 指引」文案 + grep 无 YAML 写路径 + run.py enabled 门控 test_run 3 passed（SourceDisabledError）；AC5：/sources 与 collect 均直读同一 pack，改 YAML 刷新即生效、零代码变更（integration 真包验证）。DoD 8/9 项勾选；#4（CI 变绿）留待 push 后 GitHub Actions 实跑确认——本地已等价演练 331 passed，未勾原因是流水线尚未真实执行
+
+验收反馈修复（首轮人类评审，TDD）：(a) 告警聚合——ccma 试抓四段全成功但 robots 软 200 告警埋在 note 小字、结论行「试抓通过」决策点信息不足；修法：ProbeReport.robots_invalid 结构化标志贯穿 + web._probe_warns 聚合 + 结论行「试抓通过（含 N 项告警：…）——建议人工复核」+ pih.probe 日志加 warns 计数字段。证据：collect test_soft200_robots_sets_structured_warn_flag（红=AttributeError）、unit TestProbeWarnAggregation 4 例（含无告警负控）；README 信源页章节补口径。(b) 侧边栏还原（裁决 A）——导航迁右上角偏离原型且未讨论；修法：base.html 按原型 IA 重写（brand+消费区/运营/观察面三组、未上线项 disabled、active 左边条），list/detail/sources/feedback 墰 nav_active 块（base 用 self.nav_active() 取值——块内容非变量，首轮 {% if nav_active == %} 引用未定义变量致 2 例红，属修复内回归）；style.css 重写 .app/.sidebar/.navgroup/.navlink。证据：contract TestSidebarNav 4 例（分组/链接/disabled×4/active 标记互斥）。(c) 流程沉淀——doc-5 增 §5 验收材料包（五问固定结构+客观证据约束+原型 IA 布局级对照附加项），CLAUDE.md 加触发线；ci.yml 引用漂移修正（「doc-2 §6」不实→README+doc-5）。回归：unit+contract 340 passed、integration 待复跑确认
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
