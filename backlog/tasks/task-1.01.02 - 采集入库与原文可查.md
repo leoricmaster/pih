@@ -1,10 +1,11 @@
 ---
 id: TASK-1.01.02
 title: 采集入库与原文可查
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-02 09:21'
+updated_date: '2026-09-03 07:17'
 labels:
   - web
 milestone: m-0
@@ -48,3 +49,19 @@ ordinal: 16000
 - [ ] #8 无密钥硬编码；新增依赖真实、锁版本、无高危 CVE
 - [ ] #9 不违反贯穿性约束与 ADR（偏离须先记 ADR）
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+设计文档 docs/design/TASK-1.01.02-design.md 已评审通过（三处裁决：inbox_item 先落盘+dead 标记/pipeline_run 延后；精确指纹幂等模糊去重留演进；粗筛解耦不先行 1.02.01）。切片按 AC 推进，每切片 TDD 红→绿→重构→ruff+相关层绿→细粒度 commit→notes 记证据与偏差。
+
+1. 前置实测复核存量与设计假设一致（已做：repository/run/web/graph/cli 全读；迁移 0001 仅 5 表缺 inbox/dead/pipeline_run 确认）
+2. 迁移：新建迁移建 inbox_item（采集落盘列 + process_status + snapshot_id NOT NULL + content_sha1 幂等 + dead 标记），含 downgrade。contract 先红断言表存在→绿
+3. AC4 采集落 inbox：collect_source 落库目标从 intel_item 切 inbox_item；fetch 失败捕获落一行（process_error 记因，pending 待重试）；无快照不入库守卫（snapshot_id NOT NULL）。unit + integration（跨接线缝）
+4. AC2 幂等：inbox content_sha1 ON CONFLICT DO NOTHING；重采同行数不变 integration 用例。AC2 描述收窄为精确指纹（模糊去重记 backlog 单）→ notes/AC 标注
+5. AC3 粗筛解耦：prefilter 独立函数（关键词命中 + 小模型二分类双通道，不耦合大模型配置前置）；pih process --prefilter-only 入口（倾向减入口）；filtered_out 行级标记；列表默认排除 filtered_out（行为变更）；漏报审计 process_status 显式筛出。unit + integration
+6. AC1 列表/详情合并视图：web / 与详情读 inbox(pending)+intel(extracted) UNION，默认 WHERE process_status!=filtered_out；详情路由内部判表（倾向单一）；原文快照+原始链接两入口在 inbox 即有。回归底线：不破既有 list/detail/feedback 契约
+7. AC4 dead 可查可重放：dead 标记 + CLI 查询/重放（重置 pending 重入链）/丢弃留痕；结构化日志 pih.collect/pih.process JSON lines
+8. 文档同步：README 采集入库章节 + 测试分层更新；原型列表/详情节对照（合并视图）；事实源偏差闭环（AC2 收窄、intel_item 兼任 inbox 修正入 doc-2 §6.4/§7 或 ADR）
+9. finalization：逐 AC 客观证据才勾选（测试名/命令+输出）；DoD 逐条核对；final-summary；五问材料包（doc-5 §5）；置 Done
+<!-- SECTION:PLAN:END -->
