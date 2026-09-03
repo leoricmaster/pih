@@ -93,6 +93,7 @@ class TestProbeSuccess:
         assert "告警" in report.robots_note  # 软 200 robots → 允许 + 告警
         assert report.list_ok is True
         assert "3 条详情链接" in report.list_note
+        assert report.list_count == 3  # 结构化计数（web 呈现层用，不解析 note）
         d = report.detail_results[0]
         assert d.ok is True
         assert d.url == DETAIL_URL

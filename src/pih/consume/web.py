@@ -255,6 +255,8 @@ def _probe_view(report: ProbeReport) -> tuple[list[dict], bool]:
     """ProbeReport → 四段三态视图（robots/列表页/详情/快照）。
 
     三态语义（设计文档 §3）：成功=执行且通过；失败=执行且未通过；未达=前置失败未执行。
+    note 是用户视角文案（R4）：说清发生了什么、下一步看哪——实现细节（软 200
+    排查 dump 等）留 pih.probe 日志，不上页面。
     """
     state_label = {"ok": "成功", "fail": "失败", "skip": "未达"}
     cls_map = {"ok": "ok", "fail": "warn", "skip": "muted"}
@@ -268,7 +270,13 @@ def _probe_view(report: ProbeReport) -> tuple[list[dict], bool]:
             "note": note,
         }
 
-    segs = [seg("robots", "ok" if report.robots_allowed else "fail", report.robots_note)]
+    if report.robots_invalid:
+        robots_note = "站点未提供有效 robots 声明（返回的是网页而非规则文件），按无限制处理"
+    elif report.robots_allowed:
+        robots_note = "允许抓取"
+    else:
+        robots_note = report.robots_note
+    segs = [seg("robots 合规检查", "ok" if report.robots_allowed else "fail", robots_note)]
     if not report.robots_allowed:
         segs += [seg("列表页", "skip", ""), seg("详情", "skip", ""), seg("快照", "skip", "")]
     elif not report.list_ok:
@@ -278,18 +286,20 @@ def _probe_view(report: ProbeReport) -> tuple[list[dict], bool]:
             seg("快照", "skip", ""),
         ]
     else:
-        segs.append(seg("列表页", "ok", report.list_note))
+        segs.append(seg("列表页", "ok", f"列表页可达，找到 {report.list_count} 条待抓内容"))
         details = report.detail_results
         if not details:
             segs += [seg("详情", "skip", ""), seg("快照", "skip", "")]
         else:
             ok_n = sum(1 for d in details if d.ok)
             snap_n = sum(1 for d in details if d.snapshot_id)
+            note = f"已抓取 {ok_n}/{len(details)} 条正文"
+            sample = next((d.title for d in details if d.ok and d.title), None)
+            if sample:
+                note += f"；示例：『{sample}』"
+            segs.append(seg("详情", "ok" if ok_n else "fail", note))
             segs.append(
-                seg("详情", "ok" if ok_n else "fail", f"{ok_n}/{len(details)} 条详情解析成功")
-            )
-            segs.append(
-                seg("快照", "ok" if snap_n else "fail", f"{snap_n}/{len(details)} 份快照已存档")
+                seg("快照", "ok" if snap_n else "fail", f"{snap_n} 份原文快照已存档")
             )
     return segs, report.success
 
@@ -302,7 +312,7 @@ def _probe_warns(report: ProbeReport) -> list[str]:
     """
     warns = []
     if report.robots_invalid:
-        warns.append("robots 无效（软 200）按未声明处理，建议人工复核站点行为")
+        warns.append("该站点未提供有效 robots 声明，已按无限制处理——请确认可接受")
     return warns
 
 
@@ -346,6 +356,7 @@ def sources_probe(source_id: str, request: Request) -> HTMLResponse:
         _probe_view(outcome.report) if outcome.report else (None, None)
     )
     probe_warns = _probe_warns(outcome.report) if outcome.report else []
+    snapshot_links = _probe_snapshot_links(outcome.report)
     return templates.TemplateResponse(
         request,
         "sources.html",
@@ -358,8 +369,30 @@ def sources_probe(source_id: str, request: Request) -> HTMLResponse:
             "probe_view": probe_view,
             "probe_success": probe_success,
             "probe_warns": probe_warns,
+            "probe_snapshot_links": snapshot_links,
         },
     )
+
+
+def _probe_snapshot_links(report: ProbeReport | None) -> list[dict]:
+    """R5：报告的原文查看入口——快照真存档了就让用户点得开。
+
+    试抓时已写入 MinIO；这里 presign 现取（1 小时有效）。MinIO 不可达
+    或 presign 失败降级为空列表——报告主体与「已存档」事实不受影响。
+    """
+    if report is None:
+        return []
+    client = make_snapshot_client()
+    if client is None:
+        return []
+    links = []
+    for d in report.detail_results:
+        if not (d.ok and d.snapshot_id):
+            continue
+        url = presigned_snapshot_url(client, report.source_id, d.snapshot_id)
+        if url:
+            links.append({"title": d.title or d.url, "url": url})
+    return links
 
 
 # 反馈类型展示名（模板与导出共用口径）

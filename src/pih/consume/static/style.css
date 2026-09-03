@@ -128,6 +128,8 @@ a.fb-link:hover { text-decoration: underline; }
 .probe-report .seg { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.22rem 0; font-size: 0.92rem; }
 .probe-report .seg .k { min-width: 4.5em; color: var(--fg); font-weight: 500; }
 .probe-report .seg-note { color: var(--muted); font-size: 0.85rem; }
+.probe-links { margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.probe-links a { font-size: 0.88rem; color: #1d4ed8; }
 .tag.warn { background: #fef3c7; color: #92400e; }
 .probe-verdict { margin-top: 0.6rem; padding: 0.45rem 0.75rem; border-radius: 4px; font-size: 0.9rem; }
 .probe-verdict.ok { background: #dcfce7; color: #166534; }

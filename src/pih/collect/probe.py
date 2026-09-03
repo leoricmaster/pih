@@ -41,6 +41,7 @@ class ProbeReport:
     robots_invalid: bool = False
     robots_detail: str = ""
     list_ok: bool = False
+    list_count: int = 0
     list_note: str = ""
     detail_results: list[DetailProbeResult] = field(default_factory=list)
 
@@ -112,6 +113,7 @@ def probe_source(
         report.list_note = "列表页 200 但解析出 0 条详情链接（站点结构变更或非列表页）"
         return report
     report.list_ok = True
+    report.list_count = len(urls)
     report.list_note = f"列表页 200，解析出 {len(urls)} 条详情链接"
 
     for url in urls[:details]:

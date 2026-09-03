@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@lancer'
 created_date: '2026-09-01 09:25'
-updated_date: '2026-09-03 11:15'
+updated_date: '2026-09-03 12:05'
 labels:
   - web
 milestone: m-0
@@ -87,6 +87,7 @@ finalization（计划步 10/11）：术语表 doc-4（17 词条指针型）+ 交
 验收反馈修复（二轮，用户视角文案）：页首「配置编辑在仓内 YAML+Git…人是最终环节」说明撤下——实现者术语（YAML/Git/留痕）出现在客户界面（该句源头是原型 source 页 note，用户裁定不要）。修法：sources.html 删 page-note 块 + style.css 删闲置 .page-note 规则 + 原型同步删该句（保留「▶ 流 E 信源管理」流标注）。证据：contract test_customer_page_has_no_implementation_note 负控（先红后绿）；回归 unit+contract 341 passed；live :8000 页面 grep 0 命中。同轮验收识别的更大缺口（表格字段零解释层、报告文案面向实现者、快照存档无指向、结论行仍含「领域包 YAML」内部词）超文案微调量级，按 doc-5 §6 属需排期讨论项——处置待用户裁决（并 TASK-6 或新单，涉及原型升级先行）
 
 验收反馈修复（二轮 b，robots 排查材料分层，用户裁定「本轮撤下只留日志」）：RobotsResult 增 detail 字段（Content-Type+正文前 200 字），note 改纯结论句；ProbeReport.robots_detail 贯穿；CLI 打「（排查，不上页面）」行保留开发者面；pih.probe 日志加 robots_detail 字段（排查材料留日志）；Web 页面不渲染 detail。证据：collect test_ac2_soft200_html_robots_invalid 扩展断言 + test_soft200_robots_detail_layered_out_of_note + web test_robots_detail_not_rendered_on_page（页面负控）/ test_probe_log_carries_robots_detail + cli test_probe_report_prints_robots_detail——4 红 1 负控先行；回归 unit+contract 345 passed、ruff 干净；live 重启 uvicorn 后 POST ccma 实弹：robots 段仅结论句。裁定记录：用户确认深化工作继续在本故事单完成（需求端到端规矩）；遗留同段【告警】后缀与结论行 YAML 措辞并入本故事内「原型改稿建议」讨论（原型先行）
+验收反馈修复（三轮，统一含义 + 信源页呈现深化 R1–R6，用户逐项裁定后落地）。前置裁定：层级/可靠性两轴不合并（出身 vs 表现，消费方与标准对齐各异）；赋值口径层删除——只经两途：注册人按官方定义人工初评 + 画像重估（verification_log），无并行规则（「实抓→B」类阶梯废除）；类型词不带状态备注（易过时），适配器接入状态属运行时查注册表渲染。统一含义落地（事实源优先）：doc-2 §6.3 补 Admiralty A–F 官方分档 + 两轴不合并段（含重访条件：level 长期无消费方再议降级）+ §6.4 人工初评落 A/B 口径 + §4/§5 图与表补「变更监控」；doc-4 重写为统一词表（词条=特殊含义/易混淆 + 「呈现」行=UI 标签基线）；schema 层级引用漂移修正（§6.2→§6.3）。R1–R3 清单面：labels.py（类型/频率呈现词 + 字段图例，漂移守卫 test_labels 锁 key 集与 schema 枚举一致）+ sources.html 字段说明折叠图例/呈现词列/未接入徽标/启用停用标签 + 原型清单面同步。R4–R6 报告面（TDD 8 红先行）：ProbeReport.list_count 结构化计数（web 不再解析 note）；_probe_view 用户文案——「robots 合规检查/允许抓取/站点未提供有效 robots 声明…按无限制处理/列表页可达，找到 N 条待抓内容/已抓取 x/y 条正文；示例：『title』/N 份原文快照已存档」；_probe_warns 改「该站点未提供有效 robots 声明，已按无限制处理——请确认可接受」；结论行 R6——通过「启用本信源：在信源配置文件中将 enabled 改为 true 并提交（人工操作，留版本记录）」、失败补「详细排查材料见服务日志（pih.probe）」；R5 报告附 presigned 查看原文链接（MinIO 不可达降级省略，存档事实仍在）。原型报告块与 README 同步。证据：unit+contract 434 passed、ruff 干净；live :8000 实弹 ccma——四段新文案 + 「找到 51 条待抓内容」+ 查看原文链接 curl 200 text/html 25888B（presigned 实开验证；首验 400 系提取未还原 &amp; 实体的假象）。停用断言修正：锁 <span class="tag ok">启用</span> 而非裸文本（表头 <th>启用</th> 误伤）
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

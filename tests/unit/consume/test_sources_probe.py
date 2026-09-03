@@ -23,6 +23,7 @@ FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
 def _ok_report() -> ProbeReport:
     r = ProbeReport(source_id="s1", robots_allowed=True, robots_note="robots 允许")
     r.list_ok = True
+    r.list_count = 3
     r.list_note = "列表页 200，解析出 3 条详情链接"
     r.detail_results = [
         DetailProbeResult(
@@ -94,7 +95,7 @@ class TestProbeRouteRendering:
         rep.robots_detail = "Content-Type=text/html，正文前 200 字：'<html>…'"
         monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(rep, None))
         html = client.post("/sources/s1/probe").text
-        assert "按未声明处理" in html
+        assert "未提供有效 robots 声明" in html  # 用户视角解释，非实现者术语
         assert "正文前" not in html
 
     def test_probe_log_carries_robots_detail(self, client, fixture_pack, monkeypatch, caplog):
@@ -110,12 +111,36 @@ class TestProbeRouteRendering:
 
 
 class TestProbeViewMapping:
-    """四段三态映射语义锁定（robots/列表页/详情/快照）。"""
+    """四段三态映射语义锁定（robots/列表页/详情/快照）+ 用户视角文案（R4）。"""
 
     def test_full_success(self):
         segs, success = web._probe_view(_ok_report())
         assert success is True
         assert [s["state_label"] for s in segs] == ["成功", "成功", "成功", "成功"]
+
+    def test_user_copy_per_segment_on_success(self):
+        """R4：各段 note 是用户能据以行动的话，不是实现者术语。"""
+        segs, _ = web._probe_view(_ok_report())
+        robots, list_, detail, snap = segs
+        assert robots["label"] == "robots 合规检查"
+        assert robots["note"] == "允许抓取"
+        assert list_["note"] == "列表页可达，找到 3 条待抓内容"
+        assert detail["note"].startswith("已抓取 1/1 条正文")
+        assert "『某详情』" in detail["note"]  # 示例标题给用户可感证据
+        assert snap["note"] == "1 份原文快照已存档"
+
+    def test_robots_soft200_explains_undeclared_treatment(self):
+        """软 200：向用户解释「按无限制处理」并提示确认。"""
+        rep = _ok_report()
+        rep.robots_invalid = True
+        segs, _ = web._probe_view(rep)
+        assert "未提供有效 robots 声明" in segs[0]["note"]
+        assert "按无限制处理" in segs[0]["note"]
+
+    def test_robots_denied_note_passes_through(self):
+        rep = ProbeReport(source_id="s1", robots_allowed=False, robots_note="拒绝：Disallow")
+        segs, _ = web._probe_view(rep)
+        assert segs[0]["note"] == "拒绝：Disallow"  # 失败原因原样透传
 
     def test_robots_denied(self):
         rep = ProbeReport(source_id="s1", robots_allowed=False, robots_note="拒绝")
@@ -177,7 +202,8 @@ class TestProbeWarnAggregation:
         rep.robots_invalid = True
         warns = web._probe_warns(rep)
         assert len(warns) == 1
-        assert "robots" in warns[0]
+        assert "未提供有效 robots 声明" in warns[0]
+        assert "请确认可接受" in warns[0]
 
     def test_no_warns_when_valid(self):
         assert web._probe_warns(_ok_report()) == []
@@ -189,7 +215,50 @@ class TestProbeWarnAggregation:
         html = client.post("/sources/s1/probe").text
         assert "试抓通过" in html
         assert "含 1 项告警" in html
-        assert "人工复核" in html
+        assert "确认无碍" in html
+
+
+class TestVerdictCopy:
+    """R6：结论行告诉用户下一步做什么（启用路径）与失败时去哪排查。"""
+
+    def test_pass_verdict_guides_manual_enable(self, client, fixture_pack, monkeypatch):
+        monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(_ok_report(), None))
+        html = client.post("/sources/s1/probe").text
+        assert "启用本信源" in html
+        assert "enabled 改为 true" in html
+        assert "人工操作" in html
+
+    def test_fail_verdict_points_to_service_log(self, client, fixture_pack, monkeypatch):
+        rep = ProbeReport(source_id="s1", robots_allowed=False, robots_note="拒绝")
+        monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(rep, None))
+        html = client.post("/sources/s1/probe").text
+        assert "试抓未通过" in html
+        assert "服务日志" in html
+
+
+class TestSnapshotLinks:
+    """R5：试抓报告给出原文快照的查看入口（真存档了→点得开）。"""
+
+    def test_pass_renders_presigned_snapshot_links(
+        self, client, fixture_pack, monkeypatch
+    ):
+        monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(_ok_report(), None))
+        monkeypatch.setattr(web, "make_snapshot_client", lambda: object())
+        monkeypatch.setattr(
+            web, "presigned_snapshot_url",
+            lambda c, sid, sha: f"http://minio.local/snapshots/{sid}/{sha}.html",
+        )
+        html = client.post("/sources/s1/probe").text
+        assert 'href="http://minio.local/snapshots/s1/sha123.html"' in html
+        assert "查看原文" in html
+        assert "『某详情』" in html
+
+    def test_minio_unreachable_degrades_to_no_links(self, client, fixture_pack, monkeypatch):
+        monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(_ok_report(), None))
+        monkeypatch.setattr(web, "make_snapshot_client", lambda: None)
+        html = client.post("/sources/s1/probe").text
+        assert "查看原文" not in html
+        assert "已存档" in html  # 存档事实仍在（试抓时已写入）
 
     def test_pass_without_warn_keeps_plain_verdict(self, client, fixture_pack, monkeypatch):
         monkeypatch.setattr(web, "run_probe", lambda sid: web.ProbeOutcome(_ok_report(), None))
