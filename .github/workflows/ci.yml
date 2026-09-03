@@ -1,6 +1,6 @@
-# CI（TASK-1.01.01 标杆基建；测试分层见 README「测试与 CI」）
+# CI（TASK-1.01.01 标杆基建；测试分层的事实源：README「测试分层与 CI」+ doc-5）
 #
-# 范围与理由（doc-2 §6 测试分层的 CI 落地）：
+# 范围与理由：
 # - unit + contract 进 CI；contract 的 PG 依赖用 service container 提供
 #   （与 docker-compose 同参数：pgvector/pg16、pih/pih/pih；DSN 走仓内
 #   .env.defaults 的 localhost 默认值，零重复配置）。
