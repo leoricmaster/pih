@@ -25,7 +25,7 @@ def _ev(id=1, subject="三一", event_type="新品发布", days_ago=0):
     e.status = "single_source"
     e.source_count = 2
     e.ready_for_manual = True
-    t = datetime(2026, 9, 3, 8, 0) - _d(days_ago)
+    t = datetime.now() - _d(days_ago)
     e.first_seen_at = t
     e.last_seen_at = t
     return e

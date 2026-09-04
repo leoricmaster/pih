@@ -115,3 +115,86 @@ class TestWorkerJobE2E:
         )
         row = _q("SELECT consecutive_failures FROM source WHERE id='ccma'")
         assert row == [(0,)]
+
+
+class TestProcessHandoffE2E:
+    """TASK-4.01.2 AC1/AC3：采集成功自动接力处理链（真 ProcessRunner + 假 chat）。"""
+
+    def _collect_that_saves(self, repo):
+        """fake collect：模拟 collect_source 落一条 pending（raw 供抽取）。"""
+        from datetime import UTC, datetime
+
+        from pih.collect.rawitem import RawItem
+
+        def collect(source, max_items):
+            item = RawItem(
+                source_id=source.id, url="http://ccma.example/handoff",
+                title="三一发布新品", list_url=source.list_url,
+                fetched_at=datetime.now(UTC).isoformat(), http_status=200,
+                content_type="text/html", encoding="utf-8",
+                raw_html="<html><body>三一发布新品挖掘机，销量 1000 台</body></html>",
+                snapshot_id="sha-handoff-1", content_sha1="sha-handoff-1",
+            )
+            outcome = repo.save(item)
+            return ([item], [outcome])
+
+        return collect
+
+    def test_handoff_extracts_and_clusters(self, repos):
+        from _factory import ScriptChat, ok_pred, usage
+
+        from pih.domainpacks.loader import load as load_pack
+        from pih.process.run import ProcessRunner
+        from pih.store.db import get_pool
+        from pih.store.repository import IntelRepository
+
+        health, runs = repos
+        repo = IntelRepository(get_pool())
+        pack = load_pack("domain_packs/construction_machinery/pack.yaml")
+        chat = ScriptChat(
+            small=lambda m: ({"relevant": True}, usage()),
+            large=lambda m: (ok_pred(), usage()),
+        )
+        holder: dict = {}
+
+        def process(source_id):
+            holder["runner"] = holder.get("runner") or ProcessRunner(
+                repo, pack, chat=chat
+            )
+            holder["runner"].run(source_id=source_id, limit=10)
+
+        res = run_source_job(
+            _src(), collect=self._collect_that_saves(repo), health=health,
+            runs=runs, sleep=lambda s: None, process=process,
+        )
+        assert res.ok and res.items_new == 1
+        row = _q(
+            "SELECT process_status, subject, admiralty_code, event_id "
+            "FROM intel_item WHERE content_sha1='sha-handoff-1'"
+        )
+        # AC1 接力闭环：pending → extracted（结构化 + Admiralty 继承信源 B）+ 挂事件
+        assert row[0][0] == "extracted"
+        assert row[0][1] == "三一" and row[0][2] == "B2"
+        assert row[0][3] is not None
+
+    def test_llm_missing_degrades_items_stay_pending(self, repos):
+        """AC3：LLM 配置缺失 → 处理降级，条目留 pending 不丢弃，job 不失败。"""
+        from pih.process.llm import LLMConfigError
+        from pih.store.db import get_pool
+        from pih.store.repository import IntelRepository
+
+        health, runs = repos
+        repo = IntelRepository(get_pool())
+
+        def broken_process(source_id):
+            raise LLMConfigError("PIH_LLM_BASE_URL 未配置")
+
+        res = run_source_job(
+            _src(), collect=self._collect_that_saves(repo), health=health,
+            runs=runs, sleep=lambda s: None, process=broken_process,
+        )
+        assert res.ok  # 采集成果不回滚
+        row = _q(
+            "SELECT process_status FROM intel_item WHERE content_sha1='sha-handoff-1'"
+        )
+        assert row[0][0] == "pending"  # 降级不丢弃，可重放

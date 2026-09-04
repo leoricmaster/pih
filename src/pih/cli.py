@@ -606,6 +606,7 @@ def _cmd_work(args: argparse.Namespace) -> int:
     if args.once and args.once not in by_id:
         print(f"未知信源 id：{args.once}（可用：{', '.join(by_id)}）", file=sys.stderr)
         return EXIT_USAGE
+    pack = load(Path(args.pack) if args.pack else _default_pack())
 
     snapshots = _make_snapshot_store(no_snapshot=False)
     if snapshots is None:
@@ -624,6 +625,23 @@ def _cmd_work(args: argparse.Namespace) -> int:
             type="source_health", source_id=None, title=title, body=body
         )
 
+    def _process(source_id: str) -> None:
+        """采集后自动接力处理链（TASK-4.01.2 AC1）。
+
+        惰性构造 ProcessRunner——LLM 配置缺失在构造期抛 LLMConfigError，
+        此处捕获降级：条目留 pending（不丢弃），重跑 work 待配置就绪即消化。
+        """
+        from pih.process.llm import LLMConfigError
+        from pih.process.run import ProcessRunner
+
+        try:
+            runner = ProcessRunner(repo, pack)
+            stats = runner.run(source_id=source_id, limit=50)
+            print(f"  ⋄ 处理接力（{source_id}）：{stats.summary_line()}")
+        except LLMConfigError as exc:
+            # AC3：配置缺失降级不丢弃——条目留 pending，留痕走 worker 日志
+            raise type(exc)(f"处理链降级（条目留 pending）：{exc}") from exc
+
     def _job(source_id: str, run_type: str = "scheduled") -> None:
         src = by_id.get(source_id)
         if src is None:
@@ -638,6 +656,7 @@ def _cmd_work(args: argparse.Namespace) -> int:
             max_items=args.max_items,
             run_type=run_type,
             notify=_notify,
+            process=_process,
         )
 
     try:
@@ -653,6 +672,7 @@ def _cmd_work(args: argparse.Namespace) -> int:
                 max_items=args.max_items,
                 run_type="manual",
                 notify=_notify,
+                process=_process,
             )
             if result.ok:
                 print(

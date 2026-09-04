@@ -81,11 +81,14 @@ def run_source_job(
     max_items: int = DEFAULT_MAX_ITEMS,
     run_type: str = "scheduled",
     notify: Callable[[str, str], None] | None = None,
+    process: Callable[[str], None] | None = None,
 ) -> JobResult:
     """单源一轮采集：失败退避重试（首试 + len(backoff) 次），终态回写健康与留痕。
 
     notify：连续失败恰达 ALERT_AFTER 时回调一次（title, body）——站内信告警
     钩子（TASK-4.02.01 D17）；持续失败不重复告警（episode 语义 D10）。
+    process：采集成功后接力处理链（TASK-4.01.2 AC1，传入 source_id）——
+    异常捕获降级（条目留 pending 可重放，AC3），不使采集成果回滚。
     """
     t0 = time.monotonic()
     attempts = 0
@@ -135,6 +138,13 @@ def run_source_job(
         "source=%s ok=true attempts=%d new=%d skipped=%d failed=%d",
         source.id, attempts, items_new, items_skipped, items_failed,
     )
+    if process is not None:
+        try:
+            process(source.id)
+        except Exception as exc:  # noqa: BLE001 处理链降级不丢弃（AC3，先落盘可重放）
+            logger.warning(
+                "source=%s process_degraded error=%s", source.id, _fmt_exc(exc)
+            )
     return JobResult(
         ok=True, attempts=attempts, items_new=items_new,
         items_skipped=items_skipped, items_failed=items_failed,

@@ -134,6 +134,51 @@ class TestRunSourceJob:
         assert health.successes == ["ccma"]
 
 
+class TestProcessHook:
+    """TASK-4.01.2：采集成功后自动接力处理链（AC1）/处理失败不伤采集成果（AC3）。"""
+
+    def test_process_called_after_success(self):
+        health, runs, _ = _FakeHealth(), _FakeRuns(), []
+        processed: list[str] = []
+        res = run_source_job(
+            _src(),
+            collect=MagicMock(return_value=([], [])),
+            health=health, runs=runs, sleep=lambda s: None,
+            process=processed.append,
+        )
+        assert res.ok
+        assert processed == ["ccma"]
+
+    def test_process_not_called_on_collect_failure(self):
+        health, runs, _ = _FakeHealth(), _FakeRuns(), []
+        processed: list[str] = []
+        run_source_job(
+            _src(),
+            collect=MagicMock(side_effect=ConnectionError("断")),
+            health=health, runs=runs, sleep=lambda s: None, backoff=(0, 0, 0),
+            process=processed.append,
+        )
+        assert processed == []
+
+    def test_process_failure_keeps_job_ok(self):
+        """LLM 配置缺失/处理链异常：降级不丢弃（条目留 pending），采集成果不回滚。"""
+        from pih.process.llm import LLMConfigError
+
+        health, runs, _ = _FakeHealth(), _FakeRuns(), []
+
+        def broken_process(source_id):
+            raise LLMConfigError("PIH_LLM_BASE_URL 未配置")
+
+        res = run_source_job(
+            _src(),
+            collect=MagicMock(return_value=([], [])),
+            health=health, runs=runs, sleep=lambda s: None,
+            process=broken_process,
+        )
+        assert res.ok  # 采集成功即 job 成功（健康不因处理失败归零）
+        assert health.successes == ["ccma"]
+
+
 class TestAlertHook:
     """TASK-4.02.01 D10/D17：恰达连续失败 3 次触发一次站内信告警。"""
 
