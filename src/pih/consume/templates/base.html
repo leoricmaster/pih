@@ -28,9 +28,8 @@
       <span class="navlink disabled" title="未上线">仪表盘</span>
     </div>
   </nav>
-  <main class="content">
+  <main class="main-col">
     <div class="topbar">
-      <div class="topbar-spacer"></div>
       <details class="bell">
         <summary title="站内信通知">🔔{% if bell_count is defined and bell_count > 0 %}<span class="dot">{{ bell_count }}</span>{% endif %}</summary>
         <div class="notifdrop">
@@ -49,7 +48,7 @@
         </div>
       </details>
     </div>
-    {% block content %}{% endblock %}
+    <div class="content">{% block content %}{% endblock %}</div>
   </main>
 </div>
 </body>

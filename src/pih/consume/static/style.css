@@ -26,7 +26,7 @@ body {
 .navlink.disabled { color: #a8aeb8; cursor: default; }
 .navlink.disabled:hover { background: none; }
 .content { max-width: 1100px; margin: 1.5rem auto; padding: 0 1.5rem; }
-.app > .content { flex: 1; min-width: 0; }
+.app > .main-col { flex: 1; min-width: 0; }
 
 /* 页内 tab（情报页：检索/收件箱，IA 对齐原型 tab 模式） */
 .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
@@ -183,18 +183,20 @@ a.fb-link:hover { text-decoration: underline; }
 .verify-actions button:hover { background: var(--fill); }
 .verify-actions button.danger { color: #b91c1c; border-color: #b91c1c; }
 
-/* 顶栏铃铛与站内信（TASK-4.02.01，原型 topbar/下拉/历史页） */
+/* 顶栏铃铛与站内信（TASK-4.02.01，原型 topbar/下拉/历史页）。
+   验收轮 R1：topbar 须为 main 列全宽（原型结构），此前嵌于居中内容列，
+   宽屏下铃铛落在屏幕中部——改为独立 .main-col > .topbar + .content 两层。 */
+.main-col { flex: 1; min-width: 0; }
 .topbar { display: flex; align-items: center; justify-content: flex-end;
-          padding: 0 0 0.8rem; border-bottom: 1px solid var(--line);
-          margin-bottom: 1rem; position: relative; }
-.topbar-spacer { flex: 1; }
+          padding: 0.55rem 1.2rem; border-bottom: 1px solid var(--line);
+          background: #fff; position: sticky; top: 0; z-index: 40; }
 .bell summary { cursor: pointer; list-style: none; font-size: 1.05rem;
                 position: relative; user-select: none; }
 .bell summary::-webkit-details-marker { display: none; }
 .bell .dot { position: absolute; top: -6px; right: -12px; background: #b45309;
              color: #fff; border-radius: 9px; font-size: 0.65rem;
              padding: 0 5px; line-height: 13px; font-weight: 600; }
-.notifdrop { position: absolute; top: 1.8rem; right: 0; width: 320px;
+.notifdrop { position: absolute; top: 1.9rem; right: 1rem; width: 320px;
              background: #fff; border: 1px solid var(--line); border-radius: 8px;
              box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 50; }
 .notifdrop .h { padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--line);

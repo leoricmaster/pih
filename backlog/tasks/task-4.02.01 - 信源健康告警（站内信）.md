@@ -73,3 +73,6 @@ AC 证据索引：AC1=integration e2e（3 轮→1 通知含名与原因+他源�
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
 信源健康告警（站内信）交付（新组件：通知链路）。AC1 连续 3 次抓取失败（重试耗尽计 1 次）→ worker 告警钩子恰触发一条未读站内信（含信源名与失败原因，run_source_job notify 参数+record_failure RETURNING 计数，episode 语义持续失败不重复/成功清零）；Web 顶栏铃铛（原生 details 下拉+未读角标+最近未读，每页经 _render 注入）；信源页健康列（≥3 异常悬浮原因/1-2 失败N次/正常/—，迁移0003 列+0004 notification 表）；他源采集不受影响（独立 job+独立计数，integration 隔离断言）。AC2 /notifications 未读/历史分组+标记已读 303（integration 标记后未读归零）。live：真实生产路径种子 3 轮失败→lmjx 异常+未读通知，三页实弹取证，通知保留未读供明日评审。回归 unit+contract 456/e2e 2/ruff 干净。DoD 8/9，#4 待 push（PD2）。
 <!-- SECTION:FINAL_SUMMARY:END -->
+
+## Notes
+- **Web 验收轮 R1（2026-09-04）**：铃铛位置修复——topbar 此前嵌于居中 1100px 内容列内，宽屏下铃铛落在屏幕中部而非右上角；按原型结构改为 main 列全宽 topbar（`.main-col > .topbar` + `.content` 两层，sticky），铃铛回归窗口右上。R1 由用户页面走查发现；consume 单测 80 绿 + 模板契约 40 绿，ruff 无告警。
