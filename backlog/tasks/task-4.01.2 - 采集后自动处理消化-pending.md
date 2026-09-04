@@ -1,12 +1,13 @@
 ---
 id: TASK-4.01.2
 title: 采集后自动处理消化 pending
-status: In Progress
+status: Done
 assignee:
   - '@lancer'
 created_date: '2026-09-03 10:28'
-updated_date: '2026-09-04 01:18'
+updated_date: '2026-09-04 02:14'
 labels: []
+milestone: m-0
 dependencies:
   - TASK-4.01.01
 references:
@@ -36,7 +37,7 @@ ordinal: 32000
 - [x] #1 Given 调度器完成一次自动采集 | When 该批采集结束 | Then 同批 pending 条目自动进入处理链（粗筛→抽取→校验），全程无需任何人运行命令
 - [x] #2 Given 处理链自动运行 | When 单条粗筛判否或抽取校验失败 | Then 条目落 filtered_out / needs_manual（原因可查、不丢弃、可重放），批处理继续其余条目
 - [x] #3 Given LLM 配置缺失或调用持续失败 | When 处理链被触发 | Then 按 doc-3 可靠性降级不丢弃，失败原因落运行留痕（结构化日志 / pipeline_run）
-- [ ] #4 Given 无人值守运行一个完整采集周期 | When 运营者打开收件箱与检索 | Then 新条目不再滞留 pending（自动流转为 extracted 或终态标记），页面仅剩需人工处置的异常态
+- [x] #4 Given 无人值守运行一个完整采集周期 | When 运营者打开收件箱与检索 | Then 新条目不再滞留 pending（自动流转为 extracted 或终态标记），页面仅剩需人工处置的异常态
 <!-- AC:END -->
 
 ## Definition of Done
@@ -63,6 +64,8 @@ TDD：unit TestProcessHook 3 例先红（process 参数不存在）→ run_sourc
 integration test_worker_e2e 增 TestProcessHandoffE2E 2 例：①fake collect 落 pending（raw_html 三一新品文）→ process=真 ProcessRunner+ScriptChat（ok_pred 过真实领域包校验）→ 条目 extracted（subject=三一/admiralty=B2 继承信源）+ event_id 挂载——AC1 采集→处理→聚类跨接线缝闭环；②process 抛 LLMConfigError → job ok + 条目留 pending——AC3 降级不丢弃。
 回归：unit+contract 459 / worker_e2e 5 / ruff 干净。修复 test_verify_page 时间脆弱（硬编码 09-03 基准跨日变 11 天→改相对 now）。
 AC 证据索引：AC1=unit test_process_called_after_success + integration test_handoff_extracts_and_clusters（真链 extracted+挂事件）+ 过夜 live；AC2=ProcessRunner 既有容错存量（test_process_e2e 单条写库失败继续）；AC3=unit test_process_failure_keeps_job_ok + integration test_llm_missing_degrades_items_stay_pending；AC4=过夜 pih work 运行，明晨打开 /inbox 与 / 验证（本轮结束时启动，见决策日志 D12）。
+
+用户验收（2026-09-04 晨）：认可无人值守闭环，指派 m-0 并验收。AC4 过夜证据：pih work 常驻运行（pid 1074031，logs/worker.log），启动扫 3 源 27 条入库（pipeline_run ccma 10/sany 7/cehome 10 全 ok），处理接力全量消化——0 pending 滞留（23 extracted + 5 filtered_out 终态标记），/inbox 仅剩异常态可审计；web :8000 存活。晨间状态实测（本会话查询）。
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -74,3 +77,9 @@ created: 2026-09-04 01:18
 AC4（无人值守一周期 pending 不滞留）留待 2026-09-04 晨过夜运行证据后勾选并置 Done——worker 已于 2026-09-03 夜启动（启动扫+07:30 daily 触发），晨间验收路径见 docs/mvp-run-decisions-2026-09-03.md §5。
 ---
 <!-- COMMENTS:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+采集后自动处理消化 pending 交付（用户裁定入 m-0，2026-09-04 验收）。run_source_job 增 process 编排缝：采集成功自动接力处理链（粗筛→抽取→校验→聚类），全程零命令；LLM 配置缺失/处理异常降级不丢弃（条目留 pending 可重放，job 不失败）。AC1-3 unit+integration 真链证据（设计文档 §1 索引）；AC4 过夜实证：启动扫 27 条全量流转 0 滞留（23 extracted+5 终态标记），worker/web 双进程留机运行。回归 unit+contract 459/integration 81/ruff 干净。
+<!-- SECTION:FINAL_SUMMARY:END -->
