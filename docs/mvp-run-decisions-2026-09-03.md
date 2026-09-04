@@ -107,18 +107,51 @@ TASK-1.02.01 结构化抽取与详情分区   ← 枢纽：2.01/2.02.01/2.02.02 
 |---|---|---|---|---|
 | TASK-1.02.01 | ✅ Done | docs/design/TASK-1.02.01-design.md | notes 全量索引：AC1 TestInferenceBasis+模板契约+live /intel/1；AC2-AC6 存量 test_graph/TestPostHocQualityGate/test_cluster_e2e+live [B2]/挂事件#1-4 | DoD#4 待 push（PD2）；AC5 口径收窄 comment 记档（D2） |
 | TASK-2.01.01 | ✅ Done | docs/design/TASK-2.01.01-design.md | notes：AC1 integration 组合用例+≥档正反+contract 表单+unit time_range 4例+live；AC2 integration empty+live 空态 | 附带修复存量 bug：tags @> 缺 ::jsonb cast；admiralty 语义变更为 ≥ 档（D4 落地） |
-| TASK-2.02.01 | 未开始 | docs/design/TASK-2.02.01-design.md | — | — |
+| TASK-2.02.01 | ✅ Done | docs/design/TASK-2.02.01-design.md | notes：AC1 未挂事件断言（contract+api_e2e 同步新口径）+排序存量；AC2 时间线+事实推断分区存量 | 唯一代码增量=列表未挂事件文案（D1 设计） |
 | TASK-2.02.02 | ✅ Done | docs/design/TASK-2.02.02-design.md | notes：AC1 四区 integration+unit+contract；AC2 confirm 终态 log 行断言；AC3 refute 理由入库+D7 默认隐藏+显式可查；AC4 滞留排序 integration | 新增 /verify 页（D5 落地）；原型反向更新核实节；D7 行为变更=检索默认排除已证伪 |
-| TASK-4.02.01 | 未开始 | → docs/design/TASK-4.02.01-design.md | — | — |
 | TASK-4.01.01 | ✅ Done | docs/design/TASK-4.01.01-design.md | notes：AC1 configure_scheduler unit+worker_e2e integration+live --once（0新增/3跳过+Web /inbox 3 pending）+过夜常驻；AC2 退避三路 unit+失败路径健康计数 integration | apscheduler==3.11.3 锁版；修 2 处 mock 掩盖真 bug；compose worker 挂 profile |
-| TASK-4.02.01 | 未开始 | docs/design/TASK-4.02.01-design.md | — | — |
+| TASK-4.02.01 | ✅ Done | docs/design/TASK-4.02.01-design.md | notes：AC1 notifications_e2e（3轮→1通知含名与原因+他源隔离）+告警 unit 5 例+live 三页；AC2 标记已读 303+未读归零 | 迁移 0004 notification 表；顶栏铃铛（details 原生下拉）；信源页健康列四态 |
+| TASK-4.01.2（D1 追加） | 🔶 AC1-3 证据齐 / AC4 待过夜 | docs/design/TASK-4.01.2-design.md | notes：AC1 unit+integration 真链（pending→extracted→挂事件）；AC2 存量容错；AC3 降级留 pending 双证 | 未入 m-0（是否纳入待你裁定，D1）；AC4 明晨过夜验证后置 Done（comment 记档） |
 
-全量回归基线与增量：unit 343 →（每故事后更新）；contract 57 →（同）；integration → 收尾统一跑；ruff 干净。
+**全量回归终态**：unit+contract 459 / integration 81（全文件 6m23s）/ ruff 干净。
+所有提交停在本地未 push（PD2）——验收通过后 push，Actions 首跑绿再补各故事 DoD#4。
 
-## 5. 明日 Web 验收路径（收尾时补全 URL+操作+预期）
+## 5. 明日 Web 验收路径
 
-- （收尾时填充：从首页开始的完整走查脚本，覆盖 6 故事验收面）
+服务形态：`http://127.0.0.1:8000`（uvicorn 本地进程，logs/web.log）+ `pih work` 过夜常驻
+（logs/worker.log；启动扫已跑一轮真采集+真 LLM 抽取+聚类；每日源 07:30 自动再采——晨间
+若见「今日新增」条目即为「到点可见」活体证据，TASK-4.01.01 AC1 / 4.01.2 AC4）。
+
+**走查脚本（按序，覆盖 6+1 故事验收面）**：
+
+1. **首页 `/` 检索视图（TASK-2.01.01）**：列表为 extracted 成品（标题/主体/事件类型/置信度/
+   采集时间/所属事件核实状态；未挂事件条目显「未挂事件」且排末尾）。组合筛选主行五要素：
+   主体（datalist 领域包候选）/事件类型（枚举）/时间范围（近7/30/90天）/标签/置信度（≥ 档）；
+   试 `置信度 ≥ C`（D4 语义=来源可靠性门槛）；试不存在主体 → 「无结果，建议放宽条件」（AC2）。
+2. **tab「收件箱」`/inbox`**：采集验收面——启动扫后的新条目应近零滞留 pending（4.01.2 接力）；
+   filtered_out/dead/needs_manual 可按状态筛出（漏报审计），非 pending 行有「重放」。
+3. **详情 `/intel/{id}`（TASK-1.02.01 AC1 + 2.02.01 AC2）**：结构化分区（主体/事件类型/标签/
+   量化参数/Admiralty 双维注解「来源可靠性 B × 可信度 2」）；推断含「依据：…」（硬校验）；
+   事实分区；原文快照+原始链接双入口；事件核实状态与完整跃迁时间线（system 自动/operator 人工）。
+4. **侧栏「运营 → 核实」`/verify`（TASK-2.02.02）**：四区=积压提醒/已具备升级条件事件/
+   低置信度情报/待人工条目。**建议现场操作**：对某单源确认事件点「确认 → 多源确认」→
+   回详情看时间线新增人工终态；或「证伪」（必填理由）→ 该事件条目从检索默认消失
+   （`/?event_status=refuted` 显式可查，D7）。
+5. **右上铃铛（TASK-4.02.01）**：未读角标 1（lmjx 三轮失败演示告警，真实告警路径产出）；
+   下拉见信源名+失败原因；「查看全部历史」→ `/notifications` 未读/历史分组；
+   点「标记已读」角标归零（建议留到现场点，看角标变化）。
+6. **侧栏「信源」`/sources`**：健康列——ccma/sany/cehome=正常（真实采集过），
+   lmjx=异常（连续 3 次，悬浮见原因），未采集=—。
+7. **（可选）CLI 对照**：`uv run pih verify list`、`pih query --subject=三一`、
+   `pih work --once sany`（单源手动一轮采集+处理接力）。
+
+**评审顺序建议**：§2 流程偏离（PD1-PD4）→ §3 决策点逐条裁定（重点 D1/D2/D4/D5/D7）→
+上述走查 → backlog 各任务 Implementation Notes / Final Summary 抽查证据。
 
 ## 6. 变更历史
 
 - 2026-09-03：初版（PD1–PD4、D1–D12 决策框架）；开始 TASK-1.02.01。
+- 2026-09-03 夜：六故事全部 Done（1.02.01 → 2.01.01 → 2.02.01 → 2.02.02 → 4.01.01 → 4.02.01）；
+  追加 TASK-4.01.2（AC1-3 证据齐，AC4 留过夜）；原型反向更新核实页节（D5）；
+  全量回归 459+81 绿；过夜形态启动（:8000 web + pih work，logs/）。
+- 2026-09-04 晨：晨检补过夜运行结果与 AC4 勾选（若本会话晨检任务执行）。

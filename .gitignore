@@ -26,3 +26,6 @@ minio_data/
 # 编辑器
 .vscode/
 .idea/
+
+# 过夜运行日志（worker/web，本地运行产物）
+logs/
