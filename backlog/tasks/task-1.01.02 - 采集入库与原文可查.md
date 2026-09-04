@@ -159,3 +159,6 @@ AC2 范围裁定（DoD#1 事实源对齐）：AC2 原文「内容相似度超阈
 
 DoD#4 达成：push ea327c6 后 GitHub Actions 首跑变绿（run 33745297956，success，2026-09-03）。DoD 9/9。
 <!-- SECTION:FINAL_SUMMARY:END -->
+## Notes
+
+- **Web 验收轮 R2（2026-09-04，D13）**：收件箱视图宿主迁移——情报页撤 [检索]/[收件箱] tab，非 extracted 条目全部并入核实页工作台（pending→积压区子区 / needs_manual→待人工区带重放 / filtered_out+dead→折叠审计区）；AC1/AC3/AC4 语义不变（测试随迁至 test_verify_page.py::TestWorkbenchInbox），/inbox 303 引路。裁定：账号体系收件箱方案被否（MVP 无账号体系，条目归属系统非用户）。

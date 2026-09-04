@@ -138,7 +138,7 @@
       A 日常监控 · B 录入<br>
       C 检索 · D 假设求证<br>
       E 信源 · F 核实 · G 反馈<br>
-      <span style="color:#94a3b8">收件箱并入情报 tab；F 核实页已随 TASK-2.02.02 呈现</span>
+      <span style="color:#94a3b8">R2(09-04)：收件箱并入 F 核实页工作台，情报页回归纯检索；F 核实页已随 TASK-2.02.02 呈现</span>
     </div>
   </nav>
 
@@ -163,13 +163,9 @@
     </div>
     <div class="main" id="main">
 
-    <!-- ============ 情报·列表（含 待处理 视图） ============ -->
+    <!-- ============ 情报·列表（R2: 收件箱并入核实页，本屏回归纯检索） ============ -->
     <section class="page on" id="lib" data-title="情报 / 列表">
-      <div class="note">▶ 流 C 按需检索 · 北极星落点。「检索」= 已抽取成品按需消费（组合筛选）；「收件箱」= 采集处理状态视图（流 A 落盘：pending / 粗筛丢弃 / 待人工 / 抓取失败可审计，ADR-011 两视图同表分读）。</div>
-      <div class="tabs">
-        <div class="tab active" data-tab="all">检索</div>
-        <div class="tab" data-tab="todo">收件箱 <span class="badge">3</span></div>
-      </div>
+      <div class="note">▶ 流 C 按需检索 · 北极星落点。已抽取成品按需消费（组合筛选），纯消费面。R2(09-04)：收件箱（采集处理状态视图，ADR-011 同表分读）并入运营区「核实」页工作台——pending 滞留入积压区、待人工带重放、filtered_out/dead 折叠审计。</div>
 
       <!-- 检索 视图 -->
       <div class="view on" id="v-all">
@@ -201,21 +197,8 @@
         <div class="legend">Admiralty：来源可靠性 A–F × 信息可信度 1–6（短板决定）。已证伪默认不出现。未挂事件条目排末尾。</div>
       </div>
 
-      <!-- 收件箱 视图（采集处理状态 · ADR-011 单表两视图） -->
-      <div class="view" id="v-todo">
-        <div class="mini" style="margin-bottom:12px">采集入库先落盘于此（pending）；粗筛丢弃（filtered_out）、待人工（needs_manual）、抓取失败（dead）留此可审计。排序：采集时间倒序。</div>
-        <div class="wf" style="padding:0">
-          <table class="wf-table">
-            <thead><tr><th>标题</th><th>信源</th><th>处理状态</th><th>失败/原因</th><th>采集时间</th><th>操作</th></tr></thead>
-            <tbody>
-              <tr class="item" data-go="detail" data-item="6项工程机械行业专利荣获第26届中国专利奖"><td>6项工程机械行业专利荣获第26届中国专利奖</td><td>ccma</td><td><span class="tag muted">pending</span></td><td>—</td><td>09-03 08:12</td><td>—</td></tr>
-              <tr class="item" data-go="detail" data-item="今日股市大盘走势"><td>今日股市大盘走势</td><td>ccma</td><td><span class="tag">filtered_out</span></td><td>粗筛判定与领域不相关</td><td>09-03 08:12</td><td><button class="btn">重放</button></td></tr>
-              <tr class="item" data-go="detail" data-item="(抓取失败)"><td style="color:var(--muted)">(抓取失败)</td><td>ccma</td><td><span class="tag warn">dead</span></td><td>ConnectionError: timeout</td><td>09-03 08:11</td><td><button class="btn">重放</button></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="legend">收件箱 = 采集处理状态视图（漏报审计可筛 filtered_out）；已抽取成品在「检索」。事件核实队列（确认 / 证伪）在运营区「核实」页呈现。</div>
-      </div>
+      <!-- 收件箱视图已随 R2(09-04) 并入「核实」页工作台：pending→积压区子区、
+           filtered_out/dead→折叠审计区（原 v-todo 屏撤除，样例数据迁移至核实屏） -->
     </section>
 
     <!-- ============ 情报·详情（聚合面） ============ -->
@@ -350,6 +333,13 @@
       <div class="note">▶ 流 F 人工核实 · 终态由人把关。确认（→多源确认）与证伪（必填理由）为人工终态，全程写核实日志；已证伪事件下情报检索默认隐藏（显式可查）。</div>
       <div class="wf"><div class="lbl">积压提醒（待核实超 7 天 · 按滞留时长排序）</div>
         <div class="qcard" style="border-color:var(--warn);background:#fffbeb"><div><div class="ttl">徐工 · 中标落地</div><div class="mini">事件 #12 · 滞留 14 天 · 首见 08-20</div></div><span class="mini">→ 去处理</span></div>
+        <div class="lbl" style="margin-top:10px">待处理条目（2）—— R2 收件箱归位：采集落盘未过处理链，worker 自动接力；持续滞留=处理链异常</div>
+        <table class="wf-table">
+          <thead><tr><th>标题</th><th>信源</th><th>采集时间</th></tr></thead>
+          <tbody>
+            <tr class="item" data-go="detail" data-item="6项工程机械行业专利荣获第26届中国专利奖"><td>6项工程机械行业专利荣获第26届中国专利奖</td><td>ccma</td><td>09-03 08:12</td></tr>
+          </tbody>
+        </table>
       </div>
       <div class="wf"><div class="lbl">已具备升级条件的事件（双独立信源 · 待人工确认/证伪）</div>
         <div class="queue">
@@ -377,6 +367,16 @@
           </table>
         </div>
       </div>
+      <details class="wf" style="margin-top:12px;border-style:dashed">
+        <summary style="cursor:pointer;font-weight:600">审计：粗筛丢弃与失败终态（2）—— R2 收件箱归位，默认折叠</summary>
+        <table class="wf-table">
+          <thead><tr><th>状态</th><th>标题</th><th>信源</th><th>原因</th><th>采集时间</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr class="item" data-go="detail" data-item="今日股市大盘走势"><td><span class="tag">filtered_out</span></td><td>今日股市大盘走势</td><td>ccma</td><td>粗筛判定与领域不相关</td><td>09-03 08:12</td><td><button class="btn">重放</button></td></tr>
+            <tr class="item" data-go="detail" data-item="(抓取失败)"><td><span class="tag warn">dead</span></td><td style="color:var(--muted)">(抓取失败)</td><td>ccma</td><td>ConnectionError: timeout</td><td>09-03 08:11</td><td><button class="btn">重放</button></td></tr>
+          </tbody>
+        </table>
+      </details>
     </section>
 
     <!-- ============ 反馈 ============ -->

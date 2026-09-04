@@ -73,3 +73,6 @@ README 新增人工核实页段。
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
 人工核实页交付（本故事为新增页面：CLI verify 存量，Web 操作面全新）。AC1 /verify 四区队列——积压提醒置顶、已具备升级条件事件（list_ready_for_manual 存量）、低置信度情报（新 list_low_confidence，D6 可信度4-6∪可靠性D-F）、待人工条目（list_inbox needs_manual）；排序=条目 map(admiralty) 升序+采集时间升序（低置信最老优先，路由层 ranking 权重计算）/事件按滞留最久优先（integration 断言含 3 天未超期不进积压）。AC2 POST /verify/{id}/confirm→confirmed 写 verification_log（integration 行断言 operator/single_source→confirmed；终态无出边 400）。AC3 refute 必填理由（空白 400）→refuted 理由入库+该事件下情报检索默认隐藏（D7：list_by_filter 默认排除，显式 event_status=refuted 可查——integration 双向断言）。AC4 list_stale_pending 7 天积压区按滞留排序（integration 滞留天数渲染）。原型反向更新核实页节（D5）。回归 unit+contract 423/integration 7+ruff 干净。DoD 8/9，#4 待 push（PD2）。
 <!-- SECTION:FINAL_SUMMARY:END -->
+## Notes
+
+- **Web 验收轮 R2（2026-09-04，D13）**：收件箱归位本页——新增 pending 滞留子区（积压提醒内）、待人工区带重放按钮（路由迁 POST /verify/{id}/replay，303 回 #manual）、filtered_out/dead 折叠审计区；/inbox 303 引路至 /verify。核实页由「四区」扩为「四区+两扩展」，成为全站唯一人工工作台。用户页面走查驱动裁定。

@@ -111,15 +111,17 @@ ADR-011），抽取原地 UPDATE 升级结构化字段，不另建 inbox 表。f
 
 ### 采集入库与两视图（ADR-011）
 
-采集入库的条目先停在 `pending` 态，Web「情报」页内 tab 分两视图读同表不同状态
-（`[检索]` / `[收件箱]`，原型 IA 对齐）：
+采集入库的条目先停在 `pending` 态。ADR-011 两视图是**数据口径**（检索=extracted /
+收件箱=非 extracted，同表分读）；UI 呈现随 Web 验收轮 R2（2026-09-04）归位：
 
-- **收件箱视图** `/inbox`（tab）：`pending` / `needs_manual` / `filtered_out` / `dead`——
-  采集验收面（新条目出现于此）与漏报审计（按 `process_status=filtered_out` 筛出粗筛丢弃的条目）；
-  非 pending 行带「重放」按钮（Web 版 `pih replay`：dead/filtered_out/needs_manual →
-  重置 pending 重入处理链，AC4）。
-- **检索视图** `/`：`extracted` 已抽取成品——消费列表，默认只看成品；
-  `filtered_out` 不进检索（AC3 天然成立），`process_status` 显式给定可覆盖（如 needs_manual 复核队列）。
+- **检索视图** `/`（情报页，纯消费面）：`extracted` 已抽取成品——组合筛选 + 排序；
+  `filtered_out` 不进检索（AC3 天然成立），`process_status` 显式给定可覆盖。
+- **收件箱 → 核实页工作台** `/verify`（人工操作唯一入口）：
+  `pending` 滞留入「积压提醒」区（采集落盘未处理——worker 自动接力，持续滞留=处理链异常）；
+  `needs_manual` 在「待人工条目」区带失败原因与「重放」按钮（Web 版 `pih replay`：
+  重置 pending 重入处理链，AC4；实际重处理随该信源下一轮采集接力）；
+  `filtered_out`（粗筛丢弃，漏报审计）与 `dead`（失败终态）在页底折叠审计区，可重放救回。
+  旧 `/inbox` 路由 303 引路至 `/verify`。
 
 无快照不入库（贯穿性约束 2）：`snapshot_id` NOT NULL 为守卫；详情页给原文快照与原始链接双入口。
 
@@ -168,10 +170,10 @@ docker compose up -d web
 uv run uvicorn pih.consume.web:app --reload --port 8000
 
 # 4. 浏览器访问 http://127.0.0.1:8000
-#    情报页 / —— 页内 tab：[检索]（默认 extracted 成品 + 筛选 + 下一页游标）
-#                 [收件箱]（/inbox —— 采集入库 pending/失败/粗筛丢弃 + 重放按钮）
+#    情报页 / —— 检索视图（extracted 成品 + 筛选 + 下一页游标，纯消费面）
 #    点标题进入 /intel/{id} 详情页（事实/推断分区 + 原文快照与原始链接双入口）
 #    导航「信源」进入 /sources —— 信源清单（六字段）+ 页内试抓
+#    导航「核实」进入 /verify —— 人工工作台（积压/升级/低置信/待人工 + 折叠审计区）
 
 # 5. 调 JSON API（Agent 消费者）
 curl -H "Authorization: Bearer dev-token" \
