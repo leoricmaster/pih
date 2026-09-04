@@ -98,17 +98,6 @@
   .pill{border-radius:99px;padding:1px 9px;font-size:11px;border:1px solid var(--line)}
   .pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
   .note{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;font-size:12px;color:#92400e;margin-bottom:14px}
-  /* dashboard */
-  .kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-  .kcard{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fff}
-  .kcard.dim{background:var(--fill);color:var(--muted)}
-  .kcard .klbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-  .kcard .kval{font-size:26px;font-weight:700;margin:6px 0 2px}
-  .kcard.dim .kval{color:#94a3b8}
-  .kcard .ksub{font-size:11px;color:var(--muted)}
-  .kcard .pending{font-size:10px;color:var(--warn);border:1px dashed var(--warn);border-radius:4px;padding:1px 6px;display:inline-block;margin-top:6px}
-  .barwrap{height:8px;background:var(--fill2);border-radius:99px;overflow:hidden;margin-top:8px}
-  .bar{height:100%;background:var(--accent);border-radius:99px}
 </style>
 </head>
 <body>
@@ -127,11 +116,6 @@
       <a class="navlink" data-go="verify">核实</a>
       <a class="navlink" data-go="intake">录入</a>
       <a class="navlink" data-go="feedback">反馈</a>
-      <a class="navlink" data-go="config">配置</a>
-    </div>
-    <div class="navgroup">
-      <label>观察面</label>
-      <a class="navlink" data-go="dash">仪表盘</a>
     </div>
     <div style="padding:14px 16px;margin-top:10px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);line-height:1.7">
       点击可走的流：<br>
@@ -397,115 +381,6 @@
       <div class="legend">"不该入库"与粗筛漏放（列表处理状态筛选）互补，构成漏报审计。</div>
     </section>
 
-    <!-- ============ 配置（分层：运行态可改 / 结构配置 repo / 秘密 .env） ============ -->
-    <section class="page" id="config" data-title="配置">
-      <div class="note">▶ 三层配置：① 运行态旋钮——高频低风险，Web 可改，落运行配置库（新增事实源，与 repo 并存）；② 结构配置——低频需评审，只读可视化，编辑回仓内 YAML+Git 留痕；③ 秘密——永不在 Web，止于 .env（gitignored）。</div>
-
-      <!-- ① 运行态旋钮（Web 可改） -->
-      <div class="wf">
-        <div class="lbl">① 运行态旋钮 · Web 可改 → 落运行配置库</div>
-        <div class="grid2">
-          <div>
-            <div class="seg"><span class="k">降权天数</span><input class="inp" type="number" value="7" style="width:64px"> <span class="mini">待核实超期自动降权</span></div>
-            <div class="seg"><span class="k">粗筛阈值</span><input class="inp" type="number" step="0.05" value="0.60" style="width:64px"> <span class="mini">相关性下限，低于不入库</span></div>
-            <div class="seg"><span class="k">聚类阈值</span><input class="inp" type="number" step="0.05" value="0.75" style="width:64px"> <span class="mini">主体+时间窗相似度</span></div>
-          </div>
-          <div>
-            <div class="seg"><span class="k">失败告警</span><input class="inp" type="number" value="3" style="width:64px"> 次 <span class="mini">单源连续失败触发站内信</span></div>
-            <div class="seg"><span class="k">频控下限</span><input class="inp" type="number" value="60" style="width:64px"> s <span class="mini">全局最小抓取间隔</span></div>
-            <div class="seg"><span class="k">通知渠道</span><label style="font-size:12px;margin-left:4px"><input type="checkbox" checked> 站内信</label> <label style="font-size:12px"><input type="checkbox"> 企微</label> <label style="font-size:12px"><input type="checkbox"> 邮件</label></div>
-          </div>
-        </div>
-        <div class="row" style="margin-top:10px"><button class="btn primary">保存</button><span class="mini">→ 写入运行配置库，即时生效；结构默认值仍由领域包兜底</span></div>
-        <div class="legend">数值为示意（降权天数=7 来自现行规则；粗筛/聚类阈值尚未落盘，运行库就位后标定）。引入运行配置库即新增一个事实源：repo 管"是什么"，运行库管"当前调到多少"，需明确后者覆盖前者的优先级。</div>
-      </div>
-
-      <!-- ② 结构配置（只读，repo 编辑） -->
-      <div class="wf">
-        <div class="lbl">② 结构配置 · 只读可视化 · 编辑回 repo（YAML+Git 留痕）</div>
-        <div class="seg"><span class="k">领域包</span>construction_machinery v0.2.0 <span class="mini">→ domain_packs/*.yaml</span></div>
-        <div class="seg"><span class="k">信源清单</span>9 源（3 启用 / 6 停用）<span class="mini">· reliability / level / 频率 / enabled</span></div>
-        <div class="seg"><span class="k">事件类型</span>11 类 <span class="mini">· 新品发布 / 中标落地 / 专利公开 …</span></div>
-        <div class="seg"><span class="k">标签树</span>4 组 <span class="mini">· 技术特征 / 应用场景 / 产品类 / 市场类</span></div>
-        <div class="seg"><span class="k">竞品主体</span>5 家 + 别名 <span class="mini">· 三一 / 徐工 / 柳工 / 中联 / 龙工</span></div>
-        <div class="seg"><span class="k">关键词</span>10 个 <span class="mini">· 挖机 / 无人化 / 电动化 …</span></div>
-        <div class="seg"><span class="k">抽取 prompt</span>v3 工程化版 <span class="mini">· 占位符注入 event_types/tag_tree/competitors</span></div>
-        <div class="seg"><span class="k">排序权重</span>ranking 节 <span class="mini">· reliability / credibility / event_state</span></div>
-        <div class="row" style="margin-top:10px"><button class="btn">在仓内 YAML 编辑 ↗</button><span class="mini">→ schema 校验 + Git 评审；启动时加载，缺必选字段拒绝加载</span></div>
-        <div class="legend">定义"系统是什么"，出错代价高且低频——留 repo 换版本留痕与评审，不在 Web 改。</div>
-      </div>
-
-      <!-- ③ 秘密与环境（.env，不显示值） -->
-      <div class="wf">
-        <div class="lbl">③ 秘密与环境 · 永不在 Web · 止于 .env（gitignored）</div>
-        <div class="seg"><span class="k">LLM Key</span><span class="tag muted">••••••••</span> <span class="mini">PIH_LLM_API_KEY</span></div>
-        <div class="seg"><span class="k">API Token</span><span class="tag muted">••••••••</span> <span class="mini">PIH_API_TOKEN（留空=API 503）</span></div>
-        <div class="seg"><span class="k">LLM 端点</span><span class="tag muted">••••••</span> <span class="mini">PIH_LLM_BASE_URL · large/small 路由</span></div>
-        <div class="seg"><span class="k">PG / MinIO</span><span class="mini">DSN / endpoint / port — .env.defaults 入库 + .env 本机覆盖</span></div>
-        <div class="legend">秘密不进 Web 也不进运行库；轮换在 .env。分层加载：真实环境变量 &gt; .env &gt; .env.defaults。</div>
-      </div>
-    </section>
-
-    <!-- ============ 仪表盘 ============ -->
-    <section class="page" id="dash" data-title="仪表盘 / 观察面">
-      <div class="note">▶ 观察面：北极星指标与系统健康常驻可见。指标随采集能力渐进填充——已能算的亮起，依赖埋点的标灰，不提前造空壳数据。</div>
-      <div class="kgrid">
-        <div class="kcard dim">
-          <div class="klbl">北极星 · 周均检索次数</div>
-          <div class="kval">—</div>
-          <div class="ksub">Web + API 合计</div>
-          <span class="pending">待检索埋点就位</span>
-        </div>
-        <div class="kcard">
-          <div class="klbl">入库情报</div>
-          <div class="kval">86</div>
-          <div class="ksub">门槛 60 · 已达 ✓</div>
-        </div>
-        <div class="kcard">
-          <div class="klbl">待处理积压</div>
-          <div class="kval">3</div>
-          <div class="ksub">2 条超 7 天已降权</div>
-        </div>
-      </div>
-      <div class="kgrid" style="margin-top:14px">
-        <div class="kcard">
-          <div class="klbl">采集成功率（近 7 天）</div>
-          <div class="kval">94%</div>
-          <div class="barwrap"><div class="bar" style="width:94%"></div></div>
-          <div class="ksub">失败集中于路面机械网（WAF）</div>
-        </div>
-        <div class="kcard">
-          <div class="klbl">粗筛通过率</div>
-          <div class="kval">92%</div>
-          <div class="barwrap"><div class="bar" style="width:92%"></div></div>
-          <div class="ksub">2 条假阴性（锂矿/期货口径偏窄）</div>
-        </div>
-        <div class="kcard">
-          <div class="klbl">无人值守连续运行</div>
-          <div class="kval">4 周</div>
-          <div class="ksub">中断 ≤1 次 · 门槛达成 ✓</div>
-        </div>
-      </div>
-      <div class="kgrid" style="margin-top:14px">
-        <div class="kcard">
-          <div class="klbl">活跃假设</div>
-          <div class="kval">2</div>
-          <div class="ksub">本周新增命中 3 条</div>
-        </div>
-        <div class="kcard dim">
-          <div class="klbl">快照可溯率</div>
-          <div class="kval">—</div>
-          <span class="pending">待抽样校验</span>
-        </div>
-        <div class="kcard">
-          <div class="klbl">反馈高频项</div>
-          <div class="kval">2</div>
-          <div class="ksub">主体错 34% · 事实不准 28%</div>
-        </div>
-      </div>
-      <div class="legend" style="margin-top:14px">数值为示意（Charter §7 验收门槛口径）。检索埋点（北极星）随 TASK-2.01 列表落地；快照可溯率随采集量积累抽样校验。初期数据小，部分卡片留空是预期状态，不为凑满提前采集。</div>
-    </section>
-
     <!-- ============ 站内信历史（轻量页 · 仅铃铛「查看全部」可达） ============ -->
     <section class="page" id="notif" data-title="站内信 / 历史">
       <div class="note">▶ 通知历史页：从主导航移除，仅经右上角铃铛「查看全部」可达。满足 TASK-4.02.01 AC2 历史可查。</div>
@@ -527,7 +402,7 @@
 <script>
   const crumbs = {
     lib:'情报 / 列表', detail:'情报 / 详情', hypo:'假设 / 列表', hypodetail:'假设 / 详情',
-    intake:'录入', source:'信源', verify:'运营 / 核实', feedback:'反馈', config:'配置', dash:'仪表盘 / 观察面', notif:'站内信 / 历史'
+    intake:'录入', source:'信源', verify:'运营 / 核实', feedback:'反馈', notif:'站内信 / 历史'
   };
   let stack = [];
   function go(id, fromNav){
