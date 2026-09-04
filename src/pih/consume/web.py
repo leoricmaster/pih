@@ -43,7 +43,13 @@ from pih.store.db import close_pool, get_pool
 from pih.store.event_repository import EventRepository
 from pih.store.feedback import FEEDBACK_TYPES, FeedbackRepository
 from pih.store.notification import NotificationRepository
-from pih.store.repository import STATUS_NEEDS_MANUAL, STATUS_PENDING, IntelRepository
+from pih.store.repository import (
+    STATUS_DEAD,
+    STATUS_FILTERED_OUT,
+    STATUS_NEEDS_MANUAL,
+    STATUS_PENDING,
+    IntelRepository,
+)
 from pih.store.source_health import SourceHealthRepository
 
 _BASE = Path(__file__).parent
@@ -240,6 +246,9 @@ def detail_page(
 @app.get("/verify", response_class=HTMLResponse)
 def verify_page(request: Request) -> HTMLResponse:
     """核实页（TASK-2.02.02）：积压提醒置顶 + 三类队列 + 确认/证伪操作。
+    Web 验收轮 R2（2026-09-04）收件箱归位：pending 滞留入积压区、
+    needs_manual 带重放动作、filtered_out/dead 为底部折叠审计区——
+    本页成为全站唯一人工工作台（情报页回归纯检索消费面）。
 
     排序 AC1「置信度升序 + 采集时间升序」——条目队列以 map(admiralty)（ranking
     权重短板）升序=低置信优先，fetched_at 升序破同分；事件队列无置信度维度，
@@ -274,6 +283,17 @@ def verify_page(request: Request) -> HTMLResponse:
         {"event": ev, "days": _days_ago(ev.first_seen_at)}
         for ev in event_svc.list_stale()
     ]
+    # 收件箱归位（R2）：pending 滞留并入积压区；filtered_out/dead 为折叠审计区
+    pending_items = sorted(
+        intel_repo.list_inbox(process_status=STATUS_PENDING),
+        key=lambda r: r.fetched_at,
+    )
+    audit_items = sorted(
+        intel_repo.list_inbox(process_status=STATUS_FILTERED_OUT)
+        + intel_repo.list_inbox(process_status=STATUS_DEAD),
+        key=lambda r: r.fetched_at,
+        reverse=True,
+    )
     context = {
         "ready_events": event_svc.list_ready_for_manual(),
         "stale_cards": stale_cards,
@@ -281,6 +301,8 @@ def verify_page(request: Request) -> HTMLResponse:
         "needs_manual_items": _sort_items(
             intel_repo.list_inbox(process_status=STATUS_NEEDS_MANUAL)
         ),
+        "pending_items": pending_items,
+        "audit_items": audit_items,
         "status_labels": STATUS_LABELS,
     }
     return _render(request, "verify.html", context)
@@ -338,45 +360,28 @@ def notification_mark_read(notification_id: int, request: Request) -> RedirectRe
 
 
 @app.get("/inbox", response_class=HTMLResponse)
-def inbox_page(
-    request: Request,
-    process_status: str | None = Query(None),
-    source_id: str | None = Query(None),
-) -> HTMLResponse:
-    """收件箱视图（ADR-011 两视图之一）——采集先落盘的 pending/失败/粗筛丢弃条目。
+def inbox_page() -> RedirectResponse:
+    """收件箱已并入核实页工作台（Web 验收轮 R2，2026-09-04）。
 
-    读 intel_item 非 extracted 状态子集：pending（新采集，AC1 验收面）、
-    needs_manual、filtered_out（漏报审计，AC3）、dead（失败终态，AC4）。
-    process_status 显式给定时筛单态。检索成品走 `/`（检索视图）。
+    ADR-011 两视图是数据口径（检索=extracted / 收件箱=非 extracted），
+    不随 UI 归位变化；本路由保留 303 引路，避免旧书签/口令 404。
     """
-    repo = IntelRepository(request.app.state.pool)
-    items = repo.list_inbox(
-        source_id=source_id, process_status=process_status, limit=100
-    )
-    return _render(
-        request,
-        "inbox.html",
-        {
-            "items": items,
-            "process_status": process_status,
-            "source_id": source_id,
-        },
-    )
+    return RedirectResponse("/verify", status_code=303)
 
 
-@app.post("/inbox/{intel_id}/replay")
-def inbox_replay(intel_id: int, request: Request) -> RedirectResponse:
+@app.post("/verify/{intel_id}/replay")
+def verify_replay(intel_id: int, request: Request) -> RedirectResponse:
     """AC4 重放上 Web：dead/filtered_out/needs_manual → 重置 pending 重入处理链。
 
     与 CLI `pih replay` 同语义（mark_status pending）。POST 与 Web 同信任域
-    （ADR-006 内网默认开放，同 /feedback 口径）；重放后 303 回收件箱。
+    （ADR-006 内网默认开放，同 /feedback 口径）；重放后 303 回核实页待人工区。
     """
     repo = IntelRepository(request.app.state.pool)
     if repo.get(intel_id) is None:
         raise HTTPException(status_code=404, detail=f"intel_item {intel_id} not found")
     repo.mark_status(intel_id, STATUS_PENDING)
     log_query("web", {"replay": intel_id}, 1)
-    return RedirectResponse("/inbox", status_code=303)
+    return RedirectResponse("/verify#manual", status_code=303)
 
 
 @app.get("/sources", response_class=HTMLResponse)

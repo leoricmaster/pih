@@ -70,8 +70,8 @@ class QueryService:
         """按 filters 检索情报列表，返回 items + next_before 游标。
 
         检索视图默认只看已抽取成品（ADR-011 两视图：`/` 检索=extracted，
-        `/inbox` 收件箱=非 extracted）。process_status 显式给定则覆盖默认
-        （TASK-1.02.01 AC3 needs_manual 复核队列可达）。
+        非 extracted 归核实页工作台，Web 验收轮 R2）。process_status 显式
+        给定则覆盖默认（TASK-1.02.01 AC3 needs_manual 复核队列可达）。
 
         next_before 仅在结果数等于 limit 时给出（即可能还有下一页）；
         小于 limit 时不提供，避免渲染无意义「下一页」链接（TASK-2.01.01 AC2）。

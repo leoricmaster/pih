@@ -27,6 +27,25 @@
   {% else %}
   <p class="mini">无积压</p>
   {% endif %}
+
+  {% if pending_items %}
+  <h3 class="sub">待处理条目（{{ pending_items|length }}）</h3>
+  <p class="mini">采集已落盘、尚未过处理链——worker 采集后自动接力；持续滞留说明处理链未跟上（LLM 未配置 / worker 停机）。</p>
+  <table class="intel-list">
+    <thead><tr><th>标题</th><th>信源</th><th>采集时间</th></tr></thead>
+    <tbody>
+      {% for r in pending_items %}
+      <tr>
+        <td class="title"><a href="/intel/{{ r.id }}">{{ r.title }}</a></td>
+        <td>{{ r.source_id }}</td>
+        <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="mini">无待处理条目。</p>
+  {% endif %}
 </section>
 
 <section class="block" id="ready">
@@ -80,9 +99,9 @@
   {% endif %}
 </section>
 
-<section class="block">
+<section class="block" id="manual">
   <h2>待人工条目</h2>
-  <p class="mini">抽取降级（schema 校验失败 / 占位主体）——结构化字段保留，可重放后重抽取。</p>
+  <p class="mini">抽取降级（schema 校验失败 / 占位主体）——结构化字段保留，可重放后重抽取。重放 = 重置 pending 重入处理链（与 CLI `pih replay` 同语义），实际重处理随该信源下一轮采集接力。</p>
   {% if needs_manual_items %}
   <table class="intel-list">
     <thead><tr><th>标题</th><th>置信度</th><th>原因</th><th>采集时间</th><th></th></tr></thead>
@@ -93,7 +112,11 @@
         <td>{{ r.admiralty_code or '—' }}</td>
         <td class="ts">{{ r.process_error or '—' }}</td>
         <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
-        <td><a class="fb-link" href="/inbox?status=needs_manual">收件箱复核</a></td>
+        <td>
+          <form class="inline" method="post" action="/verify/{{ r.id }}/replay">
+            <button type="submit" class="btn">重放</button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -102,5 +125,33 @@
   <p class="mini">（无待人工条目）</p>
   {% endif %}
 </section>
+
+<details class="block audit">
+  <summary>审计：粗筛丢弃与失败终态（{{ audit_items|length }}）</summary>
+  <p class="mini">filtered_out（粗筛判不相关，漏报审计）与 dead（抓取/保存致命错误）——默认折叠不碍眼；认为误杀可重放救回。</p>
+  {% if audit_items %}
+  <table class="intel-list">
+    <thead><tr><th>状态</th><th>标题</th><th>信源</th><th>原因</th><th>采集时间</th><th></th></tr></thead>
+    <tbody>
+      {% for r in audit_items %}
+      <tr>
+        <td><span class="status-badge status-{{ r.process_status }}">{{ r.process_status }}</span></td>
+        <td class="title"><a href="/intel/{{ r.id }}">{{ r.title }}</a></td>
+        <td>{{ r.source_id }}</td>
+        <td class="ts">{{ r.process_error or '—' }}</td>
+        <td class="ts">{{ r.fetched_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <form class="inline" method="post" action="/verify/{{ r.id }}/replay">
+            <button type="submit" class="btn">重放</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="mini">（无 filtered_out / dead 条目）</p>
+  {% endif %}
+</details>
 
 {% endblock %}

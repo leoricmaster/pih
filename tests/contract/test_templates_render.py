@@ -193,7 +193,7 @@ class TestSourcesHealthColumn:
 
 
 class TestVerifyPageRender:
-    """TASK-2.02.02：核实页四区 + 确认/证伪表单契约。"""
+    """TASK-2.02.02 四区 + R2 收件箱归位（pending 子区 / 审计折叠区）+ 表单契约。"""
 
     def _ctx(self, **extra) -> dict:
         from pih.store.event_repository import EventRecord
@@ -209,18 +209,21 @@ class TestVerifyPageRender:
             "stale_cards": [],
             "low_conf_items": [],
             "needs_manual_items": [],
+            "pending_items": [],
+            "audit_items": [],
             "status_labels": STATUS_LABELS,
             **extra,
         }
 
     def test_sections_and_actions_render(self):
         html = _render("verify.html", self._ctx())
-        for section in ("积压提醒", "已具备升级条件", "低置信度情报", "待人工条目"):
+        for section in ("积压提醒", "已具备升级条件", "低置信度情报", "待人工条目", "审计"):
             assert section in html
         assert 'action="/verify/5/confirm"' in html
         assert 'action="/verify/5/refute"' in html
         assert 'name="reason" required' in html
         assert "无积压" in html  # 空积压区提示
+        assert "无待处理条目" in html  # 空 pending 子区提示（R2）
 
     def test_stale_event_card_renders(self):
         from pih.store.event_repository import EventRecord

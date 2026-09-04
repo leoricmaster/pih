@@ -565,7 +565,8 @@ def _cmd_cluster(args: argparse.Namespace) -> int:
 def _cmd_replay(args: argparse.Namespace) -> int:
     """重放失败条目：dead/needs_manual → 重置 pending 重入处理链（AC4 可重放）。
 
-    丢弃留痕即保持 dead 态不删行；可查即 /inbox 与 pih query 可见 dead + process_error。
+    丢弃留痕即保持 dead 态不删行；可查即核实页审计区（原 /inbox，R2 归位）
+    与 pih query 可见 dead + process_error。
     """
     try:
         pool = get_pool()
