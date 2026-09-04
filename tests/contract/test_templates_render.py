@@ -206,6 +206,7 @@ class TestVerifyPageRender:
         )
         return {
             "ready_events": [ev],
+            "ready_event_intel": {},
             "stale_cards": [],
             "low_conf_items": [],
             "needs_manual_items": [],
@@ -224,6 +225,14 @@ class TestVerifyPageRender:
         assert 'name="reason" required' in html
         assert "无积压" in html  # 空积压区提示
         assert "无待处理条目" in html  # 空 pending 子区提示（R2）
+
+    def test_ready_event_evidence_links_renders(self):
+        """裁决点3：待确认卡片展开支撑证据链接（看证据再拍板）。"""
+        rec = _make_record(id=38, event_id=5, admiralty_code="B2")
+        html = _render("verify.html", self._ctx(ready_event_intel={5: [rec]}))
+        assert "依据：" in html
+        assert 'href="/intel/38"' in html  # 证据直达详情
+        assert "#38 sany_news · B2" in html  # 编号 + 信源 + 置信度
 
     def test_stale_event_card_renders(self):
         from pih.store.event_repository import EventRecord
@@ -267,6 +276,7 @@ class TestFilterFormIA:
         # 置信度 ≥ 档选项（A 最优）
         assert '<option value="B">≥ B</option>' in html
         # 时间范围预设（未选项无 selected 后缀，已选项回显）
+        assert '<option value="today">今日</option>' in html  # 晨检今日档（裁决点2）
         assert '<option value="7d">近7天</option>' in html
         assert '<option value="30d" selected>近30天</option>' in html
 
@@ -433,7 +443,7 @@ class TestDetailRender:
         assert "独立信源数" in html
         assert "已具备升级条件" in html  # ready_for_manual 提示
         assert "第二独立信源命中" in html  # reason
-        assert "operator=system" in html
+        assert "自动" in html  # operator=system → 自动（裁决点4 词表中文化）
         assert "事件创建" in html  # 初始 log
 
     def test_unextracted_record_shows_dash(self):

@@ -69,6 +69,8 @@ load_env()
 
 # 时间范围预设 → 天数（TASK-2.01.01 D2；显式 since 直参优先）
 _TIME_RANGE_DAYS = {"7d": 7, "30d": 30, "90d": 90}
+# 今日档：锚定今日 0 点（晨检「今天新来了啥」），非 N 天偏移，单独处理
+_TIME_RANGE_TODAY = "today"
 
 
 def _load_pack_vocab() -> tuple[list[str], list[str]]:
@@ -173,7 +175,12 @@ def list_page(
     显式 since 直参优先（API/URL 兼容路径）。
     """
     effective_since = since
-    if effective_since is None and time_range in _TIME_RANGE_DAYS:
+    if effective_since is None and time_range == _TIME_RANGE_TODAY:
+        # 今日 0 点起（晨检旅程 A「今天新来了啥」直达视角）
+        effective_since = datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+    elif effective_since is None and time_range in _TIME_RANGE_DAYS:
         effective_since = datetime.now() - timedelta(
             days=_TIME_RANGE_DAYS[time_range]
         )
@@ -294,8 +301,12 @@ def verify_page(request: Request) -> HTMLResponse:
         key=lambda r: r.fetched_at,
         reverse=True,
     )
+    ready_events = event_svc.list_ready_for_manual()
     context = {
-        "ready_events": event_svc.list_ready_for_manual(),
+        "ready_events": ready_events,
+        "ready_event_intel": {
+            ev.id: intel_repo.list_by_event(ev.id) for ev in ready_events
+        },
         "stale_cards": stale_cards,
         "low_conf_items": _sort_items(intel_repo.list_low_confidence()),
         "needs_manual_items": _sort_items(

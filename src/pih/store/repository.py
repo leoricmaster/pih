@@ -250,6 +250,28 @@ class IntelRepository:
             rows = cur.fetchall()
         return [IntelRecord(**r) for r in rows]
 
+    def list_by_event(
+        self, event_id: int, limit: int = 20
+    ) -> list[IntelRecord]:
+        """挂入某事件的全部成品情报（核实页证据可达，fetched_at ASC）。
+
+        供核实页待确认卡片展开支撑证据——多源确认依据回看（旅程 A 第 3 步
+        「看证据再拍板」；裁决点 3：原卡片只给「独立信源 N」数字不可达）。
+        仅取 extracted 成品；未抽取收件箱条目不作为证据展示。
+        """
+        sql = f"""
+            SELECT {_COLUMNS_WITH_EVENT}
+            FROM intel_item i
+            LEFT JOIN event e ON e.id = i.event_id
+            WHERE i.event_id = %s AND i.process_status = 'extracted'
+            ORDER BY i.fetched_at ASC, i.id ASC
+            LIMIT %s
+        """
+        with self._pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute(sql, (event_id, limit))
+            rows = cur.fetchall()
+        return [IntelRecord(**r) for r in rows]
+
     def mark_status(self, intel_id: int, status: str, error: str | None = None) -> None:
         """写回处理状态：filtered_out（粗筛）/ dead（失败终态）/ 重置 pending（重放）。
 

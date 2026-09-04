@@ -95,6 +95,9 @@ class _FakeIntelRepo:
     def list_inbox(self, *, source_id=None, process_status=None, limit=100):
         return self.by_status.get(process_status, [])
 
+    def list_by_event(self, event_id, limit=20):
+        return []
+
     def get(self, intel_id):
         for rows in self.by_status.values():
             if any(r.id == intel_id for r in rows):

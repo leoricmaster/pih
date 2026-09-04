@@ -19,6 +19,7 @@
   <label>时间范围
     <select name="time_range">
       <option value="">时间不限</option>
+      <option value="today"{% if time_range == 'today' %} selected{% endif %}>今日</option>
       <option value="7d"{% if time_range == '7d' %} selected{% endif %}>近7天</option>
       <option value="30d"{% if time_range == '30d' %} selected{% endif %}>近30天</option>
       <option value="90d"{% if time_range == '90d' %} selected{% endif %}>近90天</option>

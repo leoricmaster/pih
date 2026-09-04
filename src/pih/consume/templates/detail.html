@@ -174,7 +174,7 @@
       <li>
         <span class="ts">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
         <span class="transition">{{ status_labels[log.from_status] if log.from_status else '（初始）' }} → {{ status_labels[log.to_status] }}</span>
-        <span class="operator">operator={{ log.operator }}</span>
+        <span class="operator">{{ {'system':'自动','operator':'人工'}.get(log.operator, log.operator) }}</span>
         {% if log.reason %}<span class="reason">{{ log.reason }}</span>{% endif %}
       </li>
       {% endfor %}
